@@ -88,6 +88,8 @@ export class AuthService {
           userId: user.id,
           document: dto.document.replace(/\D/g, ''),
           vehicleType: dto.vehicleType,
+          vehiclePlate: dto.vehiclePlate?.toUpperCase() ?? null,
+          documentUrls: dto.documentUrls ?? [],
           status: AccountStatus.PENDING,
         }),
       );

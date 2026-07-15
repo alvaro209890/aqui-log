@@ -2,47 +2,51 @@
 
 ## Visao geral
 
-O Aqui Log usa um monorepo para manter contratos, infraestrutura e produtos versionados em conjunto. O backend e um monolito modular NestJS: simples para iniciar o MVP, mas dividido por dominios para permitir extracao futura de servicos sem reescrever as regras centrais.
+O monorepo mantem produtos, contratos, banco e infraestrutura versionados em conjunto. O backend e um monolito modular NestJS para reduzir custo operacional no MVP sem misturar os dominios.
 
 ```text
 Empresa Flutter ─┐
-Entregador Flutter├── REST + WebSocket ── NestJS ── PostgreSQL
-Dashboard React ──┘                         │
-                                            └── Redis (cache, filas e presenca futura)
+Entregador Flutter├── REST + WebSocket autenticado ── NestJS ── PostgreSQL
+Dashboard React ──┘                                      │
+                                                        └── Redis
 ```
 
-## Modulos de dominio
+## Dominios
 
-- `auth`: cadastro, login JWT, contexto do usuario e controle por perfil.
-- `companies`: aprovacao e gestao das empresas.
-- `couriers`: aprovacao, disponibilidade e localizacao dos entregadores.
-- `deliveries`: solicitacao, despacho manual inicial, ciclo de status e comprovante.
-- `tracking`: eventos WebSocket de localizacao por entrega.
-- `dashboard`: indicadores operacionais e financeiro basico.
+- `auth` e `users`: cadastro, login JWT, perfis e usuarios da empresa.
+- `companies` e `couriers`: aprovacao, documentos por URL, disponibilidade e localizacao.
+- `deliveries`: solicitacao, agenda, oferta persistida, despacho manual/automatico, aceite/recusa, estados, comprovantes e avaliacao.
+- `tracking`: canal Socket.IO autenticado; empresa, administrador e entregador vinculado podem acompanhar uma entrega.
+- `notifications`: caixa persistida por usuario, preparada para push/e-mail futuros.
+- `finance`: receita da plataforma e credito basico na carteira ao concluir a entrega.
+- `audit`: registro das operacoes sensiveis.
+- `dashboard`: indicadores operacionais derivados do PostgreSQL.
 
-## Perfis e aprovacao
+## Persistencia
 
-| Perfil | Responsabilidade inicial |
-| --- | --- |
-| `SUPER_ADMIN` | Acesso completo e aprovacao cadastral |
-| `ADMIN` | Operacao, empresas, entregadores e entregas |
-| `SUPPORT` | Consulta operacional |
-| `COMPANY_OWNER` | Entregas e usuarios da propria empresa |
-| `COMPANY_USER` | Operacao da empresa conforme permissao futura |
-| `COURIER` | Disponibilidade, corridas, coleta e entrega |
+PostgreSQL e a fonte de verdade. A migration inicial cria usuarios, empresas, entregadores, entregas, ofertas, eventos, notificacoes, avaliacoes, carteira e auditoria. Redis esta provisionado para cache, presenca, filas e locks do motor de despacho nas proximas iteracoes.
 
-Empresas e entregadores nascem com status `PENDING`. Um administrador ativa o cadastro antes do primeiro login. O primeiro `SUPER_ADMIN` e criado pelo comando `pnpm db:admin`.
+Valores financeiros sao inteiros em centavos. Identificadores internos sao UUID; cada entrega tambem recebe um codigo publico `AQL-*`.
 
-## Ciclo da entrega
+## Operacao da entrega
 
-`REQUESTED → OFFERED → ACCEPTED → AT_PICKUP → PICKED_UP → IN_TRANSIT → DELIVERED`
+```text
+REQUESTED → OFFERED → ACCEPTED → AT_PICKUP → PICKED_UP → IN_TRANSIT → DELIVERED
+     │          │
+     └──────────┴──→ CANCELED
+```
 
-`CANCELED` encerra uma solicitacao antes da conclusao. As proximas iteracoes devem adicionar uma maquina de estados explicita, historico imutavel de transicoes, upload seguro do comprovante e motor automatico de despacho.
+- O despacho automatico escolhe o entregador aprovado, disponivel, geolocalizado e mais proximo da coleta.
+- Recusas ficam registradas e excluem o mesmo entregador da proxima tentativa.
+- Ofertas expiram em dois minutos.
+- Coleta e entrega exigem comprovante por URL.
+- Cada transicao gera um evento; saltos de estado sao recusados.
+- A conclusao libera o entregador e credita sua carteira de forma idempotente.
 
-## Decisoes para evolucao
+## Seguranca e limites atuais
 
-- PostgreSQL e a fonte de verdade; Redis fica reservado a presenca, cache, filas e despacho.
-- Valores financeiros sao inteiros em centavos.
-- Identificadores internos sao UUIDs; codigos amigaveis de entrega entram na proxima etapa.
-- A API publica futura deve ser separada em namespace e autenticada por chaves por empresa.
-- Em producao, `DATABASE_SYNC` deve permanecer `false` e alteracoes de schema devem usar migrations.
+- HTTP usa JWT, papéis, validacao de DTO, Helmet, CORS e limite global de requisicoes.
+- Socket.IO exige o JWT no `auth.token` ou cabecalho `Authorization` e valida o vinculo com a entrega.
+- URLs de documentos/comprovantes sao apenas metadados nesta fase; o upload privado e a verificacao de malware ainda precisam de um provedor de objetos.
+- Redis ainda nao participa do despacho; concorrencia elevada exigira lock/fila antes de producao.
+- API publica, pagamentos reais e integracoes externas permanecem fora do MVP atual.

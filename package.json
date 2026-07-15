@@ -11,6 +11,8 @@
     "build": "pnpm --filter backend build && pnpm --filter dashboard build",
     "test": "pnpm --filter backend test && pnpm --filter dashboard build",
     "lint": "pnpm --filter backend lint:check && pnpm --filter dashboard lint",
-    "db:admin": "pnpm --filter backend seed:admin"
+    "db:admin": "pnpm --filter backend seed:admin",
+    "db:migrate": "pnpm --filter backend migration:run",
+    "smoke": "bash scripts/smoke-test.sh"
   }
 }

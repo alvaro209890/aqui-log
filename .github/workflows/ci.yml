@@ -8,6 +8,34 @@ on:
 jobs:
   web-and-api:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: aqui_log
+          POSTGRES_USER: aqui_log
+          POSTGRES_PASSWORD: aqui_log_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aqui_log -d aqui_log"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      PORT: 3000
+      DATABASE_HOST: localhost
+      DATABASE_PORT: 5432
+      DATABASE_NAME: aqui_log
+      DATABASE_USER: aqui_log
+      DATABASE_PASSWORD: aqui_log_dev
+      DATABASE_SYNC: "false"
+      JWT_SECRET: aqui-log-ci-secret-only
+      JWT_EXPIRES_IN: 1d
+      ADMIN_NAME: Administrador CI
+      ADMIN_EMAIL: admin@aquilog.com.br
+      ADMIN_PASSWORD: AdminLocal123!
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -20,6 +48,18 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm --filter backend test
+      - run: pnpm db:migrate
+      - run: pnpm db:admin
+      - name: Smoke test da API
+        run: |
+          pnpm --filter backend start > /tmp/aqui-log-api.log 2>&1 &
+          api_pid=$!
+          trap 'kill $api_pid' EXIT
+          for attempt in {1..30}; do
+            curl -fsS http://localhost:3000/api/v1/health && break
+            sleep 1
+          done
+          pnpm smoke
 
   flutter:
     runs-on: ubuntu-latest
@@ -38,3 +78,18 @@ jobs:
         run: flutter analyze
       - working-directory: apps/${{ matrix.app }}
         run: flutter test
+
+  dart-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - working-directory: packages/aqui_log_core
+        run: dart pub get
+      - working-directory: packages/aqui_log_core
+        run: dart analyze
+      - working-directory: packages/aqui_log_core
+        run: dart test

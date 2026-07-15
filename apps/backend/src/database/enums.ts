@@ -31,3 +31,25 @@ export enum VehicleType {
   BICYCLE = 'BICYCLE',
   VAN = 'VAN',
 }
+
+export enum OfferStatus {
+  PENDING = 'PENDING',
+  ACCEPTED = 'ACCEPTED',
+  REJECTED = 'REJECTED',
+  EXPIRED = 'EXPIRED',
+  CANCELED = 'CANCELED',
+}
+
+export enum NotificationType {
+  DELIVERY = 'DELIVERY',
+  ACCOUNT = 'ACCOUNT',
+  FINANCE = 'FINANCE',
+  SYSTEM = 'SYSTEM',
+}
+
+export enum TransactionType {
+  CREDIT = 'CREDIT',
+  DEBIT = 'DEBIT',
+  PAYOUT = 'PAYOUT',
+  ADJUSTMENT = 'ADJUSTMENT',
+}

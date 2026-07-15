@@ -36,6 +36,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   aqui_log_ui:
     path: ../../packages/aqui_log_ui
+  aqui_log_core:
+    path: ../../packages/aqui_log_core
 
 dev_dependencies:
   flutter_test:

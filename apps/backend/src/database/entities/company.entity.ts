@@ -26,9 +26,9 @@ export class Company {
   @Column({ type: 'enum', enum: AccountStatus, default: AccountStatus.PENDING })
   status!: AccountStatus;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt!: Date;
 }

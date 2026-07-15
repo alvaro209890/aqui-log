@@ -1,45 +1,45 @@
 # Aqui Log
 
-Esqueleto funcional de uma plataforma de logistica urbana para conectar empresas e entregadores, organizar o despacho e acompanhar a operacao em tempo real.
+Base executavel de uma plataforma de logistica urbana para conectar empresas e entregadores, despachar corridas e acompanhar a operacao em tempo real.
 
-## O que ja existe
+## Entregue nesta fase
 
-- Dois aplicativos Flutter independentes, preparados para Android e iOS.
-- Dashboard administrativo responsivo em React e TypeScript.
-- API NestJS modular com autenticacao JWT e seis perfis de acesso.
-- Cadastro com aprovacao administrativa de empresas e entregadores.
-- Estrutura de entregas, estados operacionais, comprovante e valores em centavos.
-- Rastreamento por WebSocket, Swagger e KPIs basicos.
-- PostgreSQL e Redis padronizados por Docker Compose.
-- Pipeline de CI para backend, dashboard e aplicativos Flutter.
+- Dois aplicativos Flutter independentes para Android e iOS, com design system e cliente de API compartilhados.
+- Dashboard React/TypeScript com login real, KPIs e entregas consumidos da API.
+- API NestJS com JWT, perfis, aprovacao cadastral, rate limit e cabecalhos de seguranca.
+- Solicitacao/agendamento, despacho por proximidade, oferta, aceite/recusa e ciclo protegido de entrega.
+- Historico imutavel de estados, comprovantes por URL, avaliacao e notificacoes persistidas.
+- Gestao de usuarios da empresa, auditoria e carteira/extrato basicos do entregador.
+- WebSocket autenticado para rastreamento e autorizacao por entrega.
+- PostgreSQL com migration inicial, Redis, Docker Compose, Swagger e smoke test ponta a ponta.
+
+Consulte a [matriz do MVP](docs/MVP_COVERAGE.md) para diferenciar o que esta funcional, o que tem apenas fundacao e o que permanece planejado.
 
 ## Estrutura
 
 ```text
 apps/
-  backend/       API NestJS
-  dashboard/     Painel React + TypeScript
-  company_app/   Aplicativo Flutter da empresa
-  courier_app/   Aplicativo Flutter do entregador
+  backend/          API NestJS
+  dashboard/        Painel React + TypeScript
+  company_app/      Aplicativo Flutter da empresa
+  courier_app/      Aplicativo Flutter do entregador
 packages/
-  aqui_log_ui/   Tema e componentes mobile compartilhados
-infra/           PostgreSQL e Redis para desenvolvimento
-docs/            Arquitetura e contrato inicial da API
+  aqui_log_core/    Cliente HTTP e contratos mobile
+  aqui_log_ui/      Tema e componentes mobile
+infra/              PostgreSQL e Redis
+scripts/            Validacao integrada do fluxo operacional
+docs/               Arquitetura, API, ambiente e cobertura
 ```
-
-## Requisitos
-
-- Node.js 22+
-- pnpm 10+
-- Flutter estavel com Android SDK; macOS com Xcode e necessario para compilar iOS
-- Docker com Compose para executar PostgreSQL e Redis
 
 ## Primeira execucao
 
+Requisitos e instalacao detalhada estao em [Desenvolvimento](docs/DEVELOPMENT.md). Com as ferramentas prontas:
+
 ```bash
 cp .env.example .env
-docker compose -f infra/docker-compose.yml up -d
 pnpm install
+docker compose --env-file .env -f infra/docker-compose.yml up -d
+pnpm db:migrate
 pnpm db:admin
 pnpm dev
 ```
@@ -50,13 +50,21 @@ API: `http://localhost:3000/api/v1`
 
 Swagger: `http://localhost:3000/docs`
 
-Os apps podem ser iniciados em terminais separados:
+Para validar o fluxo completo com a API em execucao:
+
+```bash
+pnpm smoke
+```
+
+O teste cria cadastros isolados, aprova empresa/entregador, despacha, aceita, coleta, entrega, avalia e confere historico, carteira, notificacoes e auditoria.
+
+## Aplicativos
 
 ```bash
 cd apps/company_app && flutter run
 cd apps/courier_app && flutter run
 ```
 
-Antes de usar fora do ambiente local, altere `JWT_SECRET` e `ADMIN_PASSWORD`, mantenha `DATABASE_SYNC=false`, adicione migrations e configure armazenamento privado para documentos e comprovantes.
+Linux pode desenvolver e testar Android. Para compilar e assinar iOS e obrigatorio usar macOS com Xcode e uma conta Apple Developer.
 
-Leia [a arquitetura](docs/ARCHITECTURE.md) e [as rotas iniciais](docs/API.md) para continuar o desenvolvimento.
+Antes de qualquer deploy, troque todos os segredos, mantenha `DATABASE_SYNC=false`, use as migrations e configure armazenamento privado real para documentos e comprovantes.

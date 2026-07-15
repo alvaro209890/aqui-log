@@ -1,8 +1,11 @@
 import {
+  IsArray,
   IsEmail,
   IsEnum,
   IsNotEmpty,
+  IsOptional,
   IsString,
+  IsUrl,
   MinLength,
 } from 'class-validator';
 import { VehicleType } from '../../database/enums';
@@ -59,4 +62,13 @@ export class RegisterCourierDto {
 
   @IsEnum(VehicleType)
   vehicleType!: VehicleType;
+
+  @IsOptional()
+  @IsString()
+  vehiclePlate?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsUrl({}, { each: true })
+  documentUrls?: string[];
 }

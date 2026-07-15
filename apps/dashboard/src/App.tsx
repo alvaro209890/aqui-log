@@ -1,9 +1,10 @@
 import {
   Bell, Bike, Building2, ChevronDown, CircleDollarSign, Clock3,
   FileChartColumn, Headphones, LayoutDashboard, Map, Menu, PackageCheck,
-  Route, Search, Settings, ShieldCheck, Truck, Users, X,
+  LogOut, Route, Search, Settings, ShieldCheck, Truck, Users, X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { api, type DashboardSummary, type DeliveryRecord, type Session } from './api';
 
 const nav = [
   { label: 'Visao geral', icon: LayoutDashboard, active: true },
@@ -15,15 +16,40 @@ const nav = [
   { label: 'Relatorios', icon: FileChartColumn },
 ];
 
-const deliveries = [
-  { id: '#AQL-1048', route: 'Centro → Savassi', courier: 'Rafael Souza', time: '8 min', status: 'Em rota', tone: 'green' },
-  { id: '#AQL-1047', route: 'Lourdes → Buritis', courier: 'Camila Reis', time: '14 min', status: 'Coletado', tone: 'blue' },
-  { id: '#AQL-1046', route: 'Funcionarios → Serra', courier: 'Sem entregador', time: '2 min', status: 'Aguardando', tone: 'amber' },
-  { id: '#AQL-1045', route: 'Prado → Centro', courier: 'Diego Alves', time: '22 min', status: 'Entregue', tone: 'gray' },
-];
+const emptySummary: DashboardSummary = { deliveriesToday: 0, activeCompanies: 0, availableCouriers: 0, inProgress: 0, revenueCents: 0 };
+
+const statusLabel: Record<string, string> = { REQUESTED: 'Aguardando', OFFERED: 'Ofertada', ACCEPTED: 'Aceita', AT_PICKUP: 'Na coleta', PICKED_UP: 'Coletada', IN_TRANSIT: 'Em rota', DELIVERED: 'Entregue', CANCELED: 'Cancelada' };
+const statusTone: Record<string, string> = { REQUESTED: 'amber', OFFERED: 'amber', ACCEPTED: 'blue', AT_PICKUP: 'blue', PICKED_UP: 'blue', IN_TRANSIT: 'green', DELIVERED: 'gray', CANCELED: 'gray' };
 
 export function App() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [session, setSession] = useState<Session | null>(() => {
+    const stored = localStorage.getItem('aqui-log-session');
+    return stored ? JSON.parse(stored) as Session : null;
+  });
+  const [summary, setSummary] = useState(emptySummary);
+  const [deliveries, setDeliveries] = useState<DeliveryRecord[]>([]);
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    if (!session) return;
+    Promise.all([api.summary(session.accessToken), api.deliveries(session.accessToken)])
+      .then(([nextSummary, nextDeliveries]) => {
+        setSummary(nextSummary);
+        setDeliveries(nextDeliveries.slice(0, 8));
+        setLoadError('');
+      })
+      .catch((error: Error) => setLoadError(error.message));
+  }, [session]);
+
+  if (!session) {
+    return <LoginPage onAuthenticated={(next) => { localStorage.setItem('aqui-log-session', JSON.stringify(next)); setSession(next); }} />;
+  }
+
+  const signOut = () => {
+    localStorage.removeItem('aqui-log-session');
+    setSession(null);
+  };
 
   return (
     <div className="app-shell">
@@ -50,9 +76,9 @@ export function App() {
           <div><strong>Precisa de ajuda?</strong><span>Fale com o suporte</span></div>
         </div>
         <div className="sidebar-user">
-          <span className="avatar">AM</span>
-          <div><strong>Alvaro Martins</strong><span>Administrador</span></div>
-          <ChevronDown size={16} />
+          <span className="avatar">{initials(session.user.name)}</span>
+          <div><strong>{session.user.name}</strong><span>{session.user.role}</span></div>
+          <button className="icon-button logout" onClick={signOut} aria-label="Sair"><LogOut size={16} /></button>
         </div>
       </aside>
       {menuOpen && <button className="scrim" onClick={() => setMenuOpen(false)} aria-label="Fechar menu" />}
@@ -69,24 +95,24 @@ export function App() {
 
         <div className="page">
           <section className="page-heading">
-            <div><p>TERCA-FEIRA, 14 DE JULHO</p><h1>Bom dia, Alvaro.</h1><span>Acompanhe a operacao da Aqui Log em tempo real.</span></div>
+            <div><p>{new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(new Date()).toUpperCase()}</p><h1>Bom dia, {session.user.name.split(' ')[0]}.</h1><span>Acompanhe a operacao da Aqui Log em tempo real.</span></div>
             <button className="primary-button"><Truck size={18} /> Nova entrega</button>
           </section>
 
           <section className="metrics" aria-label="Indicadores da operacao">
-            <Metric icon={<PackageCheck />} tone="mint" label="ENTREGAS HOJE" value="128" detail="↑ 12% vs. ontem" positive />
-            <Metric icon={<Bike />} tone="blue" label="EM ROTA AGORA" value="32" detail="de 46 ativas" />
-            <Metric icon={<Clock3 />} tone="sand" label="TEMPO MEDIO" value="38 min" detail="↓ 4 min esta semana" positive />
-            <Metric icon={<CircleDollarSign />} tone="purple" label="FATURAMENTO" value="R$ 4.860" detail="hoje" />
+            <Metric icon={<PackageCheck />} tone="mint" label="ENTREGAS HOJE" value={String(summary.deliveriesToday)} detail="solicitacoes recebidas" />
+            <Metric icon={<Bike />} tone="blue" label="EM ROTA AGORA" value={String(summary.inProgress)} detail={`${summary.availableCouriers} entregadores disponiveis`} />
+            <Metric icon={<Clock3 />} tone="sand" label="EMPRESAS ATIVAS" value={String(summary.activeCompanies)} detail="cadastros aprovados" />
+            <Metric icon={<CircleDollarSign />} tone="purple" label="FATURAMENTO" value={formatCurrency(summary.revenueCents)} detail="entregas concluidas" />
           </section>
 
           <section className="dashboard-grid">
             <article className="panel operation-map">
-              <PanelHeading title="Operacao ao vivo" subtitle="32 entregadores em movimento" action="Abrir mapa" />
+              <PanelHeading title="Operacao ao vivo" subtitle={`${summary.inProgress} entregas em movimento`} action="Abrir mapa" />
               <div className="map-canvas">
                 <div className="road road-one" /><div className="road road-two" /><div className="road road-three" />
                 <span className="map-pin pin-one"><Bike size={17} /></span><span className="map-pin pin-two"><Bike size={17} /></span><span className="map-pin pin-three"><Truck size={17} /></span>
-                <div className="map-legend"><span><i className="online" /> Em rota 32</span><span><i className="waiting" /> Disponiveis 14</span></div>
+                <div className="map-legend"><span><i className="online" /> Em rota {summary.inProgress}</span><span><i className="waiting" /> Disponiveis {summary.availableCouriers}</span></div>
               </div>
             </article>
 
@@ -103,8 +129,9 @@ export function App() {
             <PanelHeading title="Entregas recentes" subtitle="Ultimas movimentacoes da operacao" action="Ver todas" />
             <div className="table-wrap">
               <table><thead><tr><th>ENTREGA</th><th>ROTA</th><th>ENTREGADOR</th><th>ATUALIZACAO</th><th>STATUS</th><th /></tr></thead>
-                <tbody>{deliveries.map((item) => <tr key={item.id}><td><strong>{item.id}</strong></td><td>{item.route}</td><td>{item.courier}</td><td>{item.time}</td><td><span className={`status ${item.tone}`}><i />{item.status}</span></td><td><button className="more" aria-label={`Opcoes ${item.id}`}>•••</button></td></tr>)}</tbody>
+                <tbody>{deliveries.map((item) => <tr key={item.id}><td><strong>{item.code}</strong></td><td>{item.pickupAddress} → {item.deliveryAddress}</td><td>{item.courierId ? `#${item.courierId.slice(0, 8)}` : 'Sem entregador'}</td><td>{relativeTime(item.createdAt)}</td><td><span className={`status ${statusTone[item.status] ?? 'gray'}`}><i />{statusLabel[item.status] ?? item.status}</span></td><td><button className="more" aria-label={`Opcoes ${item.code}`}>•••</button></td></tr>)}</tbody>
               </table>
+              {!deliveries.length && <p className="empty-state">{loadError || 'Nenhuma entrega cadastrada.'}</p>}
             </div>
           </section>
         </div>
@@ -113,9 +140,31 @@ export function App() {
   );
 }
 
-function Metric({ icon, tone, label, value, detail, positive = false }: { icon: React.ReactNode; tone: string; label: string; value: string; detail: string; positive?: boolean }) {
+function Metric({ icon, tone, label, value, detail, positive = false }: { icon: ReactNode; tone: string; label: string; value: string; detail: string; positive?: boolean }) {
   return <article><span className={`metric-icon ${tone}`}>{icon}</span><div><p>{label}</p><strong>{value}</strong><span className={positive ? 'positive' : ''}>{detail}</span></div></article>;
 }
+
+function LoginPage({ onAuthenticated }: { onAuthenticated: (session: Session) => void }) {
+  const [email, setEmail] = useState('admin@aquilog.com.br');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setLoading(true);
+    setError('');
+    try { onAuthenticated(await api.login(email, password)); }
+    catch (nextError) { setError(nextError instanceof Error ? nextError.message : 'Falha no login'); }
+    finally { setLoading(false); }
+  };
+
+  return <main className="login-page"><section className="login-card"><div className="login-brand"><span className="brand-mark"><Route size={22} /></span><span>AQUI <strong>LOG</strong></span></div><p className="eyebrow">PAINEL OPERACIONAL</p><h1>Entre na sua conta</h1><p className="login-copy">Gerencie empresas, entregadores e entregas em tempo real.</p><form onSubmit={submit}><label>E-mail<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label><label>Senha<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} required /></label>{error && <p className="login-error">{error}</p>}<button className="primary-button login-submit" disabled={loading}>{loading ? 'Entrando...' : 'Entrar no painel'}</button></form><small>Use o administrador criado por <code>pnpm db:admin</code>.</small></section></main>;
+}
+
+function initials(name: string) { return name.split(' ').slice(0, 2).map((part) => part[0]).join('').toUpperCase(); }
+function formatCurrency(cents: number) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100); }
+function relativeTime(date: string) { const minutes = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 60000)); return minutes < 1 ? 'agora' : `${minutes} min`; }
 
 function PanelHeading({ title, subtitle, action }: { title: string; subtitle: string; action?: string }) {
   return <div className="panel-heading"><div><h2>{title}</h2><p>{subtitle}</p></div>{action && <button className="text-button">{action} <span>→</span></button>}</div>;

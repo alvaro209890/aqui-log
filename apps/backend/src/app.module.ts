@@ -1,17 +1,29 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
+import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { CompaniesModule } from './companies/companies.module';
 import { CouriersModule } from './couriers/couriers.module';
 import { Company } from './database/entities/company.entity';
 import { Courier } from './database/entities/courier.entity';
+import { AuditLog } from './database/entities/audit-log.entity';
+import { DeliveryEvent } from './database/entities/delivery-event.entity';
+import { DeliveryOffer } from './database/entities/delivery-offer.entity';
 import { Delivery } from './database/entities/delivery.entity';
+import { Notification } from './database/entities/notification.entity';
+import { Rating } from './database/entities/rating.entity';
 import { User } from './database/entities/user.entity';
+import { WalletTransaction } from './database/entities/wallet-transaction.entity';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { DeliveriesModule } from './deliveries/deliveries.module';
+import { FinanceModule } from './finance/finance.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { TrackingModule } from './tracking/tracking.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -19,6 +31,7 @@ import { TrackingModule } from './tracking/tracking.module';
       isGlobal: true,
       envFilePath: ['../../.env', '.env'],
     }),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -28,18 +41,34 @@ import { TrackingModule } from './tracking/tracking.module';
         username: config.get('DATABASE_USER', 'aqui_log'),
         password: config.get('DATABASE_PASSWORD', 'aqui_log_dev'),
         database: config.get('DATABASE_NAME', 'aqui_log'),
-        entities: [User, Company, Courier, Delivery],
+        entities: [
+          User,
+          Company,
+          Courier,
+          Delivery,
+          DeliveryOffer,
+          DeliveryEvent,
+          Notification,
+          AuditLog,
+          WalletTransaction,
+          Rating,
+        ],
         synchronize: config.get('DATABASE_SYNC', 'false') === 'true',
         logging: config.get('NODE_ENV') === 'development',
       }),
     }),
     AuthModule,
+    AuditModule,
+    NotificationsModule,
+    FinanceModule,
     CompaniesModule,
     CouriersModule,
     DeliveriesModule,
     DashboardModule,
     TrackingModule,
+    UsersModule,
   ],
   controllers: [AppController],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

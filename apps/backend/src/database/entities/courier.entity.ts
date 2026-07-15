@@ -24,6 +24,17 @@ export class Courier {
   @Column({ name: 'vehicle_type', type: 'enum', enum: VehicleType })
   vehicleType!: VehicleType;
 
+  @Column({
+    name: 'vehicle_plate',
+    type: 'varchar',
+    length: 12,
+    nullable: true,
+  })
+  vehiclePlate!: string | null;
+
+  @Column({ name: 'document_urls', type: 'jsonb', default: [] })
+  documentUrls!: string[];
+
   @Column({ type: 'enum', enum: AccountStatus, default: AccountStatus.PENDING })
   status!: AccountStatus;
 
@@ -48,9 +59,9 @@ export class Courier {
   })
   lastLongitude!: number | null;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt!: Date;
 }

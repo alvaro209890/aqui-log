@@ -8,7 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { IsBoolean } from 'class-validator';
+import { IsBoolean, IsLatitude, IsLongitude } from 'class-validator';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -20,6 +20,14 @@ import { CouriersService } from './couriers.service';
 class AvailabilityDto {
   @IsBoolean()
   available!: boolean;
+}
+
+class CourierLocationDto {
+  @IsLatitude()
+  latitude!: number;
+
+  @IsLongitude()
+  longitude!: number;
 }
 
 @ApiTags('Entregadores')
@@ -48,5 +56,18 @@ export class CouriersController {
     @Body() dto: AvailabilityDto,
   ) {
     return this.couriers.setAvailability(request.user.id, dto.available);
+  }
+
+  @Patch('me/location')
+  @Roles(UserRole.COURIER)
+  location(
+    @Req() request: Request & { user: AuthenticatedUser },
+    @Body() dto: CourierLocationDto,
+  ) {
+    return this.couriers.updateLocation(
+      request.user.id,
+      dto.latitude,
+      dto.longitude,
+    );
   }
 }
