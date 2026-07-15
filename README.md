@@ -50,13 +50,28 @@ API: `http://localhost:3000/api/v1`
 
 Swagger: `http://localhost:3000/docs`
 
-Para validar o fluxo completo com a API em execucao:
+## Qualidade
+
+Com o monorepo instalado e, para o smoke, API + Postgres em execucao:
 
 ```bash
+pnpm build
+pnpm lint
+pnpm test
 pnpm smoke
 ```
 
-O teste cria cadastros isolados, aprova empresa/entregador, despacha, aceita, coleta, entrega, avalia e confere historico, carteira, notificacoes e auditoria.
+O smoke cria cadastros isolados, aprova empresa/entregador, despacha, aceita, avanca o ciclo de estados, avalia e confere historico, carteira, notificacoes e auditoria. Sucesso imprime `Smoke test aprovado: ...`.
+
+Aplicativos e pacote Dart:
+
+```bash
+cd apps/company_app && flutter analyze && flutter test
+cd apps/courier_app && flutter analyze && flutter test
+cd packages/aqui_log_core && dart analyze && dart test
+```
+
+Detalhes de ambiente, porta do Postgres e migrations em [Desenvolvimento](docs/DEVELOPMENT.md). A [matriz do MVP](docs/MVP_COVERAGE.md) separa o que e funcional do que permanece planejado.
 
 ## Aplicativos
 

@@ -39,10 +39,20 @@ pnpm lint
 pnpm test
 pnpm smoke                 # exige API e banco em execucao
 
-cd apps/company_app && flutter analyze && flutter test
-cd apps/courier_app && flutter analyze && flutter test
-cd packages/aqui_log_core && dart analyze && dart test
+cd apps/company_app && flutter pub get && flutter analyze && flutter test
+cd apps/courier_app && flutter pub get && flutter analyze && flutter test
+cd packages/aqui_log_core && dart pub get && dart analyze && dart test
 ```
+
+### Smoke ponta a ponta
+
+1. Suba Postgres/Redis (`docker compose --env-file .env -f infra/docker-compose.yml up -d`).
+2. Aplique `pnpm db:migrate` e `pnpm db:admin`.
+3. Inicie a API real (`pnpm --filter backend start` ou `start:prod` apos `pnpm build`).
+4. Confirme `GET http://localhost:3000/api/v1/health` com `status: ok`.
+5. Execute `pnpm smoke` (idealmente duas vezes). A saida deve conter `Smoke test aprovado:` e sair com codigo 0.
+
+O script em `scripts/smoke-test.sh` cobre registro, aprovacao, despacho, aceite, ciclo de status, historico, avaliacao, carteira, notificacoes e auditoria. Redis esta provisionado no Compose, mas o despacho do MVP ainda nao depende dele em runtime.
 
 ## Banco
 
