@@ -1,0 +1,16 @@
+{
+  "name": "aqui-log",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plataforma inteligente de logistica urbana",
+  "packageManager": "pnpm@10.34.4",
+  "scripts": {
+    "dev": "pnpm --parallel --filter backend --filter dashboard dev",
+    "dev:api": "pnpm --filter backend start:dev",
+    "dev:dashboard": "pnpm --filter dashboard dev",
+    "build": "pnpm --filter backend build && pnpm --filter dashboard build",
+    "test": "pnpm --filter backend test && pnpm --filter dashboard build",
+    "lint": "pnpm --filter backend lint:check && pnpm --filter dashboard lint",
+    "db:admin": "pnpm --filter backend seed:admin"
+  }
+}

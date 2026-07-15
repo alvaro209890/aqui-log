@@ -1,0 +1,29 @@
+# Node
+node_modules/
+dist/
+coverage/
+.vite/
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+**/ios/Flutter/ephemeral/
+**/ios/Pods/
+**/android/.gradle/
+**/android/local.properties
+
+# Environment and editors
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+*.iml
+*.log
+.DS_Store
+
+# Local data
+data/

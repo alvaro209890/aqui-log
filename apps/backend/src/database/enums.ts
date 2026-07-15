@@ -1,0 +1,33 @@
+export enum UserRole {
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  ADMIN = 'ADMIN',
+  COMPANY_OWNER = 'COMPANY_OWNER',
+  COMPANY_USER = 'COMPANY_USER',
+  COURIER = 'COURIER',
+  SUPPORT = 'SUPPORT',
+}
+
+export enum AccountStatus {
+  PENDING = 'PENDING',
+  ACTIVE = 'ACTIVE',
+  SUSPENDED = 'SUSPENDED',
+  REJECTED = 'REJECTED',
+}
+
+export enum DeliveryStatus {
+  REQUESTED = 'REQUESTED',
+  OFFERED = 'OFFERED',
+  ACCEPTED = 'ACCEPTED',
+  AT_PICKUP = 'AT_PICKUP',
+  PICKED_UP = 'PICKED_UP',
+  IN_TRANSIT = 'IN_TRANSIT',
+  DELIVERED = 'DELIVERED',
+  CANCELED = 'CANCELED',
+}
+
+export enum VehicleType {
+  MOTORCYCLE = 'MOTORCYCLE',
+  CAR = 'CAR',
+  BICYCLE = 'BICYCLE',
+  VAN = 'VAN',
+}
