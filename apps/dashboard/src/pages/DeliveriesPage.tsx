@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { api, type DeliveryRecord } from '../api';
+import { PaginationBar } from '../components/PaginationBar';
 import { StatusBadge } from '../components/StatusBadge';
 
 const statuses = [
@@ -22,8 +23,13 @@ export function DeliveriesPage({ token }: { token: string }) {
   const [company, setCompany] = useState('');
   const [courier, setCourier] = useState('');
   const [date, setDate] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [assignId, setAssignId] = useState<string | null>(null);
+  const [courierId, setCourierId] = useState('');
 
-  const load = () => {
+  const load = (p = page) => {
     setLoading(true);
     api
       .deliveries(token, {
@@ -31,16 +37,33 @@ export function DeliveriesPage({ token }: { token: string }) {
         company: company || undefined,
         courier: courier || undefined,
         date: date || undefined,
+        page: p,
+        limit: 20,
       })
-      .then(setItems)
+      .then((res) => {
+        setItems(res.items);
+        setPage(res.page);
+        setTotalPages(res.totalPages);
+        setTotal(res.total);
+      })
       .catch((err: Error) => toast.error(err.message))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    load();
+    load(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  const act = async (label: string, fn: () => Promise<unknown>) => {
+    try {
+      await fn();
+      toast.success(label);
+      load(page);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha na acao');
+    }
+  };
 
   return (
     <div className="page">
@@ -48,7 +71,7 @@ export function DeliveriesPage({ token }: { token: string }) {
         <div>
           <p>OPERACAO</p>
           <h1>Entregas</h1>
-          <span>Filtre e acompanhe todas as entregas da plataforma.</span>
+          <span>Filtre, despache, atribua e cancele entregas.</span>
         </div>
       </section>
 
@@ -87,7 +110,11 @@ export function DeliveriesPage({ token }: { token: string }) {
             onChange={(e) => setDate(e.target.value)}
           />
         </label>
-        <button className="primary-button" type="button" onClick={load}>
+        <button
+          className="primary-button"
+          type="button"
+          onClick={() => load(1)}
+        >
           Aplicar filtros
         </button>
       </div>
@@ -111,6 +138,7 @@ export function DeliveriesPage({ token }: { token: string }) {
                   <th>ENTREGADOR</th>
                   <th>STATUS</th>
                   <th>CRIADA</th>
+                  <th>ACOES</th>
                 </tr>
               </thead>
               <tbody>
@@ -129,6 +157,48 @@ export function DeliveriesPage({ token }: { token: string }) {
                     <td>
                       {new Date(item.createdAt).toLocaleString('pt-BR')}
                     </td>
+                    <td className="row-actions">
+                      {item.status === 'REQUESTED' && (
+                        <button
+                          className="text-button"
+                          type="button"
+                          onClick={() =>
+                            act('Despachado', () =>
+                              api.dispatchDelivery(token, item.id),
+                            )
+                          }
+                        >
+                          Despachar
+                        </button>
+                      )}
+                      {['REQUESTED', 'OFFERED', 'ACCEPTED', 'AT_PICKUP'].includes(
+                        item.status,
+                      ) && (
+                        <button
+                          className="text-button"
+                          type="button"
+                          onClick={() => {
+                            setAssignId(item.id);
+                            setCourierId('');
+                          }}
+                        >
+                          Assign
+                        </button>
+                      )}
+                      {!['DELIVERED', 'CANCELED'].includes(item.status) && (
+                        <button
+                          className="text-button danger"
+                          type="button"
+                          onClick={() =>
+                            act('Cancelada', () =>
+                              api.cancelDelivery(token, item.id),
+                            )
+                          }
+                        >
+                          Cancelar
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -138,7 +208,51 @@ export function DeliveriesPage({ token }: { token: string }) {
             <p className="empty-state">Nenhuma entrega com esses filtros.</p>
           )}
         </div>
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          onChange={(p) => load(p)}
+        />
       </section>
+
+      {assignId && (
+        <div className="modal-scrim">
+          <div className="modal panel">
+            <h3>Atribuir entregador</h3>
+            <label>
+              Courier ID
+              <input
+                value={courierId}
+                onChange={(e) => setCourierId(e.target.value)}
+                placeholder="UUID do courier"
+              />
+            </label>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => setAssignId(null)}
+              >
+                Fechar
+              </button>
+              <button
+                type="button"
+                className="primary-button"
+                disabled={!courierId}
+                onClick={async () => {
+                  await act('Atribuido', () =>
+                    api.assignDelivery(token, assignId, courierId),
+                  );
+                  setAssignId(null);
+                }}
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

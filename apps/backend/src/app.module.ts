@@ -31,6 +31,7 @@ import { MailModule } from './mail/mail.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PricingModule } from './pricing/pricing.module';
 import { RedisModule } from './redis/redis.module';
+import { SettingsModule } from './settings/settings.module';
 import { StorageModule } from './storage/storage.module';
 import { TrackingModule } from './tracking/tracking.module';
 import { UsersModule } from './users/users.module';
@@ -72,13 +73,14 @@ import { UsersModule } from './users/users.module';
       }),
     }),
     RedisModule,
-    PricingModule,
     MailModule,
+    AuditModule,
+    SettingsModule,
+    PricingModule,
     StorageModule,
     GeoModule,
     DevicesModule,
     AuthModule,
-    AuditModule,
     NotificationsModule,
     FinanceModule,
     CompaniesModule,

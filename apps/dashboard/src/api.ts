@@ -2,6 +2,7 @@ const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api/v1';
 
 export interface Session {
   accessToken: string;
+  refreshToken?: string;
   user: {
     id: string;
     name: string;
@@ -115,11 +116,60 @@ export interface FinanceSummary {
   netCents?: number;
 }
 
+export interface UserRecord {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  companyId: string | null;
+  createdAt: string;
+}
+
+export interface AuditRecord {
+  id: string;
+  actorId: string | null;
+  action: string;
+  resourceType: string;
+  resourceId: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface PlatformSettings {
+  offerTtlSeconds: number;
+  pricingBaseFeeCents: number;
+  pricingPerKmCents: number;
+  pricingPlatformFeePercent: number;
+  pricingMinFeeCents: number;
+}
+
+export interface ReportRange {
+  from: string;
+  to: string;
+  timezone: string;
+  created: number;
+  delivered: number;
+  canceled: number;
+  revenueCents: number;
+  byStatus: Array<{ status: string; count: number }>;
+}
+
+export type PageResult<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
 export type DeliveryFilters = {
   status?: string;
   company?: string;
   courier?: string;
   date?: string;
+  page?: number;
+  limit?: number;
 };
 
 async function request<T>(
@@ -144,16 +194,30 @@ async function request<T>(
       : data.message;
     throw new Error(message ?? 'Nao foi possivel concluir a operacao');
   }
+  if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }
 
-function qs(params: Record<string, string | undefined>) {
+function qs(params: Record<string, string | number | undefined>) {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
-    if (value) search.set(key, value);
+    if (value !== undefined && value !== '') search.set(key, String(value));
   }
   const s = search.toString();
   return s ? `?${s}` : '';
+}
+
+function asPage<T>(data: T[] | PageResult<T>): PageResult<T> {
+  if (Array.isArray(data)) {
+    return {
+      items: data,
+      total: data.length,
+      page: 1,
+      limit: data.length || 20,
+      totalPages: 1,
+    };
+  }
+  return data;
 }
 
 export const api = {
@@ -180,15 +244,60 @@ export const api = {
     ),
   performance: (token: string) =>
     request<PerformanceResponse>('/dashboard/performance', {}, token),
-  deliveries: (token: string, filters: DeliveryFilters = {}) =>
-    request<DeliveryRecord[]>(
-      `/deliveries${qs(filters)}`,
+  reportRange: (token: string, from: string, to: string) =>
+    request<ReportRange>(
+      `/dashboard/reports${qs({ from, to })}`,
       {},
       token,
     ),
-  companies: (token: string) =>
-    request<CompanyRecord[]>('/companies', {}, token),
-  couriers: (token: string) => request<CourierRecord[]>('/couriers', {}, token),
+  deliveries: async (token: string, filters: DeliveryFilters = {}) => {
+    const data = await request<DeliveryRecord[] | PageResult<DeliveryRecord>>(
+      `/deliveries${qs(filters)}`,
+      {},
+      token,
+    );
+    return asPage(data);
+  },
+  companies: async (token: string, page = 1, limit = 20) =>
+    asPage(
+      await request<CompanyRecord[] | PageResult<CompanyRecord>>(
+        `/companies${qs({ page, limit })}`,
+        {},
+        token,
+      ),
+    ),
+  couriers: async (token: string, page = 1, limit = 20) =>
+    asPage(
+      await request<CourierRecord[] | PageResult<CourierRecord>>(
+        `/couriers${qs({ page, limit })}`,
+        {},
+        token,
+      ),
+    ),
+  users: async (token: string, page = 1, limit = 20) =>
+    asPage(
+      await request<UserRecord[] | PageResult<UserRecord>>(
+        `/users${qs({ page, limit })}`,
+        {},
+        token,
+      ),
+    ),
+  audit: async (token: string, page = 1, limit = 50) =>
+    asPage(
+      await request<AuditRecord[] | PageResult<AuditRecord>>(
+        `/audit${qs({ page, limit })}`,
+        {},
+        token,
+      ),
+    ),
+  settings: (token: string) =>
+    request<PlatformSettings>('/settings', {}, token),
+  updateSettings: (token: string, body: Partial<PlatformSettings>) =>
+    request<PlatformSettings>(
+      '/settings',
+      { method: 'PATCH', body: JSON.stringify(body) },
+      token,
+    ),
   financeSummary: (token: string) =>
     request<FinanceSummary>('/finance/summary', {}, token),
   ratings: (token: string) =>
@@ -207,10 +316,55 @@ export const api = {
       { method: 'PATCH' },
       token,
     ),
+  rejectCompany: (token: string, id: string) =>
+    request<CompanyRecord>(
+      `/companies/${id}/reject`,
+      { method: 'PATCH' },
+      token,
+    ),
+  suspendCompany: (token: string, id: string) =>
+    request<CompanyRecord>(
+      `/companies/${id}/suspend`,
+      { method: 'PATCH' },
+      token,
+    ),
   approveCourier: (token: string, id: string) =>
     request<CourierRecord>(
       `/couriers/${id}/approve`,
       { method: 'PATCH' },
+      token,
+    ),
+  rejectCourier: (token: string, id: string) =>
+    request<CourierRecord>(
+      `/couriers/${id}/reject`,
+      { method: 'PATCH' },
+      token,
+    ),
+  suspendCourier: (token: string, id: string) =>
+    request<CourierRecord>(
+      `/couriers/${id}/suspend`,
+      { method: 'PATCH' },
+      token,
+    ),
+  dispatchDelivery: (token: string, id: string) =>
+    request<{ delivery: DeliveryRecord }>(
+      `/deliveries/${id}/dispatch`,
+      { method: 'POST' },
+      token,
+    ),
+  assignDelivery: (token: string, id: string, courierId: string) =>
+    request<unknown>(
+      `/deliveries/${id}/assign`,
+      { method: 'PATCH', body: JSON.stringify({ courierId }) },
+      token,
+    ),
+  cancelDelivery: (token: string, id: string) =>
+    request<DeliveryRecord>(
+      `/deliveries/${id}/status`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'CANCELED', note: 'Cancelado no painel' }),
+      },
       token,
     ),
 };

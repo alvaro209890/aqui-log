@@ -26,7 +26,9 @@ import { FinanceService } from '../finance/finance.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PricingService } from '../pricing/pricing.service';
 import { RedisService } from '../redis/redis.module';
+import { SettingsService } from '../settings/settings.module';
 import { StorageService } from '../storage/storage.module';
+import { parsePagination, toPageResult } from '../common/pagination';
 import {
   OFFER_ACCEPT_LOCK_TTL_SECONDS,
   offerAcceptLockKey,
@@ -57,12 +59,13 @@ export class DeliveriesService {
     private readonly redis: RedisService,
     private readonly config: ConfigService,
     private readonly storage: StorageService,
+    private readonly settings: SettingsService,
   ) {}
 
   async create(dto: CreateDeliveryDto, user: AuthenticatedUser) {
     if (!user.companyId)
       throw new ForbiddenException('Usuario sem empresa vinculada');
-    const quote = this.pricing.quote({
+    const quote = await this.pricing.quoteAsync({
       pickupLatitude: dto.pickupLatitude,
       pickupLongitude: dto.pickupLongitude,
       deliveryLatitude: dto.deliveryLatitude,
@@ -111,6 +114,8 @@ export class DeliveriesService {
       company?: string;
       courier?: string;
       date?: string;
+      page?: string;
+      limit?: string;
     } = {},
   ) {
     const qb = this.deliveries
@@ -155,6 +160,13 @@ export class DeliveriesService {
     if (filters.date) {
       const day = filters.date.slice(0, 10);
       qb.andWhere('delivery.created_at::date = :day::date', { day });
+    }
+
+    if (filters.page != null || filters.limit != null) {
+      const p = parsePagination(filters.page, filters.limit);
+      qb.skip(p.skip).take(p.limit);
+      const [items, total] = await qb.getManyAndCount();
+      return toPageResult(items, total, p.page, p.limit);
     }
 
     return qb.getMany();
@@ -483,7 +495,8 @@ export class DeliveriesService {
     note: string,
   ) {
     assertDeliveryTransition(delivery.status, DeliveryStatus.OFFERED);
-    const ttlSeconds = Number(this.config.get('OFFER_TTL_SECONDS') ?? 120);
+    const platform = await this.settings.get();
+    const ttlSeconds = platform.offerTtlSeconds;
     const offer = await this.offers.save(
       this.offers.create({
         deliveryId: delivery.id,

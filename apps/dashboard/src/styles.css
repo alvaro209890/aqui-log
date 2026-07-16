@@ -99,6 +99,20 @@ button { cursor: pointer; }
 .notification { position: relative; }
 .notification-count { position: absolute; top: -6px; right: -8px; min-width: 16px; height: 16px; border-radius: 20px; background: #e17b59; color: white; font-size: 9px; font-weight: 700; display: grid; place-items: center; padding: 0 4px; }
 .muted { color: #81908a; font-size: 10px; }
+.pagination-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; border-top: 1px solid #edf0ed; }
+.pagination-actions { display: flex; gap: 10px; }
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.text-button.danger { color: #c45b3e; }
+.settings-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 20px; }
+.settings-form label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #5d6f68; font-weight: 600; }
+.settings-form input { height: 40px; border: 1px solid #dce4df; border-radius: 8px; padding: 0 12px; }
+.settings-form .primary-button { grid-column: 1 / -1; width: fit-content; }
+.modal-scrim { position: fixed; inset: 0; background: #0a1e1980; display: grid; place-items: center; z-index: 40; }
+.modal { width: min(420px, 92vw); padding: 20px; }
+.modal h3 { margin: 0 0 12px; }
+.modal label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+.modal input { height: 40px; border: 1px solid #dce4df; border-radius: 8px; padding: 0 12px; margin-top: 4px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 .alerts-list { list-style: none; margin: 0; padding: 0; }
 .alerts-list li { display: flex; justify-content: space-between; gap: 12px; padding: 16px 20px; border-top: 1px solid #edf0ed; }
 .alerts-list li:first-child { border-top: 0; }

@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -18,8 +26,12 @@ export class UsersController {
 
   @Get()
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COMPANY_OWNER)
-  findAll(@Req() req: Request & { user: AuthenticatedUser }) {
-    return this.users.findAll(req.user);
+  findAll(
+    @Req() req: Request & { user: AuthenticatedUser },
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.users.findAll(req.user, page, limit);
   }
 
   @Post()

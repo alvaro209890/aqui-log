@@ -62,7 +62,7 @@ export function OverviewPage({ token, userName }: { token: string; userName: str
       api.deliveriesByHour(token),
       api.deliveriesByStatus(token),
       api.performance(token),
-      api.deliveries(token),
+      api.deliveries(token, { page: 1, limit: 8 }),
     ])
       .then(([t, h, s, p, d]) => {
         if (cancelled) return;
@@ -70,7 +70,7 @@ export function OverviewPage({ token, userName }: { token: string; userName: str
         setHourData(mapHourSeries(h));
         setStatusData(mapStatusSeries(s));
         setPerformance(mapPerformance(p as PerformanceResponse));
-        setDeliveries(d.slice(0, 8));
+        setDeliveries(d.items.slice(0, 8));
       })
       .catch((err: Error) => toast.error(err.message))
       .finally(() => {

@@ -102,11 +102,11 @@ Portas locais: API **3001**, Postgres **5433**, Redis **6379**, Vite **5173**.
 
 ### Sprint 3 — Dashboard gestão + qualidade (quando A+B estáveis)
 
-- Páginas reais: Usuários, Auditoria, Configurações (TTL oferta, taxas pricing)  
-- Ações em entregas: despachar, cancelar, assign  
-- Empresas/couriers: reject/suspend  
-- Relatórios com `from`/`to` (timezone SP)  
-- Paginação nas listagens  
+- [x] Páginas reais: Usuários, Auditoria, Configurações (TTL oferta, taxas pricing)  
+- [x] Ações em entregas: despachar, cancelar, assign  
+- [x] Empresas/couriers: reject/suspend  
+- [x] Relatórios com `from`/`to` (timezone SP)  
+- [x] Paginação nas listagens  
 
 ### Sprint 4 — Produção Firebase + endurecimento
 

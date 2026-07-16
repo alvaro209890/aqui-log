@@ -38,4 +38,10 @@ export class DashboardController {
   performance() {
     return this.dashboard.performance();
   }
+
+  @Get('reports')
+  reports(@Query('from') from?: string, @Query('to') to?: string) {
+    const today = new Date().toISOString().slice(0, 10);
+    return this.dashboard.reportRange(from ?? today, to ?? today);
+  }
 }

@@ -8,8 +8,8 @@ export function MapPage({ token }: { token: string }) {
 
   useEffect(() => {
     api
-      .deliveries(token)
-      .then((items) => setDeliveries(items.slice(0, 50)))
+      .deliveries(token, { page: 1, limit: 50 })
+      .then((res) => setDeliveries(res.items.slice(0, 50)))
       .catch((err: Error) => toast.error(err.message));
   }, [token]);
 

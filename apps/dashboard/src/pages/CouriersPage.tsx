@@ -1,32 +1,42 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { api, type CourierRecord } from '../api';
+import { PaginationBar } from '../components/PaginationBar';
 import { StatusBadge } from '../components/StatusBadge';
 
 export function CouriersPage({ token }: { token: string }) {
   const [items, setItems] = useState<CourierRecord[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const load = () => {
+  const load = (p = page) => {
     setLoading(true);
     api
-      .couriers(token)
-      .then(setItems)
+      .couriers(token, p, 20)
+      .then((res) => {
+        setItems(res.items);
+        setPage(res.page);
+        setTotalPages(res.totalPages);
+        setTotal(res.total);
+      })
       .catch((err: Error) => toast.error(err.message))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    load();
+    load(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  const approve = async (id: string) => {
+  const act = async (label: string, fn: () => Promise<unknown>) => {
     try {
-      await api.approveCourier(token, id);
-      toast.success('Entregador aprovado');
-      load();
+      await fn();
+      toast.success(label);
+      load(page);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Falha ao aprovar');
+      toast.error(err instanceof Error ? err.message : 'Falha');
     }
   };
 
@@ -56,7 +66,7 @@ export function CouriersPage({ token }: { token: string }) {
                   <th>PLACA</th>
                   <th>STATUS</th>
                   <th>DISPONIVEL</th>
-                  <th />
+                  <th>ACOES</th>
                 </tr>
               </thead>
               <tbody>
@@ -71,14 +81,57 @@ export function CouriersPage({ token }: { token: string }) {
                       <StatusBadge status={item.status} />
                     </td>
                     <td>{item.available ? 'Sim' : 'Nao'}</td>
-                    <td>
+                    <td className="row-actions">
                       {item.status === 'PENDING' && (
+                        <>
+                          <button
+                            className="text-button"
+                            type="button"
+                            onClick={() =>
+                              act('Entregador aprovado', () =>
+                                api.approveCourier(token, item.id),
+                              )
+                            }
+                          >
+                            Aprovar
+                          </button>
+                          <button
+                            className="text-button danger"
+                            type="button"
+                            onClick={() =>
+                              act('Entregador recusado', () =>
+                                api.rejectCourier(token, item.id),
+                              )
+                            }
+                          >
+                            Recusar
+                          </button>
+                        </>
+                      )}
+                      {item.status === 'ACTIVE' && (
+                        <button
+                          className="text-button danger"
+                          type="button"
+                          onClick={() =>
+                            act('Entregador suspenso', () =>
+                              api.suspendCourier(token, item.id),
+                            )
+                          }
+                        >
+                          Suspender
+                        </button>
+                      )}
+                      {item.status === 'SUSPENDED' && (
                         <button
                           className="text-button"
                           type="button"
-                          onClick={() => approve(item.id)}
+                          onClick={() =>
+                            act('Entregador reativado', () =>
+                              api.approveCourier(token, item.id),
+                            )
+                          }
                         >
-                          Aprovar
+                          Reativar
                         </button>
                       )}
                     </td>
@@ -91,6 +144,12 @@ export function CouriersPage({ token }: { token: string }) {
             <p className="empty-state">Nenhum entregador cadastrado.</p>
           )}
         </div>
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          onChange={(p) => load(p)}
+        />
       </section>
     </div>
   );

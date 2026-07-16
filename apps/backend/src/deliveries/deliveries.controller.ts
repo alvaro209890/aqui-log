@@ -47,12 +47,16 @@ export class DeliveriesController {
     @Query('company') company?: string,
     @Query('courier') courier?: string,
     @Query('date') date?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     return this.deliveries.findAll(req.user, {
       status,
       company,
       courier,
       date,
+      page,
+      limit,
     });
   }
 

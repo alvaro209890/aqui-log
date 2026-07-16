@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Patch,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -39,14 +40,35 @@ export class CouriersController {
 
   @Get()
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  findAll() {
-    return this.couriers.findAll();
+  findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.couriers.findAll(page, limit);
   }
 
   @Patch(':id/approve')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  approve(@Param('id') id: string) {
-    return this.couriers.approve(id);
+  approve(
+    @Param('id') id: string,
+    @Req() request: Request & { user: AuthenticatedUser },
+  ) {
+    return this.couriers.approve(id, request.user.id);
+  }
+
+  @Patch(':id/reject')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  reject(
+    @Param('id') id: string,
+    @Req() request: Request & { user: AuthenticatedUser },
+  ) {
+    return this.couriers.reject(id, request.user.id);
+  }
+
+  @Patch(':id/suspend')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  suspend(
+    @Param('id') id: string,
+    @Req() request: Request & { user: AuthenticatedUser },
+  ) {
+    return this.couriers.suspend(id, request.user.id);
   }
 
   @Patch('me/availability')

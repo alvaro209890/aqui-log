@@ -1,32 +1,42 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { api, type CompanyRecord } from '../api';
+import { PaginationBar } from '../components/PaginationBar';
 import { StatusBadge } from '../components/StatusBadge';
 
 export function CompaniesPage({ token }: { token: string }) {
   const [items, setItems] = useState<CompanyRecord[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const load = () => {
+  const load = (p = page) => {
     setLoading(true);
     api
-      .companies(token)
-      .then(setItems)
+      .companies(token, p, 20)
+      .then((res) => {
+        setItems(res.items);
+        setPage(res.page);
+        setTotalPages(res.totalPages);
+        setTotal(res.total);
+      })
       .catch((err: Error) => toast.error(err.message))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    load();
+    load(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  const approve = async (id: string) => {
+  const act = async (label: string, fn: () => Promise<unknown>) => {
     try {
-      await api.approveCompany(token, id);
-      toast.success('Empresa aprovada');
-      load();
+      await fn();
+      toast.success(label);
+      load(page);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Falha ao aprovar');
+      toast.error(err instanceof Error ? err.message : 'Falha');
     }
   };
 
@@ -36,7 +46,7 @@ export function CompaniesPage({ token }: { token: string }) {
         <div>
           <p>CADASTROS</p>
           <h1>Empresas</h1>
-          <span>Aprove e acompanhe empresas parceiras.</span>
+          <span>Aprovar, recusar ou suspender empresas parceiras.</span>
         </div>
       </section>
       <section className="panel">
@@ -54,28 +64,73 @@ export function CompaniesPage({ token }: { token: string }) {
                   <th>NOME</th>
                   <th>DOCUMENTO</th>
                   <th>STATUS</th>
-                  <th />
+                  <th>ACOES</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((item) => (
                   <tr key={item.id}>
                     <td>
-                      <strong>{item.tradeName ?? item.legalName ?? item.id}</strong>
+                      <strong>
+                        {item.tradeName ?? item.legalName ?? item.id}
+                      </strong>
                       <div className="muted">{item.legalName}</div>
                     </td>
                     <td>{item.document ?? '—'}</td>
                     <td>
                       <StatusBadge status={item.status} />
                     </td>
-                    <td>
+                    <td className="row-actions">
                       {item.status === 'PENDING' && (
+                        <>
+                          <button
+                            className="text-button"
+                            type="button"
+                            onClick={() =>
+                              act('Empresa aprovada', () =>
+                                api.approveCompany(token, item.id),
+                              )
+                            }
+                          >
+                            Aprovar
+                          </button>
+                          <button
+                            className="text-button danger"
+                            type="button"
+                            onClick={() =>
+                              act('Empresa recusada', () =>
+                                api.rejectCompany(token, item.id),
+                              )
+                            }
+                          >
+                            Recusar
+                          </button>
+                        </>
+                      )}
+                      {item.status === 'ACTIVE' && (
+                        <button
+                          className="text-button danger"
+                          type="button"
+                          onClick={() =>
+                            act('Empresa suspensa', () =>
+                              api.suspendCompany(token, item.id),
+                            )
+                          }
+                        >
+                          Suspender
+                        </button>
+                      )}
+                      {item.status === 'SUSPENDED' && (
                         <button
                           className="text-button"
                           type="button"
-                          onClick={() => approve(item.id)}
+                          onClick={() =>
+                            act('Empresa reativada', () =>
+                              api.approveCompany(token, item.id),
+                            )
+                          }
                         >
-                          Aprovar
+                          Reativar
                         </button>
                       )}
                     </td>
@@ -88,6 +143,12 @@ export function CompaniesPage({ token }: { token: string }) {
             <p className="empty-state">Nenhuma empresa cadastrada.</p>
           )}
         </div>
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          onChange={(p) => load(p)}
+        />
       </section>
     </div>
   );

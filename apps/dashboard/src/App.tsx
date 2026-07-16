@@ -6,6 +6,7 @@ import { api, type Session } from './api';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { AlertsPage } from './pages/AlertsPage';
+import { AuditPage } from './pages/AuditPage';
 import { CompaniesPage } from './pages/CompaniesPage';
 import { CouriersPage } from './pages/CouriersPage';
 import { DeliveriesPage } from './pages/DeliveriesPage';
@@ -14,6 +15,8 @@ import { MapPage } from './pages/MapPage';
 import { OverviewPage } from './pages/OverviewPage';
 import { RatingsPage } from './pages/RatingsPage';
 import { ReportsPage } from './pages/ReportsPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { UsersPage } from './pages/UsersPage';
 
 export function App() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -99,6 +102,9 @@ export function App() {
           <Route path="/finance" element={<FinancePage token={token} />} />
           <Route path="/ratings" element={<RatingsPage token={token} />} />
           <Route path="/reports" element={<ReportsPage token={token} />} />
+          <Route path="/users" element={<UsersPage token={token} />} />
+          <Route path="/audit" element={<AuditPage token={token} />} />
+          <Route path="/settings" element={<SettingsPage token={token} />} />
           <Route
             path="/alerts"
             element={

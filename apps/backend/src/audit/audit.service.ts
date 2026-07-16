@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { parsePagination, toPageResult } from '../common/pagination';
 import { AuditLog } from '../database/entities/audit-log.entity';
 
 export interface AuditEntry {
@@ -34,5 +35,19 @@ export class AuditService {
       order: { createdAt: 'DESC' },
       take: Math.min(limit, 200),
     });
+  }
+
+  async findPage(page?: string, limit?: string) {
+    const p = parsePagination(page, limit, {
+      page: 1,
+      limit: 50,
+      maxLimit: 200,
+    });
+    const [items, total] = await this.logs.findAndCount({
+      order: { createdAt: 'DESC' },
+      skip: p.skip,
+      take: p.limit,
+    });
+    return toPageResult(items, total, p.page, p.limit);
   }
 }

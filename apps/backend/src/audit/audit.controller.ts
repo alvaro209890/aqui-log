@@ -15,7 +15,8 @@ export class AuditController {
   constructor(private readonly audit: AuditService) {}
 
   @Get()
-  findRecent(@Query('limit') limit?: string) {
+  findRecent(@Query('limit') limit?: string, @Query('page') page?: string) {
+    if (page != null) return this.audit.findPage(page, limit);
     return this.audit.findRecent(limit ? Number(limit) : 100);
   }
 }

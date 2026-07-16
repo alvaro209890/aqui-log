@@ -237,4 +237,77 @@ export class DashboardService {
         avgRow?.avg == null ? null : Math.round(Number(avgRow.avg) * 10) / 10,
     };
   }
+
+  /**
+   * Operational report for inclusive local calendar range [from, to]
+   * (YYYY-MM-DD in APP_TIMEZONE / America/Sao_Paulo).
+   */
+  async reportRange(from: string, to: string) {
+    const fromDay = from.slice(0, 10);
+    const toDay = to.slice(0, 10);
+    const fromWindow = resolveLocalDayWindow(fromDay);
+    const toWindow = resolveLocalDayWindow(toDay);
+    const start = fromWindow.start;
+    const endExclusive = toWindow.end;
+
+    const [created, delivered, canceled, revenue, statusRows] =
+      await Promise.all([
+        this.deliveries
+          .createQueryBuilder('d')
+          .where('d.createdAt >= :start AND d.createdAt < :end', {
+            start,
+            end: endExclusive,
+          })
+          .getCount(),
+        this.deliveries
+          .createQueryBuilder('d')
+          .where('d.deliveredAt >= :start AND d.deliveredAt < :end', {
+            start,
+            end: endExclusive,
+          })
+          .andWhere('d.status = :st', { st: DeliveryStatus.DELIVERED })
+          .getCount(),
+        this.deliveries
+          .createQueryBuilder('d')
+          .where('d.canceledAt >= :start AND d.canceledAt < :end', {
+            start,
+            end: endExclusive,
+          })
+          .andWhere('d.status = :st', { st: DeliveryStatus.CANCELED })
+          .getCount(),
+        this.deliveries
+          .createQueryBuilder('d')
+          .select('COALESCE(SUM(d.priceCents), 0)', 'total')
+          .where('d.deliveredAt >= :start AND d.deliveredAt < :end', {
+            start,
+            end: endExclusive,
+          })
+          .andWhere('d.status = :st', { st: DeliveryStatus.DELIVERED })
+          .getRawOne<{ total: string }>(),
+        this.deliveries
+          .createQueryBuilder('d')
+          .select('d.status', 'status')
+          .addSelect('COUNT(*)', 'count')
+          .where('d.createdAt >= :start AND d.createdAt < :end', {
+            start,
+            end: endExclusive,
+          })
+          .groupBy('d.status')
+          .getRawMany<{ status: string; count: string }>(),
+      ]);
+
+    return {
+      from: fromDay,
+      to: toDay,
+      timezone: process.env.APP_TIMEZONE ?? 'America/Sao_Paulo',
+      created,
+      delivered,
+      canceled,
+      revenueCents: Number(revenue?.total ?? 0),
+      byStatus: statusRows.map((r) => ({
+        status: r.status,
+        count: Number(r.count),
+      })),
+    };
+  }
 }

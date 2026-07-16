@@ -32,9 +32,9 @@ const ops = [
 ];
 
 const management = [
-  { to: '/companies', label: 'Usuarios', icon: Users },
-  { to: '/alerts', label: 'Auditoria', icon: ShieldCheck },
-  { to: '/reports', label: 'Configuracoes', icon: Settings },
+  { to: '/users', label: 'Usuarios', icon: Users },
+  { to: '/audit', label: 'Auditoria', icon: ShieldCheck },
+  { to: '/settings', label: 'Configuracoes', icon: Settings },
 ];
 
 function initials(name: string) {
