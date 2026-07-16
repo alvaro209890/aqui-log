@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { api, type DashboardSummary, type DeliveryRecord, type Session } from './api';
+import { LiveMap } from './LiveMap';
 
 const nav = [
   { label: 'Visao geral', icon: LayoutDashboard, active: true },
@@ -110,9 +111,7 @@ export function App() {
             <article className="panel operation-map">
               <PanelHeading title="Operacao ao vivo" subtitle={`${summary.inProgress} entregas em movimento`} action="Abrir mapa" />
               <div className="map-canvas">
-                <div className="road road-one" /><div className="road road-two" /><div className="road road-three" />
-                <span className="map-pin pin-one"><Bike size={17} /></span><span className="map-pin pin-two"><Bike size={17} /></span><span className="map-pin pin-three"><Truck size={17} /></span>
-                <div className="map-legend"><span><i className="online" /> Em rota {summary.inProgress}</span><span><i className="waiting" /> Disponiveis {summary.availableCouriers}</span></div>
+                <LiveMap deliveries={deliveries as DeliveryRecord[]} token={session.accessToken} />
               </div>
             </article>
 

@@ -1,4 +1,4 @@
-const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
+const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api/v1';
 
 export interface Session {
   accessToken: string;
@@ -17,7 +17,11 @@ export interface DeliveryRecord {
   id: string;
   code: string;
   pickupAddress: string;
+  pickupLatitude: number;
+  pickupLongitude: number;
   deliveryAddress: string;
+  deliveryLatitude: number;
+  deliveryLongitude: number;
   courierId: string | null;
   status: string;
   createdAt: string;
