@@ -20,31 +20,31 @@
 | 5 | Prioridade | **A depois B:** (1) backend robusto · (2) mobile piloto. Não misturar grandes mudanças de contrato no meio do app sem fechar locks/auth. |
 | 6 | Precificação | **Servidor calcula** (km + taxa base + % plataforma). Cliente não manda `priceCents`/`courierFeeCents` livres em produção. |
 | 7 | Geografia | **Em aberto.** Timezone padrão: **`America/Sao_Paulo`** (horário de Brasília) em trends, “dia local”, jobs e relatórios. |
-| 8 | Deploy | **Só local** (Docker Compose + `pnpm` / Flutter). Sem cloud/VPS nesta fase. |
-| 9 | Auth piloto | **Refresh token** + **recuperação de senha**. MFA e gestão avançada de sessões ficam depois. |
-| 10 | Documentação | Este arquivo (`docs/ROADMAP.md`) é a fonte versionada no git. |
+| 8 | Deploy | **Alvo cloud (estrutura):** API **Render**, dashboard **Vercel**, storage/push **Firebase**. Runtime de desenvolvimento continua **local**. Contas **não** vinculadas nesta fase (scaffold apenas). |
 
 ### Explicitamente fora (agora)
 
 - Gateway de pagamento / saque / fiscal  
-- Deploy AWS/GCP/Vercel/Render  
+- **Vínculo real** de contas Render/Vercel/Firebase (só estrutura de pastas/YAML)  
 - IA de rotas, heatmap, agrupamento multi-parada  
 - API pública / webhooks ERP  
 - MFA administrativo  
-- Escolha final Google vs Mapbox vs só OSM (mapa embutido com OSM atende dev)
+- Migração completa Postgres → Firestore sem plano de dados  
 
 ---
 
-## 2. Estado atual (resumo)
+## 2. Estado atual (resumo · pós Sprints 1–3 + scaffold 4)
 
-| Camada | OK | Fragilidade |
+| Camada | OK | Próximo |
 | --- | --- | --- |
-| API Nest | Fluxo entrega completo, JWT, dashboard metrics, WS tracking | Redis não usado; ofertas não expiram; race no aceite; pricing no client |
-| Dashboard | KPIs, charts, mapa, páginas básicas | Gestão incompleta; alertas sem mark-read; links fantasmas |
-| Apps Flutter | Login + fluxos principais | Câmera simulada; coords fixas; mapa grid; sem GPS/WS contínuo |
-| Infra | Postgres + Redis Compose, CI, smoke | Redis ocioso; storage/push Firebase ainda não |
+| API Nest | Fluxo completo, Redis locks, pricing, refresh auth, storage, geo, jobs | Ligar Firebase adapters; FKs; logs |
+| Dashboard | KPIs, mapa, gestão users/audit/settings, ações entrega | Deploy Vercel |
+| Apps Flutter | Mapa OSM, geocode, prova upload, GPS, refresh client | FCM real; deep-link maps opcional |
+| Infra | Compose local + smoke/CI; **scaffold** Render/Vercel/Firebase | Provisionar contas (Álvaro) e secrets |
 
 Portas locais: API **3001**, Postgres **5433**, Redis **6379**, Vite **5173**.
+
+Auth piloto: refresh + reset. Docs: `ROADMAP` + `HANDOFF`.
 
 ---
 
@@ -108,12 +108,19 @@ Portas locais: API **3001**, Postgres **5433**, Redis **6379**, Vite **5173**.
 - [x] Relatórios com `from`/`to` (timezone SP)  
 - [x] Paginação nas listagens  
 
-### Sprint 4 — Produção Firebase + endurecimento
+### Sprint 4 — Produção Firebase + cloud (estrutura → ligação)
 
-- Ligar **Firebase Storage** + **FCM** de verdade (projeto Firebase)  
-- Trocar adapter de storage/push sem mudar apps  
-- FKs no Postgres, retenção de provas, logs estruturados  
-- Deploy (só quando #8 deixar de ser “só local”)  
+**Feito (estrutura, sem vincular contas):**
+- [x] Blueprint Render (`infra/render.yaml`)  
+- [x] Config Vercel (`vercel.json`, `apps/dashboard/vercel.json`)  
+- [x] Scaffold Firebase (`infra/firebase/*` + `apps/backend/src/firebase/*` stubs)  
+- [x] Docs `DEPLOY_TARGETS.md` + `HANDOFF.md`  
+
+**Pendente (próximo agente):**
+- [ ] Ligar **Firebase Storage** + **FCM** de verdade (projeto + secrets)  
+- [ ] Trocar adapter de storage/push sem quebrar apps  
+- [ ] FKs no Postgres, retenção de provas, logs estruturados  
+- [ ] Deploy real Render + Vercel (quando Álvaro criar projetos)  
 
 ### Depois (backlog)
 

@@ -1,0 +1,63 @@
+# Aqui Log — blueprints de deploy (NÃO vinculados a contas reais)
+#
+# Uso previsto:
+#   - API NestJS  → Render (Web Service)
+#   - Dashboard   → Vercel
+#   - Dados/prod  → Firebase (Storage + FCM; Firestore opcional — ver docs/DEPLOY_TARGETS.md)
+#
+# Este arquivo é ESTRUTURA. Não contém secrets, IDs de projeto nem
+# integração ativa. O próximo agente deve preencher após criar os projetos.
+
+services:
+  - type: web
+    name: aqui-log-api
+    runtime: node
+    plan: free # trocar em produção
+    rootDir: .
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter backend build
+    startCommand: pnpm --filter backend start:prod
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: APP_TIMEZONE
+        value: America/Sao_Paulo
+      # --- Preencher no dashboard do Render (não commitar valores) ---
+      - key: DATABASE_HOST
+        sync: false
+      - key: DATABASE_PORT
+        sync: false
+      - key: DATABASE_NAME
+        sync: false
+      - key: DATABASE_USER
+        sync: false
+      - key: DATABASE_PASSWORD
+        sync: false
+      - key: DATABASE_SYNC
+        value: "false"
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_DAYS
+        value: "30"
+      - key: PUBLIC_API_URL
+        sync: false
+      - key: STORAGE_DRIVER
+        value: local # trocar para firebase quando adapter estiver ligado
+      - key: FIREBASE_ENABLED
+        value: "false"
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+
+  # Redis gerenciado (opcional no Render) — descomentar quando conta existir
+  # - type: redis
+  #   name: aqui-log-redis
+  #   plan: free
+  #   ipAllowList: []

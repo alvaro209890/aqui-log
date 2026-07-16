@@ -1,0 +1,17 @@
+rules_version = '2';
+// EXEMPLO — não aplicado. Ajuste path/auth quando ligar Firebase Storage.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /proof/{userId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 12 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+    match /document/{userId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 12 * 1024 * 1024;
+    }
+  }
+}

@@ -1,0 +1,9 @@
+rules_version = '2';
+// EXEMPLO — não aplicado. Firestore não é o DB de runtime hoje (Postgres).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

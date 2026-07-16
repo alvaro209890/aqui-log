@@ -56,6 +56,8 @@ O script em `scripts/smoke-test.sh` cobre registro, aprovacao, despacho, aceite,
 
 Timezone padrao: `America/Sao_Paulo` (`APP_TIMEZONE`).
 
+Continuidade multi-agente e alvos cloud: [HANDOFF](./HANDOFF.md), [DEPLOY_TARGETS](./DEPLOY_TARGETS.md).
+
 ## Banco
 
 - `pnpm db:migrate`: aplica migrations pendentes (inclui `refresh_tokens` e `password_reset_tokens`).

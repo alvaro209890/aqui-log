@@ -79,3 +79,10 @@ Legenda: **funcional** = fluxo exercitado pela API/smoke test ou painel/apps; **
 - Empresas e entregadores: reject / suspend / reativar
 - Relatorios com `from`/`to` via `GET /dashboard/reports`
 - Paginacao opcional (`page`/`limit`) em listagens admin
+
+## Sprint 4 (2026-07-16) — estrutura cloud (sem vinculo)
+
+- Blueprint Render + Vercel (sem projetos conectados)
+- Scaffold Firebase (rules/examples + Nest stubs; `FIREBASE_ENABLED=false`)
+- Documentacao: `docs/DEPLOY_TARGETS.md`, `docs/HANDOFF.md`, `docs/CHANGELOG_SPRINTS.md`
+- Runtime local continua Postgres + Redis + storage filesystem
