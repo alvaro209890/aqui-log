@@ -103,6 +103,86 @@ export function buildHourlySeries(
       }));
 }
 
+/** Local calendar midnight offset (same basis as trends dayCounts). */
+export function startOfLocalDay(
+  reference: Date = new Date(),
+  daysAgo = 0,
+): Date {
+  const d = new Date(reference.getTime());
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - daysAgo);
+  return d;
+}
+
+export function formatLocalDateLabel(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Day window for charts/trends: [start, end) in local timezone.
+ * When dateLabel is omitted, uses "today" relative to reference (not Postgres CURRENT_DATE/UTC).
+ */
+export function resolveLocalDayWindow(
+  dateLabel?: string,
+  reference: Date = new Date(),
+): { start: Date; end: Date; dateLabel: string } {
+  if (dateLabel) {
+    const parts = dateLabel.slice(0, 10).split('-').map(Number);
+    const y = parts[0];
+    const m = parts[1];
+    const day = parts[2];
+    const start = new Date(y, m - 1, day, 0, 0, 0, 0);
+    const end = new Date(y, m - 1, day + 1, 0, 0, 0, 0);
+    return { start, end, dateLabel: formatLocalDateLabel(start) };
+  }
+  const start = startOfLocalDay(reference, 0);
+  const end = startOfLocalDay(reference, -1);
+  return { start, end, dateLabel: formatLocalDateLabel(start) };
+}
+
+/** Local hours for timestamps that fall inside [start, end). */
+export function localHoursInWindow(
+  timestamps: Array<Date | string>,
+  start: Date,
+  end: Date,
+): number[] {
+  const hours: number[] = [];
+  for (const ts of timestamps) {
+    const d = typeof ts === 'string' ? new Date(ts) : ts;
+    if (Number.isNaN(d.getTime())) continue;
+    if (d >= start && d < end) {
+      hours.push(d.getHours());
+    }
+  }
+  return hours;
+}
+
+export function sumHourSeries(series: HourBucket[]): number {
+  return series.reduce((total, bucket) => total + bucket.count, 0);
+}
+
+/**
+ * Full pipeline used by deliveries-by-hour: same day window for filter + label,
+ * series total equals count of timestamps inside that window.
+ */
+export function buildDeliveriesByHourResult(
+  timestamps: Array<Date | string>,
+  dateLabel?: string,
+  reference: Date = new Date(),
+): { date: string; series: HourBucket[]; total: number } {
+  const window = resolveLocalDayWindow(dateLabel, reference);
+  const hours = localHoursInWindow(timestamps, window.start, window.end);
+  const series = buildHourlySeries(hours);
+  return {
+    date: window.dateLabel,
+    series,
+    total: sumHourSeries(series),
+  };
+}
+
 export function buildStatusBreakdown(
   rows: Array<{ status: string; count: number | string }>,
 ): StatusBucket[] {

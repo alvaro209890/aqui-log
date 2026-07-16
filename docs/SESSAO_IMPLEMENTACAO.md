@@ -62,7 +62,15 @@ pnpm dev:api
 pnpm dev:dashboard
 ```
 
-Credenciais admin: `ADMIN_EMAIL` / `ADMIN_PASSWORD` no `.env` (padrão documentado no plano: `admin@aquilog.com.br`; senha efetiva via `.env`).
+Credenciais admin (alinhas com smoke e `pnpm db:admin`):
+
+| Campo | Valor |
+| --- | --- |
+| E-mail | `admin@aquilog.com.br` |
+| Senha | `admin123` (`.env` `ADMIN_PASSWORD`) |
+
+`pnpm db:admin` faz upsert da senha a partir do `.env` (não só cria se faltar).  
+`GET /dashboard/charts/deliveries-by-hour` usa a **mesma janela de dia local** que `GET /dashboard/trends` (`[startOfLocalDay, nextDay)` em JS), evitando divergência com `CURRENT_DATE` do Postgres (UTC).
 
 ## Fora de escopo (mantido)
 

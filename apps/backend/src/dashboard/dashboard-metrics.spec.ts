@@ -1,11 +1,17 @@
 import {
+  buildDeliveriesByHourResult,
   buildHourlySeries,
   buildStatusBreakdown,
   buildTrends,
   computePerformance,
   filterDeliveries,
+  formatLocalDateLabel,
+  localHoursInWindow,
   matchesDeliveryFilters,
   percentChange,
+  resolveLocalDayWindow,
+  startOfLocalDay,
+  sumHourSeries,
 } from './dashboard-metrics';
 
 describe('dashboard-metrics', () => {
@@ -58,6 +64,69 @@ describe('dashboard-metrics', () => {
       expect(series[9]).toEqual({ hour: 9, count: 2 });
       expect(series[14]).toEqual({ hour: 14, count: 3 });
       expect(series[0].count).toBe(0);
+    });
+  });
+
+  describe('local day window (timezone-safe)', () => {
+    it('uses local midnight bounds matching trends dayCounts', () => {
+      // Fixed afternoon on 2026-07-15 in local TZ
+      const ref = new Date(2026, 6, 15, 14, 30, 0, 0);
+      const today = resolveLocalDayWindow(undefined, ref);
+      expect(today.dateLabel).toBe('2026-07-15');
+      expect(today.start).toEqual(startOfLocalDay(ref, 0));
+      expect(today.end).toEqual(startOfLocalDay(ref, -1));
+      expect(today.start.getHours()).toBe(0);
+      expect(today.end.getDate()).toBe(16);
+
+      const explicit = resolveLocalDayWindow('2026-07-15', ref);
+      expect(explicit.dateLabel).toBe('2026-07-15');
+      expect(explicit.start.getTime()).toBe(today.start.getTime());
+      expect(explicit.end.getTime()).toBe(today.end.getTime());
+    });
+
+    it('hour series total matches deliveries in the same local day window', () => {
+      const ref = new Date(2026, 6, 15, 18, 0, 0, 0);
+      const window = resolveLocalDayWindow(undefined, ref);
+      const inWindow = [
+        new Date(2026, 6, 15, 9, 0, 0, 0),
+        new Date(2026, 6, 15, 9, 30, 0, 0),
+        new Date(2026, 6, 15, 14, 0, 0, 0),
+      ];
+      const outside = [
+        new Date(2026, 6, 14, 23, 59, 0, 0),
+        new Date(2026, 6, 16, 0, 0, 0, 0),
+      ];
+      const timestamps = [...inWindow, ...outside];
+
+      const hours = localHoursInWindow(timestamps, window.start, window.end);
+      expect(hours).toHaveLength(inWindow.length);
+      expect(hours).toEqual([9, 9, 14]);
+
+      const series = buildHourlySeries(hours);
+      expect(sumHourSeries(series)).toBe(inWindow.length);
+      expect(sumHourSeries(series)).toBe(3);
+      expect(series[9].count).toBe(2);
+      expect(series[14].count).toBe(1);
+
+      // Empty window → zero total (not NaN / wrong day bleed)
+      const empty = buildDeliveriesByHourResult(outside, undefined, ref);
+      expect(empty.date).toBe(formatLocalDateLabel(window.start));
+      expect(empty.total).toBe(0);
+      expect(sumHourSeries(empty.series)).toBe(0);
+
+      const nonempty = buildDeliveriesByHourResult(timestamps, undefined, ref);
+      expect(nonempty.date).toBe('2026-07-15');
+      expect(nonempty.total).toBe(3);
+      expect(sumHourSeries(nonempty.series)).toBe(nonempty.total);
+
+      // Explicit date label must use the same bounds (not UTC CURRENT_DATE)
+      const byLabel = buildDeliveriesByHourResult(
+        timestamps,
+        '2026-07-15',
+        ref,
+      );
+      expect(byLabel.total).toBe(nonempty.total);
+      expect(byLabel.date).toBe(nonempty.date);
     });
   });
 

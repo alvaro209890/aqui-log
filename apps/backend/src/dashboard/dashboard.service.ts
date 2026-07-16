@@ -8,10 +8,12 @@ import { DeliveryOffer } from '../database/entities/delivery-offer.entity';
 import { Rating } from '../database/entities/rating.entity';
 import { AccountStatus, DeliveryStatus, OfferStatus } from '../database/enums';
 import {
-  buildHourlySeries,
+  buildDeliveriesByHourResult,
   buildStatusBreakdown,
   buildTrends,
   computePerformance,
+  resolveLocalDayWindow,
+  startOfLocalDay,
   type DayCounts,
 } from './dashboard-metrics';
 
@@ -28,6 +30,7 @@ export class DashboardService {
   ) {}
 
   async summary() {
+    const { start, end } = resolveLocalDayWindow();
     const [
       deliveriesToday,
       activeCompanies,
@@ -37,7 +40,10 @@ export class DashboardService {
     ] = await Promise.all([
       this.deliveries
         .createQueryBuilder('delivery')
-        .where('delivery.createdAt >= CURRENT_DATE')
+        .where('delivery.createdAt >= :start AND delivery.createdAt < :end', {
+          start,
+          end,
+        })
         .getCount(),
       this.companies.countBy({ status: AccountStatus.ACTIVE }),
       this.couriers.countBy({ status: AccountStatus.ACTIVE, available: true }),
@@ -68,39 +74,30 @@ export class DashboardService {
     return buildTrends(today, yesterday);
   }
 
+  /**
+   * Hourly series for a local calendar day (same bounds as trends/dayCounts).
+   * Avoids Postgres CURRENT_DATE (UTC) vs Node local label mismatch.
+   */
   async deliveriesByHour(date?: string) {
-    const day =
-      date?.slice(0, 10) ??
-      (() => {
-        const d = new Date();
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const dayNum = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${dayNum}`;
-      })();
+    const window = resolveLocalDayWindow(date);
     const rows = await this.deliveries
       .createQueryBuilder('delivery')
-      .select('EXTRACT(HOUR FROM delivery.created_at)', 'hour')
-      .addSelect('COUNT(*)', 'count')
-      .where(
-        date
-          ? 'delivery.created_at::date = CAST(:day AS date)'
-          : "delivery.created_at >= CURRENT_DATE AND delivery.created_at < CURRENT_DATE + INTERVAL '1 day'",
-        date ? { day } : {},
-      )
-      .groupBy('hour')
-      .orderBy('hour', 'ASC')
-      .getRawMany<{ hour: string; count: string }>();
+      .select('delivery.created_at', 'createdAt')
+      .where('delivery.createdAt >= :start AND delivery.createdAt < :end', {
+        start: window.start,
+        end: window.end,
+      })
+      .getRawMany<{ createdAt: Date | string }>();
 
-    const hours: number[] = [];
-    for (const row of rows) {
-      const hour = Number(row.hour);
-      const count = Number(row.count);
-      for (let i = 0; i < count; i++) hours.push(hour);
-    }
+    // Same pure pipeline as unit tests: local window filter + local hour buckets
+    const result = buildDeliveriesByHourResult(
+      rows.map((row) => row.createdAt),
+      window.dateLabel,
+    );
     return {
-      date: day,
-      series: buildHourlySeries(hours),
+      date: result.date,
+      series: result.series,
+      total: result.total,
     };
   }
 
@@ -158,8 +155,8 @@ export class DashboardService {
   }
 
   private async dayCounts(daysAgo: number): Promise<DayCounts> {
-    const start = this.startOfDayOffset(daysAgo);
-    const end = this.startOfDayOffset(daysAgo - 1);
+    const start = startOfLocalDay(new Date(), daysAgo);
+    const end = startOfLocalDay(new Date(), daysAgo - 1);
 
     const [deliveries, inProgress, delivered, canceled, revenue, avgRow] =
       await Promise.all([
@@ -239,12 +236,5 @@ export class DashboardService {
       avgMinutes:
         avgRow?.avg == null ? null : Math.round(Number(avgRow.avg) * 10) / 10,
     };
-  }
-
-  private startOfDayOffset(daysAgo: number): Date {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() - daysAgo);
-    return d;
   }
 }
