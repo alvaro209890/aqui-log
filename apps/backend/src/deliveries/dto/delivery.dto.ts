@@ -7,7 +7,6 @@ import {
   IsOptional,
   IsPhoneNumber,
   IsString,
-  IsUrl,
   Min,
   Max,
 } from 'class-validator';
@@ -62,7 +61,7 @@ export class UpdateDeliveryStatusDto {
   status!: DeliveryStatus;
 
   @IsOptional()
-  @IsUrl()
+  @IsString()
   proofUrl?: string;
 
   @IsOptional()

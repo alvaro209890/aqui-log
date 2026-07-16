@@ -71,6 +71,8 @@ void main() {
             code: 'AQL-DETAIL',
             status: 'DELIVERED',
           ),
+          loadHistory: () async => [],
+          onRate: (score, comment) async {},
         ),
       ),
     );
@@ -80,7 +82,14 @@ void main() {
   testWidgets('NewDeliveryScreen has fields', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: NewDeliveryScreen(onSubmit: (_) async {}),
+        home: NewDeliveryScreen(
+          onSubmit: (_) async {},
+          geocode: (address) async => GeocodeResult(
+            latitude: -15.6,
+            longitude: -56.1,
+            formattedAddress: address,
+          ),
+        ),
       ),
     );
     expect(find.text('Solicitar entrega'), findsOneWidget);

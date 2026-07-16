@@ -76,6 +76,14 @@ export class DeliveriesController {
     return this.deliveries.history(id, req.user);
   }
 
+  @Get(':id')
+  findOne(
+    @Param('id') id: string,
+    @Req() req: Request & { user: AuthenticatedUser },
+  ) {
+    return this.deliveries.findOne(id, req.user);
+  }
+
   @Patch(':id/assign')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   assign(

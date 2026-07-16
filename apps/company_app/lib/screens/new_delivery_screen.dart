@@ -1,10 +1,16 @@
 import 'package:aqui_log_ui/aqui_log_ui.dart';
 import 'package:flutter/material.dart';
+import 'package:aqui_log_core/aqui_log_core.dart';
 
 class NewDeliveryScreen extends StatefulWidget {
-  const NewDeliveryScreen({super.key, required this.onSubmit});
+  const NewDeliveryScreen({
+    super.key,
+    required this.onSubmit,
+    required this.geocode,
+  });
 
   final Future<void> Function(Map<String, dynamic> form) onSubmit;
+  final Future<GeocodeResult> Function(String address) geocode;
 
   @override
   State<NewDeliveryScreen> createState() => _NewDeliveryScreenState();
@@ -12,8 +18,8 @@ class NewDeliveryScreen extends StatefulWidget {
 
 class _NewDeliveryScreenState extends State<NewDeliveryScreen> {
   final formKey = GlobalKey<FormState>();
-  final pickup = TextEditingController(text: 'Av. Afonso Pena, 1000');
-  final delivery = TextEditingController(text: 'Praca da Liberdade');
+  final pickup = TextEditingController();
+  final delivery = TextEditingController();
   final recipient = TextEditingController(text: 'Cliente');
   final phone = TextEditingController(text: '+5531999999999');
   bool loading = false;
@@ -39,13 +45,17 @@ class _NewDeliveryScreenState extends State<NewDeliveryScreen> {
           children: [
             TextFormField(
               controller: pickup,
-              decoration: const InputDecoration(labelText: 'Endereco de coleta'),
+              decoration: const InputDecoration(
+                labelText: 'Endereco de coleta',
+              ),
               validator: (v) => v == null || v.isEmpty ? 'Obrigatorio' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: delivery,
-              decoration: const InputDecoration(labelText: 'Endereco de entrega'),
+              decoration: const InputDecoration(
+                labelText: 'Endereco de entrega',
+              ),
               validator: (v) => v == null || v.isEmpty ? 'Obrigatorio' : null,
             ),
             const SizedBox(height: 12),
@@ -75,17 +85,27 @@ class _NewDeliveryScreenState extends State<NewDeliveryScreen> {
                         error = null;
                       });
                       try {
+                        final pickupGeo = await widget.geocode(
+                          pickup.text.trim(),
+                        );
+                        final deliveryGeo = await widget.geocode(
+                          delivery.text.trim(),
+                        );
                         await widget.onSubmit({
-                          'pickupAddress': pickup.text.trim(),
-                          'pickupLatitude': -19.9245,
-                          'pickupLongitude': -43.9352,
-                          'deliveryAddress': delivery.text.trim(),
-                          'deliveryLatitude': -19.9386,
-                          'deliveryLongitude': -43.9346,
+                          'pickupAddress':
+                              pickupGeo.formattedAddress.isNotEmpty
+                              ? pickupGeo.formattedAddress
+                              : pickup.text.trim(),
+                          'pickupLatitude': pickupGeo.latitude,
+                          'pickupLongitude': pickupGeo.longitude,
+                          'deliveryAddress':
+                              deliveryGeo.formattedAddress.isNotEmpty
+                              ? deliveryGeo.formattedAddress
+                              : delivery.text.trim(),
+                          'deliveryLatitude': deliveryGeo.latitude,
+                          'deliveryLongitude': deliveryGeo.longitude,
                           'recipientName': recipient.text.trim(),
                           'recipientPhone': phone.text.trim(),
-                          'priceCents': 3500,
-                          'courierFeeCents': 1800,
                         });
                         if (context.mounted) Navigator.of(context).pop(true);
                       } catch (e) {
@@ -94,11 +114,11 @@ class _NewDeliveryScreenState extends State<NewDeliveryScreen> {
                         if (mounted) setState(() => loading = false);
                       }
                     },
-              child: Text(loading ? 'Enviando...' : 'Solicitar entrega'),
+              child: Text(loading ? 'Geocodificando...' : 'Solicitar entrega'),
             ),
             const SizedBox(height: 8),
             const Text(
-              'Coordenadas de exemplo sao usadas no MVP local.',
+              'Coordenadas sao obtidas via API de geocode (provedor configuravel).',
               style: TextStyle(color: AquiLogColors.muted, fontSize: 12),
             ),
           ],

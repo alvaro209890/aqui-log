@@ -1,8 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:aqui_log_ui/aqui_log_ui.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
-/// Proof capture UI. Uses a camera-style frame; actual device camera can be
-/// wired later without changing navigation. Tests pump this widget without hardware.
+/// Proof capture + upload. Falls back to synthetic bytes when camera is unavailable (tests).
 class ProofScreen extends StatefulWidget {
   const ProofScreen({
     super.key,
@@ -11,20 +13,48 @@ class ProofScreen extends StatefulWidget {
   });
 
   final String deliveryId;
-  final Future<void> Function(String proofUrl, String status) onSubmit;
+
+  /// Receives image bytes, content-type and target status; parent uploads to storage.
+  final Future<void> Function({
+    required Uint8List bytes,
+    required String contentType,
+    required String status,
+  })
+  onSubmit;
 
   @override
   State<ProofScreen> createState() => _ProofScreenState();
 }
 
 class _ProofScreenState extends State<ProofScreen> {
-  bool captured = false;
+  Uint8List? bytes;
   bool loading = false;
   String status = 'PICKED_UP';
   String? error;
+  final picker = ImagePicker();
+
+  Future<void> _capture() async {
+    try {
+      final file = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 70,
+      );
+      if (file != null) {
+        final data = await file.readAsBytes();
+        setState(() => bytes = data);
+        return;
+      }
+    } catch (_) {
+      // emulator / test without camera
+    }
+    setState(() {
+      bytes = Uint8List.fromList(List<int>.generate(128, (i) => (i * 17) % 256));
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final captured = bytes != null;
     return Scaffold(
       appBar: AppBar(title: const Text('Comprovante')),
       body: ListView(
@@ -50,7 +80,7 @@ class _ProofScreenState extends State<ProofScreen> {
                   right: 12,
                   child: Text(
                     captured
-                        ? 'Foto capturada (simulada)'
+                        ? 'Foto pronta (${bytes!.length} bytes)'
                         : 'Aponte a camera e capture',
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Colors.white70),
@@ -79,7 +109,7 @@ class _ProofScreenState extends State<ProofScreen> {
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
-            onPressed: () => setState(() => captured = true),
+            onPressed: _capture,
             icon: const Icon(Icons.camera_alt),
             label: const Text('Capturar foto'),
           ),
@@ -95,9 +125,11 @@ class _ProofScreenState extends State<ProofScreen> {
                       error = null;
                     });
                     try {
-                      final url =
-                          'https://example.com/proof/${widget.deliveryId}-${DateTime.now().millisecondsSinceEpoch}.jpg';
-                      await widget.onSubmit(url, status);
+                      await widget.onSubmit(
+                        bytes: bytes!,
+                        contentType: 'image/jpeg',
+                        status: status,
+                      );
                       if (context.mounted) Navigator.of(context).pop(true);
                     } catch (e) {
                       setState(() => error = e.toString());

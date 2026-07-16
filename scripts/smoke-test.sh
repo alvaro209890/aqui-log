@@ -64,9 +64,26 @@ offer_id="$(jq -er '.offer.id' <<<"$dispatch")"
 api GET /deliveries/offers/mine "$courier_token" | jq -e --arg offer "$offer_id" 'map(.id) | index($offer) != null' >/dev/null
 api PATCH "/deliveries/offers/$offer_id/accept" "$courier_token" >/dev/null
 api PATCH "/deliveries/$delivery_id/status" "$courier_token" '{"status":"AT_PICKUP"}' >/dev/null
-api PATCH "/deliveries/$delivery_id/status" "$courier_token" '{"status":"PICKED_UP","proofUrl":"https://example.com/coleta.jpg"}' >/dev/null
+
+upload_proof() {
+  local label="$1"
+  local presign
+  presign="$(api POST /storage/presign "$courier_token" "$(jq -nc '{purpose:"proof",contentType:"image/jpeg"}')")"
+  local upload_url file_url
+  upload_url="$(jq -er '.uploadUrl' <<<"$presign")"
+  file_url="$(jq -er '.fileUrl' <<<"$presign")"
+  curl -fsS -X PUT "$upload_url" \
+    -H "Authorization: Bearer $courier_token" \
+    -H "Content-Type: image/jpeg" \
+    --data-binary "fake-jpeg-$label-$RUN_ID" >/dev/null
+  printf '%s' "$file_url"
+}
+
+proof_pickup="$(upload_proof pickup)"
+api PATCH "/deliveries/$delivery_id/status" "$courier_token" "$(jq -nc --arg proofUrl "$proof_pickup" '{status:"PICKED_UP",proofUrl:$proofUrl}')" >/dev/null
 api PATCH "/deliveries/$delivery_id/status" "$courier_token" '{"status":"IN_TRANSIT"}' >/dev/null
-api PATCH "/deliveries/$delivery_id/status" "$courier_token" '{"status":"DELIVERED","proofUrl":"https://example.com/entrega.jpg"}' >/dev/null
+proof_delivery="$(upload_proof delivery)"
+api PATCH "/deliveries/$delivery_id/status" "$courier_token" "$(jq -nc --arg proofUrl "$proof_delivery" '{status:"DELIVERED",proofUrl:$proofUrl}')" >/dev/null
 
 api GET "/deliveries/$delivery_id/history" "$owner_token" | jq -e 'length >= 7' >/dev/null
 api POST "/deliveries/$delivery_id/rating" "$owner_token" '{"score":5,"comment":"Entrega concluida no fluxo de teste"}' >/dev/null

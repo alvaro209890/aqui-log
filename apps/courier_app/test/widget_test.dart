@@ -8,9 +8,15 @@ import 'package:aqui_log_entregador/screens/proof_screen.dart';
 import 'package:aqui_log_entregador/screens/wallet_screen.dart';
 import 'package:aqui_log_core/aqui_log_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Future<void> _noopProof(String url, String status) async {}
+Future<void> _noopProof({
+  required Uint8List bytes,
+  required String contentType,
+  required String status,
+}) async {}
+
 
 void main() {
   testWidgets('LoginScreen renders', (tester) async {

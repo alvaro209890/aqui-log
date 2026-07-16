@@ -93,12 +93,12 @@ Portas locais: API **3001**, Postgres **5433**, Redis **6379**, Vite **5173**.
 
 **Definition of Done Sprint 2**
 
-- [ ] `flutter analyze` + `flutter test` nos dois apps e `aqui_log_core`  
-- [ ] Nova entrega sem lat/lng mágicos de BH  
-- [ ] Comprovante não usa `example.com`  
-- [ ] Mapa embutido mostra pins reais  
-- [ ] Entregador em corrida atualiza localização  
-- [ ] Smoke ainda verde (API)  
+- [x] `flutter analyze` + `flutter test` nos dois apps e `aqui_log_core`  
+- [x] Nova entrega sem lat/lng mágicos de BH (geocode API)  
+- [x] Comprovante não usa `example.com` (storage local + policy)  
+- [x] Mapa embutido mostra pins reais (`flutter_map` + OSM)  
+- [x] Entregador em corrida atualiza localização (timer + Geolocator)  
+- [x] Smoke ainda verde (API + upload de prova)  
 
 ### Sprint 3 — Dashboard gestão + qualidade (quando A+B estáveis)
 

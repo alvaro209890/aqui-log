@@ -87,16 +87,33 @@ class _CompanyShellState extends State<CompanyShell> {
     }
   }
 
-  void _openDetail(DeliverySummary d) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => DeliveryDetailScreen(delivery: d)),
+  Future<void> _openDetail(DeliverySummary d) async {
+    DeliverySummary full = d;
+    try {
+      full = await widget.state.api.delivery(d.id);
+    } catch (_) {}
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DeliveryDetailScreen(
+          delivery: full,
+          loadHistory: () => widget.state.api.deliveryHistory(d.id),
+          onRate: (score, comment) => widget.state.api.rateDelivery(
+            d.id,
+            score: score,
+            comment: comment,
+          ),
+        ),
+      ),
     );
+    await _load();
   }
 
   Future<void> _openNew() async {
     final created = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => NewDeliveryScreen(
+          geocode: widget.state.api.geocode,
           onSubmit: (form) => widget.state.api.createDelivery(form),
         ),
       ),

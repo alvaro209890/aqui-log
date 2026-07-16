@@ -6,6 +6,7 @@ import { Courier } from './entities/courier.entity';
 import { DeliveryEvent } from './entities/delivery-event.entity';
 import { DeliveryOffer } from './entities/delivery-offer.entity';
 import { Delivery } from './entities/delivery.entity';
+import { DeviceToken } from './entities/device-token.entity';
 import { Notification } from './entities/notification.entity';
 import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { Rating } from './entities/rating.entity';
@@ -35,6 +36,7 @@ export default new DataSource({
     Rating,
     RefreshToken,
     PasswordResetToken,
+    DeviceToken,
   ],
   migrations: ['src/database/migrations/*.ts'],
   synchronize: false,

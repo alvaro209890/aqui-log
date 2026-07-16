@@ -3,7 +3,8 @@ import 'package:flutter/foundation.dart';
 
 class CompanyAppState extends ChangeNotifier {
   CompanyAppState({AquiLogApiClient? client})
-    : api = client ??
+    : api =
+          client ??
           AquiLogApiClient(
             baseUrl: const String.fromEnvironment(
               'AQUI_LOG_API',
@@ -29,6 +30,15 @@ class CompanyAppState extends ChangeNotifier {
     notifyListeners();
     try {
       session = await api.login(email, password);
+      try {
+        await api.registerDevice(
+          token:
+              'local-dev-company-${session!.user['id']}-${DateTime.now().millisecondsSinceEpoch}',
+          platform: defaultTargetPlatform == TargetPlatform.iOS
+              ? 'ios'
+              : 'android',
+        );
+      } catch (_) {}
       loading = false;
       notifyListeners();
       return true;
@@ -45,9 +55,13 @@ class CompanyAppState extends ChangeNotifier {
     }
   }
 
-  void logout() {
+  Future<void> logout() async {
+    try {
+      await api.logout();
+    } catch (_) {}
     session = null;
     api.accessToken = null;
+    api.refreshToken = null;
     notifyListeners();
   }
 

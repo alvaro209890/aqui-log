@@ -69,6 +69,7 @@ class _CourierShellState extends State<CourierShell> {
   @override
   void initState() {
     super.initState();
+    widget.state.startLocationUpdates();
     _load();
   }
 
@@ -77,10 +78,16 @@ class _CourierShellState extends State<CourierShell> {
     try {
       final offerRaw = await widget.state.api.offers();
       offers = offerRaw
-          .map((e) => e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map))
+          .map(
+            (e) => e is Map<String, dynamic>
+                ? e
+                : Map<String, dynamic>.from(e as Map),
+          )
           .toList();
       deliveries = await widget.state.api.deliveries();
-      statement = await widget.state.api.statement().catchError((_) => <String, dynamic>{});
+      statement = await widget.state.api.statement().catchError(
+        (_) => <String, dynamic>{},
+      );
     } catch (_) {
       // keep previous
     } finally {
@@ -88,34 +95,49 @@ class _CourierShellState extends State<CourierShell> {
     }
   }
 
-  void _openDetail(DeliverySummary d) {
-    Navigator.of(context).push(
+  Future<void> _openDetail(DeliverySummary d) async {
+    DeliverySummary full = d;
+    try {
+      full = await widget.state.api.delivery(d.id);
+    } catch (_) {}
+    if (!mounted) return;
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => DeliveryDetailScreen(
-          delivery: d,
+          delivery: full,
           onProof: () async {
             await Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => ProofScreen(
                   deliveryId: d.id,
-                  onSubmit: (url, status) => widget.state.api.updateDeliveryStatus(
-                    d.id,
-                    status,
-                    proofUrl: url,
-                  ),
+                  onSubmit: ({
+                    required bytes,
+                    required contentType,
+                    required status,
+                  }) async {
+                    final url = await widget.state.api.uploadBytes(
+                      bytes: bytes,
+                      contentType: contentType,
+                      purpose: 'proof',
+                      deliveryId: d.id,
+                    );
+                    await widget.state.api.updateDeliveryStatus(
+                      d.id,
+                      status,
+                      proofUrl: url,
+                    );
+                  },
                 ),
               ),
             );
             await _load();
           },
-          onStatus: (status, {proofUrl}) => widget.state.api.updateDeliveryStatus(
-            d.id,
-            status,
-            proofUrl: proofUrl,
-          ),
+          onStatus: (status, {proofUrl}) => widget.state.api
+              .updateDeliveryStatus(d.id, status, proofUrl: proofUrl),
         ),
       ),
     );
+    await _load();
   }
 
   @override

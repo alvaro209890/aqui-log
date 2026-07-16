@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:aqui_log_core/aqui_log_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
 
 class CourierAppState extends ChangeNotifier {
   CourierAppState({AquiLogApiClient? client})
-    : api = client ??
+    : api =
+          client ??
           AquiLogApiClient(
             baseUrl: const String.fromEnvironment(
               'AQUI_LOG_API',
@@ -16,6 +20,7 @@ class CourierAppState extends ChangeNotifier {
   bool loading = false;
   String? error;
   bool available = true;
+  Timer? _locationTimer;
 
   bool get isAuthenticated => session != null && api.accessToken != null;
 
@@ -30,6 +35,14 @@ class CourierAppState extends ChangeNotifier {
     notifyListeners();
     try {
       session = await api.login(email, password);
+      try {
+        await api.registerDevice(
+          token: 'local-dev-${session!.user['id']}-${DateTime.now().millisecondsSinceEpoch}',
+          platform: defaultTargetPlatform == TargetPlatform.iOS
+              ? 'ios'
+              : 'android',
+        );
+      } catch (_) {}
       loading = false;
       notifyListeners();
       return true;
@@ -51,19 +64,62 @@ class CourierAppState extends ChangeNotifier {
     notifyListeners();
     try {
       await api.setAvailability(value);
-    } catch (_) {
-      // keep local toggle for offline UX
+    } catch (_) {}
+    if (value) {
+      startLocationUpdates();
+    } else {
+      stopLocationUpdates();
     }
   }
 
-  void logout() {
+  void startLocationUpdates() {
+    _locationTimer?.cancel();
+    _locationTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      unawaited(_pushLocation());
+    });
+    unawaited(_pushLocation());
+  }
+
+  void stopLocationUpdates() {
+    _locationTimer?.cancel();
+    _locationTimer = null;
+  }
+
+  Future<void> _pushLocation() async {
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return;
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+      await api.sendLocation(pos.latitude, pos.longitude);
+    } catch (_) {
+      // device/tests without GPS
+    }
+  }
+
+  Future<void> logout() async {
+    stopLocationUpdates();
+    try {
+      await api.logout();
+    } catch (_) {}
     session = null;
     api.accessToken = null;
+    api.refreshToken = null;
     notifyListeners();
   }
 
   @override
   void dispose() {
+    stopLocationUpdates();
     api.close();
     super.dispose();
   }

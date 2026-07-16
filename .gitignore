@@ -27,3 +27,5 @@ build/
 
 # Local data
 data/
+uploads/
+apps/backend/uploads/

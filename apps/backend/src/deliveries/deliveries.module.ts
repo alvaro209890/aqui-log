@@ -5,6 +5,7 @@ import { DeliveryEvent } from '../database/entities/delivery-event.entity';
 import { DeliveryOffer } from '../database/entities/delivery-offer.entity';
 import { Delivery } from '../database/entities/delivery.entity';
 import { Rating } from '../database/entities/rating.entity';
+import { StorageModule } from '../storage/storage.module';
 import { DeliveriesController } from './deliveries.controller';
 import { DeliveriesService } from './deliveries.service';
 import { DeliveryJobsService } from './delivery-jobs.service';
@@ -18,6 +19,7 @@ import { DeliveryJobsService } from './delivery-jobs.service';
       DeliveryEvent,
       Rating,
     ]),
+    StorageModule,
   ],
   controllers: [DeliveriesController],
   providers: [DeliveriesService, DeliveryJobsService],

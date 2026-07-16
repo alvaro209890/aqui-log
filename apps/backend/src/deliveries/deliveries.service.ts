@@ -26,6 +26,7 @@ import { FinanceService } from '../finance/finance.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PricingService } from '../pricing/pricing.service';
 import { RedisService } from '../redis/redis.module';
+import { StorageService } from '../storage/storage.module';
 import {
   OFFER_ACCEPT_LOCK_TTL_SECONDS,
   offerAcceptLockKey,
@@ -55,6 +56,7 @@ export class DeliveriesService {
     private readonly pricing: PricingService,
     private readonly redis: RedisService,
     private readonly config: ConfigService,
+    private readonly storage: StorageService,
   ) {}
 
   async create(dto: CreateDeliveryDto, user: AuthenticatedUser) {
@@ -160,6 +162,12 @@ export class DeliveriesService {
 
   async listRatings() {
     return this.ratings.find({ order: { createdAt: 'DESC' }, take: 200 });
+  }
+
+  async findOne(id: string, user: AuthenticatedUser) {
+    const delivery = await this.getById(id);
+    await this.ensureCanView(delivery, user);
+    return delivery;
   }
 
   async history(id: string, user: AuthenticatedUser) {
@@ -407,6 +415,7 @@ export class DeliveriesService {
     ) {
       throw new BadRequestException('Comprovante obrigatorio para esta etapa');
     }
+    if (dto.proofUrl) this.storage.assertAllowedProofUrl(dto.proofUrl);
     delivery.status = dto.status;
     if (dto.status === DeliveryStatus.PICKED_UP)
       delivery.collectionProofUrl = dto.proofUrl ?? null;
