@@ -1,310 +1,178 @@
+import 'package:aqui_log_core/aqui_log_core.dart';
 import 'package:aqui_log_ui/aqui_log_ui.dart';
 import 'package:flutter/material.dart';
 
+import 'app_state.dart';
+import 'screens/dashboard_screen.dart';
+import 'screens/deliveries_screen.dart';
+import 'screens/delivery_detail_screen.dart';
+import 'screens/login_screen.dart';
+import 'screens/new_delivery_screen.dart';
+import 'screens/reports_screen.dart';
+import 'screens/settings_screen.dart';
+
 void main() => runApp(const CompanyApp());
 
-class CompanyApp extends StatelessWidget {
-  const CompanyApp({super.key});
+class CompanyApp extends StatefulWidget {
+  const CompanyApp({super.key, this.state});
+
+  final CompanyAppState? state;
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'Aqui Log Empresa',
-    debugShowCheckedModeBanner: false,
-    theme: AquiLogTheme.light(),
-    home: const CompanyHomePage(),
-  );
+  State<CompanyApp> createState() => _CompanyAppState();
 }
 
-class CompanyHomePage extends StatefulWidget {
-  const CompanyHomePage({super.key});
+class _CompanyAppState extends State<CompanyApp> {
+  late final CompanyAppState state = widget.state ?? CompanyAppState();
 
   @override
-  State<CompanyHomePage> createState() => _CompanyHomePageState();
+  void dispose() {
+    if (widget.state == null) state.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: state,
+      builder: (context, _) => MaterialApp(
+        title: 'Aqui Log Empresa',
+        debugShowCheckedModeBanner: false,
+        theme: AquiLogTheme.light(),
+        home: state.isAuthenticated
+            ? CompanyShell(state: state)
+            : LoginScreen(
+                loading: state.loading,
+                error: state.error,
+                onSubmit: state.login,
+              ),
+      ),
+    );
+  }
 }
 
-class _CompanyHomePageState extends State<CompanyHomePage> {
-  int currentIndex = 0;
+class CompanyShell extends StatefulWidget {
+  const CompanyShell({super.key, required this.state});
+  final CompanyAppState state;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      toolbarHeight: 76,
-      title: const AquiLogBrand(),
-      actions: [
-        IconButton(
-          onPressed: () {},
-          icon: const Badge(
-            smallSize: 7,
-            child: Icon(Icons.notifications_none_rounded),
-          ),
+  State<CompanyShell> createState() => _CompanyShellState();
+}
+
+class _CompanyShellState extends State<CompanyShell> {
+  int index = 0;
+  List<DeliverySummary> deliveries = [];
+  Map<String, dynamic>? finance;
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => loading = true);
+    try {
+      final results = await Future.wait([
+        widget.state.api.deliveries(),
+        widget.state.api.financeSummary().catchError((_) => <String, dynamic>{}),
+      ]);
+      deliveries = results[0] as List<DeliverySummary>;
+      finance = results[1] as Map<String, dynamic>;
+    } catch (_) {
+      // keep previous data
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  void _openDetail(DeliverySummary d) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => DeliveryDetailScreen(delivery: d)),
+    );
+  }
+
+  Future<void> _openNew() async {
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => NewDeliveryScreen(
+          onSubmit: (form) => widget.state.api.createDelivery(form),
         ),
-        const SizedBox(width: 10),
-      ],
-    ),
-    body: SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
-        children: [
-          const Text(
-            'Bom dia, Alvaro',
-            style: TextStyle(
-              fontSize: 25,
-              fontWeight: FontWeight.w800,
-              color: AquiLogColors.ink,
+      ),
+    );
+    if (created == true) await _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pages = [
+      DashboardScreen(
+        userName: widget.state.userName,
+        deliveries: deliveries,
+        loading: loading,
+        onNewDelivery: _openNew,
+        onOpenDelivery: _openDetail,
+      ),
+      DeliveriesScreen(
+        deliveries: deliveries,
+        loading: loading,
+        onOpen: _openDetail,
+        onRefresh: _load,
+      ),
+      ReportsScreen(deliveries: deliveries, finance: finance),
+      SettingsScreen(
+        userName: widget.state.userName,
+        email: '${widget.state.session?.user['email'] ?? ''}',
+        onLogout: widget.state.logout,
+      ),
+    ];
+
+    return Scaffold(
+      appBar: AppBar(
+        toolbarHeight: 72,
+        title: const AquiLogBrand(),
+        actions: [
+          IconButton(
+            onPressed: _load,
+            icon: const Badge(
+              smallSize: 7,
+              child: Icon(Icons.notifications_none_rounded),
             ),
           ),
-          const SizedBox(height: 5),
-          const Text(
-            'Sua operacao, simples e em movimento.',
-            style: TextStyle(color: AquiLogColors.muted),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: pages[index],
+      floatingActionButton: index == 1
+          ? FloatingActionButton(
+              onPressed: _openNew,
+              child: const Icon(Icons.add),
+            )
+          : null,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: index,
+        onDestinationSelected: (i) => setState(() => index = i),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home_rounded),
+            label: 'Inicio',
           ),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AquiLogColors.forestDark, AquiLogColors.forest],
-              ),
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(
-                      Icons.local_shipping_outlined,
-                      color: AquiLogColors.mint,
-                    ),
-                    SizedBox(width: 9),
-                    Text(
-                      'PRECISA ENVIAR ALGO?',
-                      style: TextStyle(
-                        color: AquiLogColors.mint,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: .8,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 13),
-                const Text(
-                  'Solicite uma entrega\nem poucos passos.',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    height: 1.25,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AquiLogColors.mint,
-                    foregroundColor: AquiLogColors.forestDark,
-                    minimumSize: const Size(190, 45),
-                  ),
-                  onPressed: () {},
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Nova entrega'),
-                ),
-              ],
-            ),
+          NavigationDestination(
+            icon: Icon(Icons.local_shipping_outlined),
+            label: 'Entregas',
           ),
-          const SizedBox(height: 25),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Resumo de hoje',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-              ),
-              Text(
-                '14 JUL',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: AquiLogColors.muted,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+          NavigationDestination(
+            icon: Icon(Icons.bar_chart_rounded),
+            label: 'Relatorios',
           ),
-          const SizedBox(height: 13),
-          const Row(
-            children: [
-              Expanded(
-                child: _SummaryCard(
-                  icon: Icons.route_rounded,
-                  value: '12',
-                  label: 'Em andamento',
-                  color: Color(0xFF4E83A1),
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _SummaryCard(
-                  icon: Icons.check_circle_outline_rounded,
-                  value: '38',
-                  label: 'Concluidas',
-                  color: Color(0xFF3BA87D),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 26),
-          const Text(
-            'Entregas recentes',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 13),
-          const _DeliveryCard(
-            code: '#AQL-1048',
-            destination: 'Av. Getulio Vargas, 812',
-            status: 'Em rota',
-            icon: Icons.two_wheeler_rounded,
-          ),
-          const SizedBox(height: 10),
-          const _DeliveryCard(
-            code: '#AQL-1047',
-            destination: 'Rua dos Timbiras, 1200',
-            status: 'Coletado',
-            icon: Icons.inventory_2_outlined,
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            label: 'Ajustes',
           ),
         ],
       ),
-    ),
-    bottomNavigationBar: NavigationBar(
-      selectedIndex: currentIndex,
-      onDestinationSelected: (index) => setState(() => currentIndex = index),
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home_rounded),
-          label: 'Inicio',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.local_shipping_outlined),
-          label: 'Entregas',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.bar_chart_rounded),
-          label: 'Relatorios',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.person_outline_rounded),
-          label: 'Perfil',
-        ),
-      ],
-    ),
-  );
-}
-
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
-    required this.icon,
-    required this.value,
-    required this.label,
-    required this.color,
-  });
-  final IconData icon;
-  final String value;
-  final String label;
-  final Color color;
-  @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(17),
-      child: Row(
-        children: [
-          Container(
-            width: 39,
-            height: 39,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: .12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: AquiLogColors.muted,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-class _DeliveryCard extends StatelessWidget {
-  const _DeliveryCard({
-    required this.code,
-    required this.destination,
-    required this.status,
-    required this.icon,
-  });
-  final String code;
-  final String destination;
-  final String status;
-  final IconData icon;
-  @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(15),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE5F5EE),
-              borderRadius: BorderRadius.circular(13),
-            ),
-            child: Icon(icon, color: AquiLogColors.forest, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  code,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  destination,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AquiLogColors.muted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          StatusPill(status),
-        ],
-      ),
-    ),
-  );
+    );
+  }
 }

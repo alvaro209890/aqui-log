@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -40,8 +41,25 @@ export class DeliveriesController {
   }
 
   @Get()
-  findAll(@Req() req: Request & { user: AuthenticatedUser }) {
-    return this.deliveries.findAll(req.user);
+  findAll(
+    @Req() req: Request & { user: AuthenticatedUser },
+    @Query('status') status?: string,
+    @Query('company') company?: string,
+    @Query('courier') courier?: string,
+    @Query('date') date?: string,
+  ) {
+    return this.deliveries.findAll(req.user, {
+      status,
+      company,
+      courier,
+      date,
+    });
+  }
+
+  @Get('ratings')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SUPPORT)
+  listRatings() {
+    return this.deliveries.listRatings();
   }
 
   @Get('offers/mine')

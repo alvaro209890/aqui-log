@@ -1,44 +1,46 @@
 # Cobertura funcional do MVP
 
-Legenda: **funcional** = fluxo exercitado pela API/smoke test; **fundacao** = contrato/cliente ou interface existe, mas falta completar a experiencia; **planejado** = fora desta entrega.
+Legenda: **funcional** = fluxo exercitado pela API/smoke test ou painel/apps; **fundacao** = contrato/cliente ou interface existe, mas falta completar a experiencia; **planejado** = fora desta entrega.
 
 ## Empresa
 
 | Funcionalidade | Estado | Observacao |
 | --- | --- | --- |
-| Cadastro, aprovacao e login | Funcional | API, perfis e cliente mobile prontos |
+| Cadastro, aprovacao e login | Funcional | API, perfis e app Flutter com tela de login |
 | Usuarios da empresa | Funcional | Proprietario lista e cria operadores |
-| Solicitar e agendar entrega | Funcional | Enderecos, coordenadas e agenda |
-| Rastreamento em tempo real | Funcional no backend | Falta integrar mapa real no app |
-| Historico | Funcional | Eventos cronologicos protegidos |
-| Financeiro e relatorios | Funcional basico | Totais e KPIs; telas mobile ainda demonstrativas |
+| Solicitar e agendar entrega | Funcional | App: tela `new_delivery` + API |
+| Rastreamento em tempo real | Funcional no backend | Painel com mapa Leaflet; app empresa sem mapa GPS nativo |
+| Historico | Funcional | Eventos cronologicos; detalhe no app |
+| Financeiro e relatorios | Funcional basico | Totais API + tela `reports` no app empresa |
 | Notificacoes | Funcional na API | Push nativo ainda planejado |
 | Avaliacao | Funcional | Uma avaliacao por entrega concluida |
-| Configuracoes | Planejado | Politicas e preferencias ainda sem modelo |
+| Configuracoes | Fundacao | Tela `settings` no app; politicas avancadas ainda leves |
 
 ## Entregador
 
 | Funcionalidade | Estado | Observacao |
 | --- | --- | --- |
 | Cadastro, veiculo e documentos | Funcional | URLs persistidas; upload privado pendente |
-| Aprovacao e disponibilidade | Funcional | Integrado ao despacho |
-| Oferta, aceite e recusa | Funcional | Oferta persistida com expiracao |
-| Navegacao GPS | Fundacao | Coordenadas/cliente prontos; abrir app de mapas pendente |
-| Coleta, entrega e comprovantes | Funcional | Maquina de estados exige URLs de prova |
-| Historico | Funcional na API | Tela detalhada pendente |
-| Carteira e extrato | Funcional basico | Credito idempotente na conclusao |
-| Avaliacoes, perfil e suporte | Fundacao | Avaliacao persistida; telas/fluxo de suporte pendentes |
+| Aprovacao e disponibilidade | Funcional | App com toggle + API |
+| Oferta, aceite e recusa | Funcional | Tela `available_deliveries` com mapa UI |
+| Navegacao GPS | Fundacao | Mapa ilustrativo no app; abrir app de mapas externo pendente |
+| Coleta, entrega e comprovantes | Funcional | Tela `proof` (camera simulada) + maquina de estados |
+| Historico | Funcional | Tela `my_deliveries` + detalhe |
+| Carteira e extrato | Funcional basico | Tela `wallet` + credito idempotente |
+| Avaliacoes, perfil e suporte | Fundacao | Perfil no app; suporte ainda informativo |
 
 ## Dashboard e plataforma
 
 | Funcionalidade | Estado | Observacao |
 | --- | --- | --- |
-| Login, KPIs e entregas | Funcional | Painel consome a API real |
-| Empresas, entregadores e usuarios | Funcional na API | Paginas completas do sidebar pendentes |
-| Mapa em tempo real | Funcional no backend | Componente visual ainda ilustrativo |
-| Financeiro, relatorios e auditoria | Funcional basico | Endpoints persistidos |
+| Login, KPIs e entregas | Funcional | 7 metricas com variacao % + tabela |
+| Graficos (hora, status, gauge) | Funcional | recharts + endpoints `/dashboard/charts/*` e `/performance` |
+| Empresas, entregadores e usuarios | Funcional | Paginas Companies e Couriers no sidebar |
+| Entregas com filtros | Funcional | Pagina Deliveries + query params na API |
+| Mapa em tempo real | Funcional | Leaflet + WebSocket no painel |
+| Financeiro, relatorios e avaliacoes | Funcional basico | Paginas Finance, Reports, Ratings |
+| Alertas / notificacoes | Funcional basico | Pagina Alerts + badge no topbar |
 | Permissoes | Funcional basico | Seis perfis; permissoes granulares futuras |
-| Notificacoes e logs | Funcional basico | Caixa e auditoria; central web pendente |
 | Motor de despacho | Funcional MVP | Proximidade, disponibilidade e exclusao de recusas |
 | API publica e integracoes | Planejado | ERP, e-commerce e marketplaces ficam para fase futura |
 | IA, BI, calor, roteirizacao e agrupamento | Planejado | Explicitamente fora do MVP estrutural |

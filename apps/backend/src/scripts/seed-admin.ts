@@ -16,21 +16,33 @@ async function seed() {
   const email = (
     config.get<string>('ADMIN_EMAIL') ?? 'admin@aquilog.com.br'
   ).toLowerCase();
+  const password =
+    config.get<string>('ADMIN_PASSWORD') ?? 'TroqueEstaSenha123!';
+  const passwordHash = await hash(password, 12);
+  const name = config.get<string>('ADMIN_NAME') ?? 'Administrador Aqui Log';
 
-  if (!(await users.findOneBy({ email }))) {
+  const existing = await users.findOneBy({ email });
+  if (existing) {
+    existing.name = name;
+    existing.passwordHash = passwordHash;
+    existing.role = UserRole.SUPER_ADMIN;
+    existing.status = AccountStatus.ACTIVE;
+    await users.save(existing);
+
+    console.log(`Admin atualizado: ${email}`);
+  } else {
     await users.save(
       users.create({
-        name: config.get<string>('ADMIN_NAME') ?? 'Administrador Aqui Log',
+        name,
         email,
-        passwordHash: await hash(
-          config.get<string>('ADMIN_PASSWORD') ?? 'TroqueEstaSenha123!',
-          12,
-        ),
+        passwordHash,
         role: UserRole.SUPER_ADMIN,
         status: AccountStatus.ACTIVE,
         companyId: null,
       }),
     );
+
+    console.log(`Admin criado: ${email}`);
   }
 
   await app.close();

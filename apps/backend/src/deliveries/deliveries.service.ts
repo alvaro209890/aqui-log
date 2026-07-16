@@ -77,25 +77,64 @@ export class DeliveriesService {
     return delivery;
   }
 
-  async findAll(user: AuthenticatedUser) {
+  async findAll(
+    user: AuthenticatedUser,
+    filters: {
+      status?: string;
+      company?: string;
+      courier?: string;
+      date?: string;
+    } = {},
+  ) {
+    const qb = this.deliveries
+      .createQueryBuilder('delivery')
+      .orderBy('delivery.createdAt', 'DESC');
+
     if (
       [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SUPPORT].includes(
         user.role,
       )
     ) {
-      return this.deliveries.find({ order: { createdAt: 'DESC' } });
-    }
-    if (user.companyId) {
-      return this.deliveries.find({
-        where: { companyId: user.companyId },
-        order: { createdAt: 'DESC' },
+      // full access
+    } else if (user.companyId) {
+      qb.andWhere('delivery.companyId = :companyId', {
+        companyId: user.companyId,
+      });
+    } else {
+      const courier = await this.getCourierByUser(user.id);
+      qb.andWhere('delivery.courierId = :courierId', {
+        courierId: courier.id,
       });
     }
-    const courier = await this.getCourierByUser(user.id);
-    return this.deliveries.find({
-      where: { courierId: courier.id },
-      order: { createdAt: 'DESC' },
-    });
+
+    if (filters.status) {
+      qb.andWhere('delivery.status = :status', { status: filters.status });
+    }
+    if (
+      filters.company &&
+      [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SUPPORT].includes(
+        user.role,
+      )
+    ) {
+      qb.andWhere('delivery.companyId = :filterCompany', {
+        filterCompany: filters.company,
+      });
+    }
+    if (filters.courier) {
+      qb.andWhere('delivery.courierId = :filterCourier', {
+        filterCourier: filters.courier,
+      });
+    }
+    if (filters.date) {
+      const day = filters.date.slice(0, 10);
+      qb.andWhere('delivery.created_at::date = :day::date', { day });
+    }
+
+    return qb.getMany();
+  }
+
+  async listRatings() {
+    return this.ratings.find({ order: { createdAt: 'DESC' }, take: 200 });
   }
 
   async history(id: string, user: AuthenticatedUser) {
