@@ -22,20 +22,41 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     env:
       NODE_ENV: test
       PORT: 3000
+      APP_TIMEZONE: America/Sao_Paulo
       DATABASE_HOST: localhost
       DATABASE_PORT: 5432
       DATABASE_NAME: aqui_log
       DATABASE_USER: aqui_log
       DATABASE_PASSWORD: aqui_log_dev
       DATABASE_SYNC: "false"
+      REDIS_URL: redis://localhost:6379
       JWT_SECRET: aqui-log-ci-secret-only
       JWT_EXPIRES_IN: 1d
+      JWT_REFRESH_EXPIRES_DAYS: "7"
+      PUBLIC_API_URL: http://localhost:3000/api/v1
+      STORAGE_LOCAL_DIR: /tmp/aqui-log-uploads
+      STORAGE_DRIVER: local
+      GEO_PROVIDER: local
       ADMIN_NAME: Administrador CI
       ADMIN_EMAIL: admin@aquilog.com.br
       ADMIN_PASSWORD: AdminLocal123!
+      PRICING_BASE_FEE_CENTS: "1000"
+      PRICING_PER_KM_CENTS: "500"
+      PRICING_PLATFORM_FEE_PERCENT: "20"
+      PRICING_MIN_FEE_CENTS: "800"
+      OFFER_TTL_SECONDS: "120"
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -48,17 +69,37 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm --filter backend test
+      - run: pnpm --filter backend lint:check
       - run: pnpm db:migrate
       - run: pnpm db:admin
       - name: Smoke test da API
         run: |
-          pnpm --filter backend start > /tmp/aqui-log-api.log 2>&1 &
+          set -euo pipefail
+          pnpm --filter backend start:prod > /tmp/aqui-log-api.log 2>&1 &
           api_pid=$!
-          trap 'kill $api_pid' EXIT
-          for attempt in {1..30}; do
-            curl -fsS http://localhost:3000/api/v1/health && break
+          cleanup() {
+            kill "$api_pid" 2>/dev/null || true
+            if [[ -f /tmp/aqui-log-api.log ]]; then
+              echo "---- API log (tail) ----"
+              tail -n 80 /tmp/aqui-log-api.log || true
+            fi
+          }
+          trap cleanup EXIT
+          ready=0
+          for attempt in $(seq 1 45); do
+            if body="$(curl -fsS http://localhost:3000/api/v1/health 2>/dev/null)"; then
+              echo "$body"
+              if echo "$body" | jq -e '.status == "ok" and .checks.db == "ok" and .checks.redis == "ok"' >/dev/null; then
+                ready=1
+                break
+              fi
+            fi
             sleep 1
           done
+          if [[ "$ready" -ne 1 ]]; then
+            echo "API health not ready after wait"
+            exit 1
+          fi
           pnpm smoke
 
   flutter:
