@@ -156,8 +156,8 @@ cd packages/aqui_log_core && dart test
 | --- | --- |
 | `fb4f55a` | Sprint 1 backend |
 | `550b194` | Sprint 2 mobile |
+| `e017917` | Scaffold Render/Vercel/Firebase + HANDOFF |
 | `e0dff26` / `bf36b4a` | Sprint 3 dashboard + docs |
-| *(este)* | Scaffold Render/Vercel/Firebase + HANDOFF |
 
 ---
 
