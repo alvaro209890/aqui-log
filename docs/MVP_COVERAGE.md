@@ -64,6 +64,14 @@ Legenda: **funcional** = fluxo exercitado pela API/smoke test ou painel/apps; **
 - Dashboard: marcar alertas como lidos.
 - Timezone `America/Sao_Paulo` no health e env.
 
+## Sprint 2 (2026-07-16) — entregue
+
+- Storage local Firebase-ready (`POST /storage/presign`, `PUT /storage/upload/:key`, `GET /storage/files/:key`)
+- Policy de `proofUrl` (host do storage)
+- Geo `POST /geo/geocode` (local deterministic + cache Redis; `GEO_PROVIDER=nominatim` opcional)
+- Devices `POST /devices` (skeleton FCM)
+- Apps: mapa embutido OSM, geocode na nova entrega, camera/upload, GPS periodico, detalhe com historico/avaliacao, refresh token no core
+
 ## Sprint 3 (2026-07-16) — entregue
 
 - Paginas Usuarios, Auditoria, Configuracoes (settings em Redis)
