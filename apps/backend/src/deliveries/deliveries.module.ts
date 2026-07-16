@@ -7,6 +7,7 @@ import { Delivery } from '../database/entities/delivery.entity';
 import { Rating } from '../database/entities/rating.entity';
 import { DeliveriesController } from './deliveries.controller';
 import { DeliveriesService } from './deliveries.service';
+import { DeliveryJobsService } from './delivery-jobs.service';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { DeliveriesService } from './deliveries.service';
     ]),
   ],
   controllers: [DeliveriesController],
-  providers: [DeliveriesService],
+  providers: [DeliveriesService, DeliveryJobsService],
+  exports: [DeliveriesService],
 })
 export class DeliveriesModule {}

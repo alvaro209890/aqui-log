@@ -49,14 +49,16 @@ cd packages/aqui_log_core && dart pub get && dart analyze && dart test
 1. Suba Postgres/Redis (`docker compose --env-file .env -f infra/docker-compose.yml up -d`).
 2. Aplique `pnpm db:migrate` e `pnpm db:admin`.
 3. Inicie a API real (`pnpm --filter backend start` ou `start:prod` apos `pnpm build`).
-4. Confirme `GET http://localhost:3000/api/v1/health` com `status: ok`.
+4. Confirme `GET http://localhost:3001/api/v1/health` com `status: ok` e `checks.db/redis: ok`.
 5. Execute `pnpm smoke` (idealmente duas vezes). A saida deve conter `Smoke test aprovado:` e sair com codigo 0.
 
-O script em `scripts/smoke-test.sh` cobre registro, aprovacao, despacho, aceite, ciclo de status, historico, avaliacao, carteira, notificacoes e auditoria. Redis esta provisionado no Compose, mas o despacho do MVP ainda nao depende dele em runtime.
+O script em `scripts/smoke-test.sh` cobre registro, aprovacao, despacho, aceite, ciclo de status, historico, avaliacao, carteira (fee server-side), notificacoes, auditoria e **refresh token**. Redis e usado em runtime para lock de aceite de oferta e jobs de expiracao/re-despacho.
+
+Timezone padrao: `America/Sao_Paulo` (`APP_TIMEZONE`).
 
 ## Banco
 
-- `pnpm db:migrate`: aplica migrations pendentes.
+- `pnpm db:migrate`: aplica migrations pendentes (inclui `refresh_tokens` e `password_reset_tokens`).
 - `pnpm db:admin`: cria o primeiro administrador de forma idempotente.
 - `pnpm --filter backend migration:generate src/database/migrations/NomeDaAlteracao`: gera a proxima migration apos alterar entidades.
 - `pnpm --filter backend migration:revert`: reverte a ultima migration.

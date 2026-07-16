@@ -23,7 +23,7 @@ export function App() {
   });
   const [alertCount, setAlertCount] = useState(0);
 
-  useEffect(() => {
+  const refreshAlerts = () => {
     if (!session) return;
     api
       .notifications(session.accessToken)
@@ -31,6 +31,11 @@ export function App() {
         setAlertCount(items.filter((n) => !n.readAt).length),
       )
       .catch(() => setAlertCount(0));
+  };
+
+  useEffect(() => {
+    refreshAlerts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
   if (!session) {
@@ -94,7 +99,12 @@ export function App() {
           <Route path="/finance" element={<FinancePage token={token} />} />
           <Route path="/ratings" element={<RatingsPage token={token} />} />
           <Route path="/reports" element={<ReportsPage token={token} />} />
-          <Route path="/alerts" element={<AlertsPage token={token} />} />
+          <Route
+            path="/alerts"
+            element={
+              <AlertsPage token={token} onReadChange={refreshAlerts} />
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

@@ -195,6 +195,12 @@ export const api = {
     request<RatingRecord[]>('/deliveries/ratings', {}, token),
   notifications: (token: string) =>
     request<NotificationRecord[]>('/notifications', {}, token),
+  markNotificationRead: (token: string, id: string) =>
+    request<NotificationRecord>(
+      `/notifications/${id}/read`,
+      { method: 'PATCH' },
+      token,
+    ),
   approveCompany: (token: string, id: string) =>
     request<CompanyRecord>(
       `/companies/${id}/approve`,

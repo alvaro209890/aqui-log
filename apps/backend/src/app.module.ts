@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
@@ -15,13 +16,18 @@ import { DeliveryEvent } from './database/entities/delivery-event.entity';
 import { DeliveryOffer } from './database/entities/delivery-offer.entity';
 import { Delivery } from './database/entities/delivery.entity';
 import { Notification } from './database/entities/notification.entity';
+import { PasswordResetToken } from './database/entities/password-reset-token.entity';
 import { Rating } from './database/entities/rating.entity';
+import { RefreshToken } from './database/entities/refresh-token.entity';
 import { User } from './database/entities/user.entity';
 import { WalletTransaction } from './database/entities/wallet-transaction.entity';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { DeliveriesModule } from './deliveries/deliveries.module';
 import { FinanceModule } from './finance/finance.module';
+import { MailModule } from './mail/mail.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { PricingModule } from './pricing/pricing.module';
+import { RedisModule } from './redis/redis.module';
 import { TrackingModule } from './tracking/tracking.module';
 import { UsersModule } from './users/users.module';
 
@@ -31,6 +37,7 @@ import { UsersModule } from './users/users.module';
       isGlobal: true,
       envFilePath: ['../../.env', '.env'],
     }),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
@@ -52,11 +59,16 @@ import { UsersModule } from './users/users.module';
           AuditLog,
           WalletTransaction,
           Rating,
+          RefreshToken,
+          PasswordResetToken,
         ],
         synchronize: config.get('DATABASE_SYNC', 'false') === 'true',
         logging: config.get('NODE_ENV') === 'development',
       }),
     }),
+    RedisModule,
+    PricingModule,
+    MailModule,
     AuthModule,
     AuditModule,
     NotificationsModule,

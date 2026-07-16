@@ -7,7 +7,9 @@ import { DeliveryEvent } from './entities/delivery-event.entity';
 import { DeliveryOffer } from './entities/delivery-offer.entity';
 import { Delivery } from './entities/delivery.entity';
 import { Notification } from './entities/notification.entity';
+import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { Rating } from './entities/rating.entity';
+import { RefreshToken } from './entities/refresh-token.entity';
 import { User } from './entities/user.entity';
 import { WalletTransaction } from './entities/wallet-transaction.entity';
 
@@ -31,6 +33,8 @@ export default new DataSource({
     AuditLog,
     WalletTransaction,
     Rating,
+    RefreshToken,
+    PasswordResetToken,
   ],
   migrations: ['src/database/migrations/*.ts'],
   synchronize: false,

@@ -24,7 +24,7 @@ Dashboard React ──┘                                      │
 
 ## Persistencia
 
-PostgreSQL e a fonte de verdade. A migration inicial cria usuarios, empresas, entregadores, entregas, ofertas, eventos, notificacoes, avaliacoes, carteira e auditoria. Redis esta provisionado para cache, presenca, filas e locks do motor de despacho nas proximas iteracoes.
+PostgreSQL e a fonte de verdade. A migration inicial cria usuarios, empresas, entregadores, entregas, ofertas, eventos, notificacoes, avaliacoes, carteira e auditoria. Redis e usado para locks de aceite de oferta (Sprint 1). Jobs de expiracao de oferta e despacho agendado rodam via `@nestjs/schedule`. Precificacao e server-side (Haversine + env `PRICING_*`). Auth: JWT access + refresh tokens persistidos (hash) e recuperacao de senha.
 
 Valores financeiros sao inteiros em centavos. Identificadores internos sao UUID; cada entrega tambem recebe um codigo publico `AQL-*`.
 

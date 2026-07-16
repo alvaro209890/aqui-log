@@ -5,6 +5,8 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Company } from '../database/entities/company.entity';
 import { Courier } from '../database/entities/courier.entity';
+import { PasswordResetToken } from '../database/entities/password-reset-token.entity';
+import { RefreshToken } from '../database/entities/refresh-token.entity';
 import { User } from '../database/entities/user.entity';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -14,7 +16,13 @@ import { JwtStrategy } from './jwt.strategy';
   imports: [
     ConfigModule,
     PassportModule,
-    TypeOrmModule.forFeature([User, Company, Courier]),
+    TypeOrmModule.forFeature([
+      User,
+      Company,
+      Courier,
+      RefreshToken,
+      PasswordResetToken,
+    ]),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -27,6 +35,6 @@ import { JwtStrategy } from './jwt.strategy';
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
-  exports: [JwtModule],
+  exports: [JwtModule, AuthService],
 })
 export class AuthModule {}

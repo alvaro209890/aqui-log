@@ -47,10 +47,19 @@ Legenda: **funcional** = fluxo exercitado pela API/smoke test ou painel/apps; **
 
 ## Bloqueios antes de producao
 
-- Upload privado e validacao de documentos/comprovantes.
-- Push notification, provedor de mapas/geocoding e observabilidade.
-- Gateway de pagamento, conciliacao, saque e regras fiscais.
-- Refresh token, recuperacao de senha, MFA administrativo e gestao de sessoes.
-- Locks/filas Redis no despacho para alta concorrencia.
-- Chaves estrangeiras, politica de retencao e rotinas de saneamento do banco.
-- Testes de carga, pentest, LGPD, backups e infraestrutura AWS/GCP.
+- Upload privado e validacao de documentos/comprovantes (**Firebase Storage** no plano prod).
+- Push notification (**Firebase FCM**).
+- Provedor de mapas/geocoding definitivo (mapa embutido OSM no Sprint 2).
+- Observabilidade, FKs, retencao e rotinas de saneamento do banco.
+- Gateway de pagamento, conciliacao, saque e regras fiscais (**fora do escopo atual**).
+- MFA administrativo e gestao avancada de sessoes (refresh + reset **ja no Sprint 1**).
+- Testes de carga, pentest, LGPD formal, backups e infraestrutura cloud.
+
+## Sprint 1 (2026-07-16) — entregue
+
+- Redis em runtime (health + lock de aceite).
+- Expiracao de ofertas + re-despacho e despacho agendado (cron 10s).
+- Precificacao server-side (km + base + % plataforma).
+- Refresh token, logout, forgot/reset password (token no log local).
+- Dashboard: marcar alertas como lidos.
+- Timezone `America/Sao_Paulo` no health e env.

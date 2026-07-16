@@ -5,8 +5,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, LessThanOrEqual, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/jwt.strategy';
 import { AuditService } from '../audit/audit.service';
 import { Courier } from '../database/entities/courier.entity';
@@ -23,6 +24,12 @@ import {
 } from '../database/enums';
 import { FinanceService } from '../finance/finance.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PricingService } from '../pricing/pricing.service';
+import { RedisService } from '../redis/redis.module';
+import {
+  OFFER_ACCEPT_LOCK_TTL_SECONDS,
+  offerAcceptLockKey,
+} from './delivery-locks';
 import { assertDeliveryTransition, distanceInKm } from './delivery-rules';
 import {
   AssignCourierDto,
@@ -45,11 +52,20 @@ export class DeliveriesService {
     private readonly notifications: NotificationsService,
     private readonly audit: AuditService,
     private readonly finance: FinanceService,
+    private readonly pricing: PricingService,
+    private readonly redis: RedisService,
+    private readonly config: ConfigService,
   ) {}
 
   async create(dto: CreateDeliveryDto, user: AuthenticatedUser) {
     if (!user.companyId)
       throw new ForbiddenException('Usuario sem empresa vinculada');
+    const quote = this.pricing.quote({
+      pickupLatitude: dto.pickupLatitude,
+      pickupLongitude: dto.pickupLongitude,
+      deliveryLatitude: dto.deliveryLatitude,
+      deliveryLongitude: dto.deliveryLongitude,
+    });
     const delivery = await this.deliveries.save(
       this.deliveries.create({
         ...dto,
@@ -59,20 +75,29 @@ export class DeliveriesService {
         courierId: null,
         notes: dto.notes ?? null,
         scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : null,
-        priceCents: dto.priceCents ?? 0,
-        courierFeeCents: dto.courierFeeCents ?? 0,
+        // Server-side pricing always wins (client price fields ignored)
+        priceCents: quote.priceCents,
+        courierFeeCents: quote.courierFeeCents,
         collectionProofUrl: null,
         deliveryProofUrl: null,
         canceledAt: null,
       }),
     );
-    await this.recordEvent(delivery, user.id, 'Entrega solicitada');
+    await this.recordEvent(
+      delivery,
+      user.id,
+      `Entrega solicitada (dist ${quote.distanceKm}km)`,
+    );
     await this.audit.record({
       actorId: user.id,
       action: 'DELIVERY_CREATED',
       resourceType: 'delivery',
       resourceId: delivery.id,
-      metadata: { code: delivery.code, companyId: delivery.companyId },
+      metadata: {
+        code: delivery.code,
+        companyId: delivery.companyId,
+        pricing: quote,
+      },
     });
     return delivery;
   }
@@ -226,34 +251,124 @@ export class DeliveriesService {
   }
 
   async acceptOffer(offerId: string, userId: string) {
-    const courier = await this.getCourierByUser(userId);
-    const offer = await this.getPendingOffer(offerId, courier.id);
-    const delivery = await this.getById(offer.deliveryId);
-    assertDeliveryTransition(delivery.status, DeliveryStatus.ACCEPTED);
-    offer.status = OfferStatus.ACCEPTED;
-    offer.respondedAt = new Date();
-    delivery.status = DeliveryStatus.ACCEPTED;
-    delivery.acceptedAt = new Date();
-    courier.available = false;
-    await Promise.all([
-      this.offers.save(offer),
-      this.deliveries.save(delivery),
-      this.couriers.save(courier),
-    ]);
-    await this.recordEvent(delivery, userId, 'Corrida aceita');
-    await this.notifyCreator(
-      delivery,
-      'Corrida aceita',
-      `O entregador aceitou a entrega ${delivery.code}`,
+    const lockKey = offerAcceptLockKey(offerId);
+    const locked = await this.redis.acquireLock(
+      lockKey,
+      OFFER_ACCEPT_LOCK_TTL_SECONDS,
     );
-    await this.audit.record({
-      actorId: userId,
-      action: 'DELIVERY_OFFER_ACCEPTED',
-      resourceType: 'delivery',
-      resourceId: delivery.id,
-      metadata: { offerId, courierId: courier.id },
+    if (!locked) {
+      throw new ConflictException('Oferta em processamento; tente novamente');
+    }
+    try {
+      const courier = await this.getCourierByUser(userId);
+      const offer = await this.getPendingOffer(offerId, courier.id);
+      const delivery = await this.getById(offer.deliveryId);
+      if (delivery.status !== DeliveryStatus.OFFERED) {
+        throw new ConflictException('Entrega nao esta mais em oferta');
+      }
+      assertDeliveryTransition(delivery.status, DeliveryStatus.ACCEPTED);
+      offer.status = OfferStatus.ACCEPTED;
+      offer.respondedAt = new Date();
+      delivery.status = DeliveryStatus.ACCEPTED;
+      delivery.acceptedAt = new Date();
+      delivery.courierId = courier.id;
+      courier.available = false;
+      // Expire sibling pending offers for this delivery
+      await this.offers
+        .createQueryBuilder()
+        .update()
+        .set({ status: OfferStatus.CANCELED, respondedAt: new Date() })
+        .where('delivery_id = :deliveryId', { deliveryId: delivery.id })
+        .andWhere('id != :offerId', { offerId })
+        .andWhere('status = :pending', { pending: OfferStatus.PENDING })
+        .execute();
+      await Promise.all([
+        this.offers.save(offer),
+        this.deliveries.save(delivery),
+        this.couriers.save(courier),
+      ]);
+      await this.recordEvent(delivery, userId, 'Corrida aceita');
+      await this.notifyCreator(
+        delivery,
+        'Corrida aceita',
+        `O entregador aceitou a entrega ${delivery.code}`,
+      );
+      await this.audit.record({
+        actorId: userId,
+        action: 'DELIVERY_OFFER_ACCEPTED',
+        resourceType: 'delivery',
+        resourceId: delivery.id,
+        metadata: { offerId, courierId: courier.id },
+      });
+      return delivery;
+    } finally {
+      await this.redis.releaseLock(lockKey);
+    }
+  }
+
+  /** Expire PENDING offers past expiresAt; re-open delivery and try redispatch. */
+  async expireStaleOffers(): Promise<number> {
+    const stale = await this.offers.find({
+      where: {
+        status: OfferStatus.PENDING,
+        expiresAt: LessThanOrEqual(new Date()),
+      },
+      take: 50,
     });
-    return delivery;
+    let count = 0;
+    for (const offer of stale) {
+      offer.status = OfferStatus.EXPIRED;
+      offer.respondedAt = new Date();
+      await this.offers.save(offer);
+      count += 1;
+      const delivery = await this.deliveries.findOneBy({
+        id: offer.deliveryId,
+      });
+      if (
+        delivery &&
+        delivery.status === DeliveryStatus.OFFERED &&
+        delivery.courierId === offer.courierId
+      ) {
+        delivery.status = DeliveryStatus.REQUESTED;
+        delivery.courierId = null;
+        await this.deliveries.save(delivery);
+        await this.recordEvent(
+          delivery,
+          null,
+          'Oferta expirada; reabrindo despacho',
+        );
+        try {
+          await this.dispatch(delivery.id, delivery.createdById);
+        } catch {
+          // no courier available — stays REQUESTED
+        }
+      }
+    }
+    return count;
+  }
+
+  /** Auto-dispatch REQUESTED deliveries whose scheduledAt has arrived. */
+  async dispatchDueScheduled(): Promise<number> {
+    const due = await this.deliveries.find({
+      where: {
+        status: DeliveryStatus.REQUESTED,
+        scheduledAt: LessThanOrEqual(new Date()),
+      },
+      take: 20,
+      order: { scheduledAt: 'ASC' },
+    });
+    // Also only those with non-null scheduledAt
+    const withSchedule = due.filter((d) => d.scheduledAt !== null);
+    let count = 0;
+    for (const delivery of withSchedule) {
+      try {
+        await this.dispatch(delivery.id, delivery.createdById);
+        count += 1;
+      } catch {
+        // skip if no couriers
+      }
+    }
+    return count;
   }
 
   async rejectOffer(offerId: string, userId: string) {
@@ -359,12 +474,13 @@ export class DeliveriesService {
     note: string,
   ) {
     assertDeliveryTransition(delivery.status, DeliveryStatus.OFFERED);
+    const ttlSeconds = Number(this.config.get('OFFER_TTL_SECONDS') ?? 120);
     const offer = await this.offers.save(
       this.offers.create({
         deliveryId: delivery.id,
         courierId: courier.id,
         status: OfferStatus.PENDING,
-        expiresAt: new Date(Date.now() + 2 * 60 * 1000),
+        expiresAt: new Date(Date.now() + ttlSeconds * 1000),
         respondedAt: null,
       }),
     );

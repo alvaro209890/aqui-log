@@ -27,9 +27,14 @@ api() {
 }
 
 api GET /health | jq -e '.status == "ok"' >/dev/null
+api GET /health | jq -e '.checks.redis == "ok" and .checks.db == "ok"' >/dev/null
 
 admin_login="$(api POST /auth/login "" "$(jq -nc --arg email "${ADMIN_EMAIL_VALUE:-admin@aquilog.com.br}" --arg password "${ADMIN_PASSWORD_VALUE:-AdminLocal123!}" '{email:$email,password:$password}')")"
 admin_token="$(jq -er '.accessToken' <<<"$admin_login")"
+# refresh token pair
+refresh_token="$(jq -er '.refreshToken' <<<"$admin_login")"
+refreshed="$(api POST /auth/refresh "" "$(jq -nc --arg refreshToken "$refresh_token" '{refreshToken:$refreshToken}')")"
+jq -er '.accessToken' <<<"$refreshed" >/dev/null
 
 company="$(api POST /auth/register/company "" "$(jq -nc --arg ownerName 'Empresa Teste' --arg email "$COMPANY_EMAIL" --arg password "$TEST_PASSWORD" --arg legalName "Aqui Log Teste $RUN_ID LTDA" --arg tradeName 'Empresa Smoke' --arg document "99${RUN_DOC}0" '{ownerName:$ownerName,email:$email,password:$password,legalName:$legalName,tradeName:$tradeName,document:$document}')")"
 company_id="$(jq -er '.companyId' <<<"$company")"
@@ -47,9 +52,12 @@ api POST /users "$owner_token" "$(jq -nc --arg name 'Operador Teste' --arg email
 api PATCH /couriers/me/location "$courier_token" "$(jq -nc --argjson latitude "$PICKUP_LATITUDE" --argjson longitude "$PICKUP_LONGITUDE" '{latitude:$latitude,longitude:$longitude}')" >/dev/null
 api PATCH /couriers/me/availability "$courier_token" '{"available":true}' >/dev/null
 
-delivery="$(api POST /deliveries "$owner_token" "$(jq -nc --argjson pickupLatitude "$PICKUP_LATITUDE" --argjson pickupLongitude "$PICKUP_LONGITUDE" --argjson deliveryLatitude "$DELIVERY_LATITUDE" --argjson deliveryLongitude "$DELIVERY_LONGITUDE" '{pickupAddress:"Av. Afonso Pena, 1000 - Centro",pickupLatitude:$pickupLatitude,pickupLongitude:$pickupLongitude,deliveryAddress:"Praca da Liberdade - Savassi",deliveryLatitude:$deliveryLatitude,deliveryLongitude:$deliveryLongitude,recipientName:"Cliente Teste",recipientPhone:"+5531999999999",priceCents:3500,courierFeeCents:1800}')")"
+delivery="$(api POST /deliveries "$owner_token" "$(jq -nc --argjson pickupLatitude "$PICKUP_LATITUDE" --argjson pickupLongitude "$PICKUP_LONGITUDE" --argjson deliveryLatitude "$DELIVERY_LATITUDE" --argjson deliveryLongitude "$DELIVERY_LONGITUDE" '{pickupAddress:"Av. Afonso Pena, 1000 - Centro",pickupLatitude:$pickupLatitude,pickupLongitude:$pickupLongitude,deliveryAddress:"Praca da Liberdade - Savassi",deliveryLatitude:$deliveryLatitude,deliveryLongitude:$deliveryLongitude,recipientName:"Cliente Teste",recipientPhone:"+5531999999999"}')")"
 delivery_id="$(jq -er '.id' <<<"$delivery")"
 delivery_code="$(jq -er '.code' <<<"$delivery")"
+courier_fee="$(jq -er '.courierFeeCents' <<<"$delivery")"
+price_cents="$(jq -er '.priceCents' <<<"$delivery")"
+jq -en --argjson fee "$courier_fee" --argjson price "$price_cents" '$fee > 0 and $price >= $fee' >/dev/null
 
 dispatch="$(api POST "/deliveries/$delivery_id/dispatch" "$admin_token")"
 offer_id="$(jq -er '.offer.id' <<<"$dispatch")"
@@ -62,7 +70,7 @@ api PATCH "/deliveries/$delivery_id/status" "$courier_token" '{"status":"DELIVER
 
 api GET "/deliveries/$delivery_id/history" "$owner_token" | jq -e 'length >= 7' >/dev/null
 api POST "/deliveries/$delivery_id/rating" "$owner_token" '{"score":5,"comment":"Entrega concluida no fluxo de teste"}' >/dev/null
-api GET /finance/statement "$courier_token" | jq -e '.balanceCents == 1800' >/dev/null
+api GET /finance/statement "$courier_token" | jq -e --argjson fee "$courier_fee" '.balanceCents == $fee' >/dev/null
 api GET /notifications "$owner_token" | jq -e 'length > 0' >/dev/null
 api GET /audit "$admin_token" | jq -e 'length > 0' >/dev/null
 

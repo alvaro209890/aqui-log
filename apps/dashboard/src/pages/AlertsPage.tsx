@@ -2,18 +2,43 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { api, type NotificationRecord } from '../api';
 
-export function AlertsPage({ token }: { token: string }) {
+export function AlertsPage({
+  token,
+  onReadChange,
+}: {
+  token: string;
+  onReadChange?: () => void;
+}) {
   const [items, setItems] = useState<NotificationRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = () => {
     setLoading(true);
     api
       .notifications(token)
       .then(setItems)
       .catch((err: Error) => toast.error(err.message))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    load();
   }, [token]);
+
+  const markRead = async (id: string) => {
+    try {
+      await api.markNotificationRead(token, id);
+      setItems((prev) =>
+        prev.map((n) =>
+          n.id === id ? { ...n, readAt: new Date().toISOString() } : n,
+        ),
+      );
+      onReadChange?.();
+      toast.success('Alerta marcado como lido');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha ao marcar');
+    }
+  };
 
   return (
     <div className="page">
@@ -43,7 +68,15 @@ export function AlertsPage({ token }: { token: string }) {
                     {new Date(item.createdAt).toLocaleString('pt-BR')}
                   </span>
                 </div>
-                {!item.readAt && <em className="badge-new">Novo</em>}
+                {!item.readAt && (
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => markRead(item.id)}
+                  >
+                    Marcar lida
+                  </button>
+                )}
               </li>
             ))}
           </ul>
