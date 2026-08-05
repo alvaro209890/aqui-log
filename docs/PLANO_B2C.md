@@ -1,188 +1,187 @@
 # Plano — Aqui Log B2C (cliente direto → motoboy)
 
-> **Status:** PROPOSTA — nada desenvolvido
-> **Data:** 2026-08-03
-> **Mudança:** remover o modelo de empresas; o cliente final solicita a entrega (peso, tipo de produto, foto) e o motoboy escolhe se aceita.
+> **Status geral:** ✅ **MVP B2C funcional** (2026-08-04) — fluxo cliente → motoboy
+> rodando de ponta a ponta, sem empresa no meio. Próximas fases planejadas abaixo.
+> **Data de criação:** 2026-08-03 · **Última atualização:** 2026-08-04
+> **Planos derivados:** `PLANO_PAGAMENTOS.md` · `PLANO_TRANSPORTADORA.md` · `PLANO_CONFIANCA_E_PRECO.md`
 
 ---
 
-## 1. Objetivo
+## 1. Resumo executivo
 
-Hoje o Aqui Log é B2B: a **empresa** cria entregas e um **despacho automático** escolhe motoboy por proximidade.
+O Aqui Log deixou de ser B2B (empresa cria entrega, admin despacha) e virou
+**B2C direto**: a pessoa física se cadastra sozinha, descreve a encomenda
+(tipo, tamanho, peso, foto, alcance) e **o motoboy vê o pedido e decide se aceita**.
 
-O novo modelo é **B2C direto**:
-
-- O **cliente** (pessoa física) pede uma entrega informando **peso, tipo de produto e foto**.
-- A oferta aparece para os motoboys; **cada motoboy decide se aceita ou recusa**.
-- Sem empresa intermediária, sem despacho automático forçado.
+| Dimensão | Estado |
+|---|---|
+| Cadastro/login do cliente | ✅ auto-aprovado, auto-login |
+| Pedido com encomenda (tipo/tamanho/peso/foto/alcance) | ✅ app cliente |
+| Publicação para motoboys (auto-dispatch) | ✅ sem admin no meio |
+| Motoboy vê a encomenda e aceita/recusa | ✅ app motoboy |
+| Acompanhamento/avaliação | ✅ lista/detalhe + rating |
+| Pagamento do cliente | 🟠 pendente → `PLANO_PAGAMENTOS.md` |
+| Rota multi-pedido (transportadora) | ⏳ futuro → `PLANO_TRANSPORTADORA.md` |
 
 ---
 
-## 2. Quem é quem no modelo novo
+## 2. Quem é quem no modelo B2C
 
-| Papel | Antes | Depois |
+| Papel | Descrição | Aprovação |
 |---|---|---|
-| Quem pede | Empresa (CNPJ, aprovação admin) | **Cliente** pessoa física (cadastro simples, sem aprovação) |
-| Quem entrega | Entregador (courier) | **Motoboy** (courier — continua com aprovação admin) |
-| Quem controla | Admin | Admin (continua: aprovar motoboys, bloquear clientes, relatórios) |
+| **Cliente** | Pessoa física (`customers`), pede e acompanha | **Nenhuma** (auto-aprovado) |
+| **Motoboy** | Executa as entregas (`couriers`) | Admin (documentos) — inalterado |
+| **Admin** | Aprova motoboys, vê relatórios | — |
 
-A empresa desaparece como entidade. Vira **cliente** (`customers`).
-
----
-
-## 3. Fluxo novo de ponta a ponta
-
-1. **Cliente cadastra** (nome, telefone, CPF) — sem fila de aprovação, já opera.
-2. **Cliente cria o pedido:**
-   - Endereço de retirada e de entrega (com mapa)
-   - Destinatário (nome + telefone)
-   - **Peso** (kg)
-   - **Tipo de produto** (categoria)
-   - **Foto do produto/pacote** (obrigatória ou opcional — decisão)
-   - Observações
-3. **Sistema calcula o valor** da corrida (distância + base + ajuste por peso/faixa) — decisão pendente: preço automático ou sugestão do cliente (ver §5).
-4. **Oferta publicada** para motoboys disponíveis próximos da retirada (mapa + lista).
-5. **Motoboy aceita ou recusa.** Se recusa, a oferta continua viva para os outros. Se ninguém aceita em X minutos, o sistema pode re-ofertar, aumentar o valor (decisão) ou avisar o cliente.
-6. **Execução:** motoboy vai à retirada → coleta → entrega, com GPS ao vivo pro cliente acompanhar.
-7. **Prova:** foto na coleta e/ou na entrega (assinatura/recebimento).
-8. **Pagamento:** cliente paga; motoboy recebe (ver §5).
-9. **Avaliação mútua:** cliente avalia o motoboy e motoboy avalia o cliente.
+A empresa desaparece do fluxo de pedidos. O modelo antigo (B2B) continua
+suportado no backend por compatibilidade, mas o produto novo é o B2C.
 
 ---
 
-## 4. O que muda em cada camada (referência p/ quando desenvolver)
+## 3. Fluxo ponta a ponta (implementado)
 
-### Banco de dados
-- `companies` → **`customers`** (sem CNPJ/aprovação; CPF, telefone).
-- `deliveries` ganha: `weight_kg`, `product_type` (enum), `product_photo_urls` (1+).
-- `deliveries.company_id` vira `customer_id`.
-- `users` da empresa deixam de existir (cliente é uma pessoa só).
-- Carteira: continua, mas agora precisa de **entrada de dinheiro** do cliente (ver §5).
+```
+cliente ──cadastra──▶ POST /auth/register/customer   (auto-aprovado, devolve tokens)
+cliente ──pede──────▶ POST /deliveries               (encomenda + endereços + geocode)
+sistema ──publica───▶ auto-dispatch: oferta PENDING para motoboys disponíveis
+                      próximos da retirada (sem motoboy → REQUESTED, redespacha)
+motoboy ──vê────────▶ GET /deliveries/offers/mine    (card com a encomenda)
+motoboy ──aceita────▶ PATCH /deliveries/offers/:id/accept → ACCEPTED
+motoboy ──executa───▶ status: AT_PICKUP → PICKED_UP (prova) → IN_TRANSIT → DELIVERED (prova)
+cliente ──avalia────▶ POST /deliveries/:id/rating
+```
 
-### API
-- `POST /auth/register/company` → `POST /auth/register/customer` (auto-aprovado).
-- `POST /deliveries` muda: campos novos (peso, tipo, fotos), cria pra cliente.
-- Oferta: deixa de ser "despacho forçado com lock" → vira **convite visível** que o motoboy aceita/recusa (`accept`/`reject` continuam, mas sem disputa automática; recusa não re-despacha forçado, apenas mantém a oferta viva).
-- `POST /deliveries/:id/rating` → avaliação **nos dois sentidos**.
-- Rotas de admin: listar/bloquear clientes; empresas saem do dashboard.
+Estados da entrega: `REQUESTED → OFFERED → ACCEPTED → AT_PICKUP → PICKED_UP →
+IN_TRANSIT → DELIVERED` (ou `CANCELED` pelo cliente/admin).
 
-### App empresa → **App cliente**
-- O `company_app` é reformulado: cadastro de cliente, tela de novo pedido (mapa, peso, tipo, foto, destinatário), acompanhamento da corrida em tempo real, histórico, carteira/pagamento.
-- Renomear mentalmente: "app empresa" vira "app cliente".
-
-### App motoboy (courier_app)
-- Tela de **ofertas disponíveis** (mapa + cards com peso, tipo, foto, valor, distância).
-- Botão aceitar/recusar em cada oferta.
-- Resto (GPS, prova, carteira) já existe e continua.
-
-### Dashboard admin
-- Substituir gestão de empresas por gestão de **clientes** (bloqueio/reativação).
-- Relatórios: entregas por categoria de produto, peso médio, valor médio.
-- KPIs atuais continuam válidos.
+**Preço:** calculado **sempre no servidor** (base + km + % plataforma — `PricingService`);
+o app nunca envia valor.
 
 ---
 
-## 5. Decisões pendentes (preciso da sua palavra)
+## 4. O que já está implementado (matriz camada × estado)
+
+| Camada | Item | Estado |
+|---|---|---|
+| **DB** | Tabela `customers` + `users.customer_id` + role `CUSTOMER` no enum | ✅ migrations `1785000000000/1` |
+| **DB** | `deliveries.company_id` opcional + `deliveries.customer_id` | ✅ |
+| **DB** | `ratings.company_id` opcional + `ratings.customer_id` | ✅ |
+| **API** | `POST /auth/register/customer` (auto-aprovado, auto-login) | ✅ |
+| **API** | `POST /deliveries` por cliente (encomenda vai no `notes`; preço server-side) | ✅ |
+| **API** | **Auto-dispatch** no create (oferta direta p/ motoboys disponíveis) | ✅ |
+| **API** | Cliente lista/cancela/avalia **só os próprios pedidos** | ✅ |
+| **API** | JWT/WS tracking com `customerId` no payload | ✅ |
+| **App cliente** | Cadastro (nome/CPF/telefone), login, 4 abas (Início/Pedir/Entregas/Perfil) | ✅ |
+| **App cliente** | Pedido: tipo (7 categorias), tamanho P/M/G, peso kg, alcance, foto, destinatário | ✅ |
+| **App cliente** | Lista/detalhe mostram a encomenda (com foto) | ✅ |
+| **App motoboy** | Card da oferta mostra a encomenda (tipo · tamanho · peso · alcance · foto) | ✅ |
+| **Core** | `OrderMeta` (encode/parse da encomenda no `notes`) em `aqui_log_core` | ✅ |
+| **Qualidade** | Backend 27/27 · cliente 10/10 · motoboy 7/7 · smoke e2e verde · CI verde | ✅ |
+
+**Detalhe da encomenda no `notes` (workaround atual):** o backend ainda não tem
+colunas próprias (`weight_kg`, `product_type`, `product_photo_urls`). O app cliente
+serializa os metadados num bloco estruturado dentro do campo `notes`
+(→ `OrderMeta.encodeNotes`), e o app motoboy parseia (`OrderMeta.fromNotes`).
+A migração para colunas próprias é transparente para os apps (Fase 1 abaixo).
+
+---
+
+## 5. Decisões de produto
+
+### ✅ Decididas e aplicadas
+
+| # | Tema | Decisão |
+|---|---|---|
+| 2 | Peso | Kg livre no formulário (faixas só no preço, quando houver) |
+| 4 | Tipo de produto | Categorias fixas (Documento, Alimento, Eletrônico, Frágil, Roupas, Medicamento, Outro) |
+| 7 | Alcance | Cliente declara: mesma cidade / outra cidade ou município |
+| 10 | App do cliente | Reformular o `company_app` (não criar app novo) |
+| — | Preço | Sempre calculado no servidor (sem valor vindo do app) |
+| — | Despacho | Publicação automática para motoboys disponíveis (auto-dispatch) |
+
+### 🟠 Pendentes (precisam da palavra do Álvaro)
 
 | # | Tema | Opções | Recomendação |
 |---|---|---|---|
-| 1 | **Preço** | (a) Sistema calcula sempre (km + peso) e motoboy só aceita/recusa — estilo Uber; (b) Cliente sugere um valor e motoboy aceita/recusa/contra-propõe — estilo frete | **(a)** pra começar: simples, evita briga de preço; motoboy pode recusar se achar pouco |
-| 2 | **Peso** | Faixas (ex: até 2kg / 2–7kg / 7–15kg / 15kg+) que somam R$ no preço | **Faixas** — pesagem exata é fricção pro cliente |
-| 3 | **Foto** | Obrigatória sempre / opcional / obrigatória só acima de X kg | **Obrigatória** — é o que dá confiança pro motoboy aceitar |
-| 4 | **Tipo de produto** | Categorias fixas (documento, alimento, eletrônico, frágil, outro) | **Categorias fixas** + campo "outro" |
-| 5 | **Pagamento do cliente** | (a) Carteira interna com recarga (PIX/cartão) antes de pedir; (b) PIX/cartão na confirmação; (c) pagar na entrega em dinheiro | **(a)** carteira com recarga — já temos estrutura de carteira; sem gateway externo por enquanto |
-| 6 | **Oferta sem aceite** | Oferecer de novo até vencer / subir o valor automaticamente / avisar cliente pra aumentar | **Avisar o cliente** na 1ª versão; subir valor fica pra depois |
-| 7 | **Ninguém aceita** | Cancelar com aviso / re-oferecer com outro raio | **Re-oferecer com raio maior** uma vez, depois cancelar |
-| 8 | **Cadastro de cliente** | 100% automático (só CPF+telefone) / exige validação de telefone | **Validação de telefone** (código SMS) pra reduzir lixo |
-| 9 | **Avaliação** | Só cliente avalia motoboy / avaliação mútua | **Mútua** (protege os dois lados) |
-| 10 | **App do cliente** | Reformular `company_app` / criar app novo | **Reformular** o company_app — menos trabalho, mesma base |
+| 1 | Preço | (a) sistema calcula sempre — estilo Uber; (b) cliente sugere valor + contra-proposta — estilo frete | **(a)** — simples, evita briga de preço |
+| 3 | Foto do produto | Obrigatória / opcional / obrigatória acima de X kg | **Obrigatória** — dá confiança pro motoboy aceitar |
+| 5 | Pagamento | (a) carteira interna com recarga (PIX/cartão); (b) PIX na confirmação; (c) dinheiro na entrega | **(a)** carteira com recarga — sem gateway externo na v1 (ver `PLANO_PAGAMENTOS.md`) |
+| 6 | Oferta sem aceite | Re-ofertar / subir valor / avisar cliente | **Avisar o cliente** na v1 |
+| 8 | Validação de telefone | 100% automático / código SMS | **SMS** pra reduzir lixo (ver `PLANO_CONFIANCA_E_PRECO.md`) |
+| 9 | Avaliação | Só cliente avalia / **mútua** | **Mútua** — protege os dois lados |
 
 ---
 
-## 6. Fases (quando aprovar o plano)
+## 6. Próximas fases (priorizadas)
 
-| Fase | Entrega | Esforço relativo |
+| Prio | Fase | Entrega | Esforço | Doc |
+|---|---|---|---|---|
+| 1 | **Encomenda no backend** | Colunas `weight_kg`/`product_type`/`product_photo_urls` + foto obrigatória | Médio | `PLANO_CONFIANCA_E_PRECO.md` §2 |
+| 2 | **Preço por faixa** | Peso/tamanho somam R$ no preço; aumento automático se ninguém aceitar | Médio | `PLANO_CONFIANCA_E_PRECO.md` §1 |
+| 3 | **Avaliação mútua** | `ratings.from_role` (cliente ↔ motoboy) | Baixo | `PLANO_CONFIANCA_E_PRECO.md` §4 |
+| 4 | **Validação SMS** | Código no cadastro (provedor a definir) | Médio | `PLANO_CONFIANCA_E_PRECO.md` §3 |
+| 5 | **Carteira do cliente** | Reserva/estorno, depois PIX via gateway | Médio-Alto | `PLANO_PAGAMENTOS.md` |
+| 6 | **Transportadora** | Rota multi-pedido por proximidade (origem/destino próximos) | Alto | `PLANO_TRANSPORTADORA.md` |
+| 7 | **Dashboard** | Gestão de clientes + relatórios por categoria/peso | Baixo | — |
+
+Regra de ouro: **nada de cloud** (Render/Vercel/Firebase) sem pedido explícito.
+
+---
+
+## 7. Riscos e limitações conhecidas
+
+| Limitação | Impacto | Mitigação |
 |---|---|---|
-| 0 | Fechar as 10 decisões da §5 | — (só conversa) |
-| 1 | Banco + API: customers, campos de peso/tipo/foto, oferta por aceite, avaliação mútua | Médio |
-| 2 | App cliente (reformular company_app) | Alto |
-| 3 | App motoboy: tela de ofertas com aceite/recusa | Médio |
-| 4 | Dashboard: clientes no lugar de empresas, relatórios novos | Baixo |
-| 5 | Smoke/CI verdes + docs (HANDOFF/ROADMAP/MVP_COVERAGE) | Baixo |
+| Encomenda no `notes` (sem colunas próprias) | Relatórios/consultas por categoria não existem | Fase 1 (colunas) é a prioridade |
+| Foto opcional no app | Motoboy aceita sem ver o produto | Fase 1 torna obrigatória |
+| Sem pagamento | Ninguém paga nada ainda | `PLANO_PAGAMENTOS.md` |
+| Despacho por "motoboy mais próximo" (1 oferta por vez) | Sem concorrência de ofertas visíveis | Aceite/recusa já existe; anéis de raio futuros |
+| Sem validação de telefone | Contas lixo possíveis | `PLANO_CONFIANCA_E_PRECO.md` §3 |
+| Empresas ainda existem no backend | Dois modelos convivendo | B2B fica como legado; produto é B2C |
 
-## 7. O que NÃO muda
+---
 
-- Motoboy (courier) com aprovação admin e documentos
-- GPS ao vivo + foto de prova na entrega
-- Carteira/extrato
+## 8. Como rodar e testar
+
+```bash
+cd /home/acer/Documentos/aqui-log
+# infra (Postgres :5433, Redis :6379) — já rodando neste PC
+pnpm install
+pnpm db:migrate && pnpm db:admin
+pnpm build && pnpm test          # backend
+pnpm smoke                        # e2e: empresa + motoboy (B2B legado segue verde)
+# apps
+cd apps/company_app && flutter analyze && flutter test
+cd ../courier_app  && flutter analyze && flutter test
+# APK do cliente (release, arm64):
+cd apps/company_app && flutter build apk --release --target-platform android-arm64
+```
+
+**Fluxo B2C manual (curl):**
+
+```bash
+# 1. cliente se cadastra (auto-aprovado, já loga)
+curl -X POST localhost:3001/api/v1/auth/register/customer -H 'Content-Type: application/json' \
+  -d '{"name":"Maria","email":"m@x.com","password":"TesteSeguro123!","document":"12345678909","phone":"+5566999999999"}'
+# 2. motoboy: registrar + admin aprovar + localização + disponível
+# 3. cliente cria pedido → status OFFERED (auto-dispatch) se houver motoboy online
+# 4. motoboy: GET /deliveries/offers/mine → vê a encomenda → PATCH .../accept → ACCEPTED
+```
+
+---
+
+## 9. O que NÃO muda (herdado do B2B)
+
+- Motoboy com aprovação admin e documentos
+- GPS ao vivo + foto de prova na coleta/entrega
+- Carteira/extrato do motoboy
 - Dashboard, relatórios, auditoria
-- Stack e infra (NestJS/React/Flutter, local primeiro, cloud depois)
+- Stack e infra (NestJS/React/Flutter, Postgres/Redis, local primeiro, cloud depois)
 
 ---
 
-## 8. Fora de escopo (por enquanto)
+## 10. Fora de escopo (por enquanto)
 
-- Gateway de pagamento externo real (PIX/cartão processado) — só recarga interna
+- Gateway de pagamento externo real (PIX/cartão processado)
 - Agendamento avançado, rotas multi-parada, IA
-- Entregas para empresas (se voltar, entra como "cliente tipo empresa" depois)
-
----
-
-## 9. Status 2026-08-04 — Fase App Cliente (front) ✅
-
-**Implementado (commit B2C):** front do app cliente reformulado em `apps/company_app`
-(re-branding "Aqui Log Cliente", package id `br.com.aquilog.aqui_log_cliente`):
-
-| Item | Situação |
-| --- | --- |
-| Tela **Novo pedido** (`new_order_screen.dart`) | Tipo de encomenda (7 categorias), tamanho P/M/G (até 30/60/60+ cm), **peso em kg**, **alcance** (mesma cidade / outra cidade ou município), **foto do produto** (câmera/galeria via image_picker, upload no storage), retirada/entrega com geocode, destinatário, observações |
-| Abas do app | Início · Pedir · Entregas · Perfil |
-| Home | Card "Fazer pedido" + resumo (em andamento/concluídas) + pedidos recentes |
-| Lista/detalhe | Mostra **Encomenda** (tipo · tamanho · peso · alcance · foto) parseada do `notes` |
-| Login | **Cadastro de cliente funcional** (nome/CPF/telefone) — auto-aprovado e auto-login |
-
-**Estratégia front-only:** como o backend ainda não tem colunas de encomenda, o app
-serializa os metadados num bloco estruturado dentro do campo `notes` (formato em
-`apps/company_app/lib/order_meta.dart` — `encodeNotes`/`fromNotes`). O motoboy vê o
-texto completo na oferta; quando a Fase 1 do backend sair, a migração é transparente.
-
-**Decisões aplicadas (§5):** #2 peso em kg livre (não faixas) · #4 categorias fixas +
-"Outro" · #7 alcance declarado pelo cliente (intra/intermunicipal) · #10 reformular
-company_app (feito). **Ainda pendentes:** #1 preço, #3 foto obrigatória?, #5 pagamento,
-#6 oferta sem aceite, #8 validação de telefone, #9 avaliação mútua.
-
-**Testes:** `flutter analyze` limpo; `flutter test` 9/9 verdes (inclui round-trip do
-`OrderMeta`). **APK release** em `apps/company_app/build/app/outputs/flutter-apk/app-release.apk`.
-
-**Falta (próximas fases, com pedido):**
-- Fase 1 backend: `customers`, colunas `weight_kg`/`product_type`/`product_photo_urls`, oferta por aceite (sem lock forçado), avaliação mútua, registro cliente auto-aprovado
-- App motoboy: card de oferta com tipo/tamanho/peso/foto em destaque
-- Dashboard: gestão de clientes no lugar de empresas + relatórios por categoria/peso
-
----
-
-## 10. Status 2026-08-04 (2ª rodada) — B2C funcional ponta a ponta ✅
-
-**Backend agora suporta o fluxo B2C real — sem empresa no meio:**
-
-| Item | Implementado |
-| --- | --- |
-| `POST /auth/register/customer` | Cadastro pessoa física (nome/email/senha/CPF/telefone), **auto-aprovado**, devolve tokens (auto-login) |
-| Role `CUSTOMER` + entidade `customers` | Enum `users_role_enum` ganhou `CUSTOMER`; `users.customer_id`; nova tabela `customers` |
-| `POST /deliveries` por cliente | `deliveries.company_id` virou opcional; novo `customer_id`; preço continua server-side |
-| **Auto-dispatch** | Pedido do cliente é **publicado automaticamente** para motoboys disponíveis próximos (sem admin no meio); sem motoboy → fica REQUESTED e redespacha quando houver |
-| Listagem/detalhe | Cliente vê só os próprios pedidos; cancelar o próprio pedido permitido |
-| Avaliação | Cliente avalia o motoboy (ratings com `customer_id`) |
-| App cliente | Login + **cadastro** ("Criar conta de cliente"), formulário de pedido com encomenda |
-| App motoboy | Card da oferta mostra **encomenda** (tipo · tamanho · peso · alcance · foto) |
-| `OrderMeta` | Movido para `packages/aqui_log_core` (compartilhado pelos 2 apps) |
-
-**Validado ao vivo (API local, Postgres+Redis):**
-`register customer → create delivery (encomenda no notes) → auto-dispatch (OFFERED) →
-offers/mine do motoboy mostra a encomenda → accept → ACCEPTED`.
-Smoke e2e (fluxo B2B antigo) continua verde — nada quebrado.
-Testes: backend 27/27 · app cliente 10/10 · app motoboy 7/7 · analyze limpo nos 3.
-
-**Próximas fases (com pedido):** colunas próprias de encomenda no backend,
-pagamentos (`docs/PLANO_PAGAMENTOS.md`), transportadora multi-pedido
-(`docs/PLANO_TRANSPORTADORA.md`), confiança/preço (`docs/PLANO_CONFIANCA_E_PRECO.md`).
+- Entregas para empresas (se voltar, entra como "cliente tipo empresa")
