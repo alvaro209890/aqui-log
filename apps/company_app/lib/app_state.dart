@@ -30,15 +30,7 @@ class CustomerAppState extends ChangeNotifier {
     notifyListeners();
     try {
       session = await api.login(email, password);
-      try {
-        await api.registerDevice(
-          token:
-              'local-dev-customer-${session!.user['id']}-${DateTime.now().millisecondsSinceEpoch}',
-          platform: defaultTargetPlatform == TargetPlatform.iOS
-              ? 'ios'
-              : 'android',
-        );
-      } catch (_) {}
+      await _registerDevice();
       loading = false;
       notifyListeners();
       return true;
@@ -53,6 +45,54 @@ class CustomerAppState extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  /// Cadastro de cliente (B2C): cria a conta e já autentica.
+  Future<bool> register({
+    required String name,
+    required String email,
+    required String password,
+    required String document,
+    required String phone,
+  }) async {
+    loading = true;
+    error = null;
+    notifyListeners();
+    try {
+      session = await api.registerCustomer({
+        'name': name,
+        'email': email,
+        'password': password,
+        'document': document,
+        'phone': phone,
+      });
+      await _registerDevice();
+      loading = false;
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      error = e.message;
+      loading = false;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      error = e.toString();
+      loading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<void> _registerDevice() async {
+    try {
+      await api.registerDevice(
+        token:
+            'local-dev-customer-${session!.user['id']}-${DateTime.now().millisecondsSinceEpoch}',
+        platform: defaultTargetPlatform == TargetPlatform.iOS
+            ? 'ios'
+            : 'android',
+      );
+    } catch (_) {}
   }
 
   Future<void> logout() async {

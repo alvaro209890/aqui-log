@@ -32,7 +32,7 @@ export class DeliveriesController {
   constructor(private readonly deliveries: DeliveriesService) {}
 
   @Post()
-  @Roles(UserRole.COMPANY_OWNER, UserRole.COMPANY_USER)
+  @Roles(UserRole.COMPANY_OWNER, UserRole.COMPANY_USER, UserRole.CUSTOMER)
   create(
     @Body() dto: CreateDeliveryDto,
     @Req() req: Request & { user: AuthenticatedUser },
@@ -132,6 +132,7 @@ export class DeliveriesController {
     UserRole.COURIER,
     UserRole.COMPANY_OWNER,
     UserRole.COMPANY_USER,
+    UserRole.CUSTOMER,
   )
   updateStatus(
     @Param('id') id: string,
@@ -142,7 +143,7 @@ export class DeliveriesController {
   }
 
   @Post(':id/rating')
-  @Roles(UserRole.COMPANY_OWNER, UserRole.COMPANY_USER)
+  @Roles(UserRole.COMPANY_OWNER, UserRole.COMPANY_USER, UserRole.CUSTOMER)
   rate(
     @Param('id') id: string,
     @Body() dto: RateDeliveryDto,

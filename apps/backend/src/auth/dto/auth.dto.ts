@@ -93,3 +93,24 @@ export class RegisterCourierDto {
   @IsUrl({}, { each: true })
   documentUrls?: string[];
 }
+
+export class RegisterCustomerDto {
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+
+  @IsEmail()
+  email!: string;
+
+  @IsString()
+  @MinLength(8)
+  password!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  document!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  phone!: string;
+}

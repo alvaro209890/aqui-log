@@ -2,8 +2,6 @@ import 'package:aqui_log_core/aqui_log_core.dart';
 import 'package:aqui_log_ui/aqui_log_ui.dart';
 import 'package:flutter/material.dart';
 
-import '../order_meta.dart';
-
 class HomeScreen extends StatelessWidget {
   const HomeScreen({
     super.key,

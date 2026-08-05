@@ -11,6 +11,7 @@ import { CompaniesModule } from './companies/companies.module';
 import { CouriersModule } from './couriers/couriers.module';
 import { Company } from './database/entities/company.entity';
 import { Courier } from './database/entities/courier.entity';
+import { Customer } from './database/entities/customer.entity';
 import { AuditLog } from './database/entities/audit-log.entity';
 import { DeliveryEvent } from './database/entities/delivery-event.entity';
 import { DeliveryOffer } from './database/entities/delivery-offer.entity';
@@ -57,6 +58,7 @@ import { UsersModule } from './users/users.module';
           User,
           Company,
           Courier,
+          Customer,
           Delivery,
           DeliveryOffer,
           DeliveryEvent,

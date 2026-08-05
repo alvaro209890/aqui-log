@@ -9,6 +9,7 @@ import 'screens/delivery_detail_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/new_order_screen.dart';
+import 'screens/register_screen.dart';
 import 'screens/settings_screen.dart';
 
 void main() => runApp(const CustomerApp());
@@ -45,7 +46,20 @@ class _CustomerAppState extends State<CustomerApp> {
                 loading: state.loading,
                 error: state.error,
                 onSubmit: state.login,
+                onCreateAccount: _openRegister,
               ),
+      ),
+    );
+  }
+
+  void _openRegister() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RegisterScreen(
+          loading: state.loading,
+          error: state.error,
+          onSubmit: state.register,
+        ),
       ),
     );
   }

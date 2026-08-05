@@ -9,22 +9,32 @@ Leia isto **antes** de mudar código. Fonte de produto: `docs/ROADMAP.md`.
 
 ---
 
-## 0. Atualização 2026-08-04 — pivot B2C iniciado (front do app cliente)
+## 0. Atualização 2026-08-04 — pivot B2C **funcional** (sem empresa no meio)
 
 O Álvaro decidiu migrar o produto para **B2C direto** (cliente pessoa física → motoboy,
-sem empresa no meio). Plano completo: **`docs/PLANO_B2C.md`** (10 decisões pendentes na §5).
+sem empresa no meio). Plano completo: **`docs/PLANO_B2C.md`** (decisões pendentes §5).
+Planos futuros: `docs/PLANO_TRANSPORTADORA.md`, `docs/PLANO_PAGAMENTOS.md`,
+`docs/PLANO_CONFIANCA_E_PRECO.md`.
 
-**Já implementado (commit `B2C`):** front do app cliente em `apps/company_app`
-("Aqui Log Cliente", applicationId `br.com.aquilog.aqui_log_cliente`):
-- Novo pedido com **tipo de encomenda, tamanho P/M/G, peso (kg), alcance (mesma cidade
-  ou outro município), foto do produto**, endereços com geocode, destinatário.
-- Metadados da encomenda vão estruturados no campo `notes`
-  (`lib/order_meta.dart` — `encodeNotes`/`fromNotes`) — **backend intocado**.
-- Abas: Início · Pedir · Entregas · Perfil. `flutter analyze` limpo, `flutter test` 9/9.
-- APK release: `apps/company_app/build/app/outputs/flutter-apk/app-release.apk`.
+**Já implementado (2 rodadas de commits `B2C`):**
+- **Backend funcional:** `POST /auth/register/customer` (auto-aprovado, auto-login),
+  role `CUSTOMER` (enum + entidade `customers`), `deliveries.customer_id`
+  (`company_id` opcional), **auto-dispatch** no create (pedido vai direto pra oferta
+  dos motoboys disponíveis), cliente lista/cancela/avalia os próprios pedidos.
+- **App cliente** (`apps/company_app`, "Aqui Log Cliente"): cadastro de cliente,
+  login, pedido com **tipo de encomenda, tamanho P/M/G, peso kg, alcance (mesma
+  cidade / outro município), foto**, endereços com geocode; abas Início/Pedir/Entregas/Perfil.
+- **App motoboy** (`apps/courier_app`): card da oferta mostra a **encomenda**
+  (tipo · tamanho · peso · alcance · foto) antes de aceitar/recusar.
+- Metadados da encomenda serializados no `notes` via `OrderMeta`
+  (`packages/aqui_log_core/lib/src/order_meta.dart`, compartilhado).
+- **Validado ao vivo:** register customer → create → auto-dispatch (OFFERED) →
+  oferta no app do motoboy → accept (ACCEPTED). Smoke B2B segue verde.
+- Testes: backend 27/27 · cliente 10/10 · motoboy 7/7 · analyze limpo.
 
-**Próximo (com pedido do Álvaro):** Fase 1 backend (customers + colunas de encomenda +
-oferta por aceite) → app motoboy → dashboard. Nada de cloud sem pedido.
+**Próximo (com pedido do Álvaro):** colunas próprias de encomenda no backend,
+pagamentos (PLANO_PAGAMENTOS), transportadora multi-pedido (PLANO_TRANSPORTADORA),
+confiança/preço (PLANO_CONFIANCA_E_PRECO). Nada de cloud sem pedido.
 
 ---
 

@@ -139,7 +139,7 @@ A empresa desaparece como entidade. Vira **cliente** (`customers`).
 | Abas do app | Início · Pedir · Entregas · Perfil |
 | Home | Card "Fazer pedido" + resumo (em andamento/concluídas) + pedidos recentes |
 | Lista/detalhe | Mostra **Encomenda** (tipo · tamanho · peso · alcance · foto) parseada do `notes` |
-| Login | Copy de cliente; cadastro CPF fica para a Fase 1 (backend) |
+| Login | **Cadastro de cliente funcional** (nome/CPF/telefone) — auto-aprovado e auto-login |
 
 **Estratégia front-only:** como o backend ainda não tem colunas de encomenda, o app
 serializa os metadados num bloco estruturado dentro do campo `notes` (formato em
@@ -158,3 +158,31 @@ company_app (feito). **Ainda pendentes:** #1 preço, #3 foto obrigatória?, #5 p
 - Fase 1 backend: `customers`, colunas `weight_kg`/`product_type`/`product_photo_urls`, oferta por aceite (sem lock forçado), avaliação mútua, registro cliente auto-aprovado
 - App motoboy: card de oferta com tipo/tamanho/peso/foto em destaque
 - Dashboard: gestão de clientes no lugar de empresas + relatórios por categoria/peso
+
+---
+
+## 10. Status 2026-08-04 (2ª rodada) — B2C funcional ponta a ponta ✅
+
+**Backend agora suporta o fluxo B2C real — sem empresa no meio:**
+
+| Item | Implementado |
+| --- | --- |
+| `POST /auth/register/customer` | Cadastro pessoa física (nome/email/senha/CPF/telefone), **auto-aprovado**, devolve tokens (auto-login) |
+| Role `CUSTOMER` + entidade `customers` | Enum `users_role_enum` ganhou `CUSTOMER`; `users.customer_id`; nova tabela `customers` |
+| `POST /deliveries` por cliente | `deliveries.company_id` virou opcional; novo `customer_id`; preço continua server-side |
+| **Auto-dispatch** | Pedido do cliente é **publicado automaticamente** para motoboys disponíveis próximos (sem admin no meio); sem motoboy → fica REQUESTED e redespacha quando houver |
+| Listagem/detalhe | Cliente vê só os próprios pedidos; cancelar o próprio pedido permitido |
+| Avaliação | Cliente avalia o motoboy (ratings com `customer_id`) |
+| App cliente | Login + **cadastro** ("Criar conta de cliente"), formulário de pedido com encomenda |
+| App motoboy | Card da oferta mostra **encomenda** (tipo · tamanho · peso · alcance · foto) |
+| `OrderMeta` | Movido para `packages/aqui_log_core` (compartilhado pelos 2 apps) |
+
+**Validado ao vivo (API local, Postgres+Redis):**
+`register customer → create delivery (encomenda no notes) → auto-dispatch (OFFERED) →
+offers/mine do motoboy mostra a encomenda → accept → ACCEPTED`.
+Smoke e2e (fluxo B2B antigo) continua verde — nada quebrado.
+Testes: backend 27/27 · app cliente 10/10 · app motoboy 7/7 · analyze limpo nos 3.
+
+**Próximas fases (com pedido):** colunas próprias de encomenda no backend,
+pagamentos (`docs/PLANO_PAGAMENTOS.md`), transportadora multi-pedido
+(`docs/PLANO_TRANSPORTADORA.md`), confiança/preço (`docs/PLANO_CONFIANCA_E_PRECO.md`).

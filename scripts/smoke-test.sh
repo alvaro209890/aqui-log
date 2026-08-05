@@ -59,8 +59,15 @@ courier_fee="$(jq -er '.courierFeeCents' <<<"$delivery")"
 price_cents="$(jq -er '.priceCents' <<<"$delivery")"
 jq -en --argjson fee "$courier_fee" --argjson price "$price_cents" '$fee > 0 and $price >= $fee' >/dev/null
 
-dispatch="$(api POST "/deliveries/$delivery_id/dispatch" "$admin_token")"
-offer_id="$(jq -er '.offer.id' <<<"$dispatch")"
+# B2C: o pedido é publicado automaticamente para os motoboys disponíveis
+# (auto-dispatch no create). Se ninguém estava online no momento, cai no
+# dispatch manual do admin.
+offers="$(api GET /deliveries/offers/mine "$courier_token")"
+offer_id="$(jq -er --arg deliveryId "$delivery_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty' <<<"$offers")"
+if [[ -z "$offer_id" ]]; then
+  dispatch="$(api POST "/deliveries/$delivery_id/dispatch" "$admin_token")"
+  offer_id="$(jq -er '.offer.id' <<<"$dispatch")"
+fi
 api GET /deliveries/offers/mine "$courier_token" | jq -e --arg offer "$offer_id" 'map(.id) | index($offer) != null' >/dev/null
 api PATCH "/deliveries/offers/$offer_id/accept" "$courier_token" >/dev/null
 api PATCH "/deliveries/$delivery_id/status" "$courier_token" '{"status":"AT_PICKUP"}' >/dev/null

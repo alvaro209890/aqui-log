@@ -18,8 +18,12 @@ export class Delivery {
   code!: string;
 
   @Index()
-  @Column({ name: 'company_id', type: 'uuid' })
-  companyId!: string;
+  @Column({ name: 'company_id', type: 'uuid', nullable: true })
+  companyId!: string | null;
+
+  @Index()
+  @Column({ name: 'customer_id', type: 'uuid', nullable: true })
+  customerId!: string | null;
 
   @Column({ name: 'created_by_id', type: 'uuid' })
   createdById!: string;

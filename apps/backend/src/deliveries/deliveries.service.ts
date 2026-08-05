@@ -63,8 +63,11 @@ export class DeliveriesService {
   ) {}
 
   async create(dto: CreateDeliveryDto, user: AuthenticatedUser) {
-    if (!user.companyId)
+    const isCustomer = user.role === UserRole.CUSTOMER;
+    if (!isCustomer && !user.companyId)
       throw new ForbiddenException('Usuario sem empresa vinculada');
+    if (isCustomer && !user.customerId)
+      throw new ForbiddenException('Cliente sem cadastro completo');
     const quote = await this.pricing.quoteAsync({
       pickupLatitude: dto.pickupLatitude,
       pickupLongitude: dto.pickupLongitude,
@@ -75,7 +78,8 @@ export class DeliveriesService {
       this.deliveries.create({
         ...dto,
         code: this.createCode(),
-        companyId: user.companyId,
+        companyId: isCustomer ? null : user.companyId,
+        customerId: isCustomer ? user.customerId : null,
         createdById: user.id,
         courierId: null,
         notes: dto.notes ?? null,
@@ -91,7 +95,7 @@ export class DeliveriesService {
     await this.recordEvent(
       delivery,
       user.id,
-      `Entrega solicitada (dist ${quote.distanceKm}km)`,
+      `Pedido solicitado (dist ${quote.distanceKm}km)`,
     );
     await this.audit.record({
       actorId: user.id,
@@ -101,9 +105,18 @@ export class DeliveriesService {
       metadata: {
         code: delivery.code,
         companyId: delivery.companyId,
+        customerId: delivery.customerId,
         pricing: quote,
       },
     });
+    // B2C: pedido do cliente é publicado direto para os motoboys próximos.
+    // Se não houver motoboy disponível agora, fica REQUESTED e o job de
+    // redespacho (expireStaleOffers) tenta de novo quando houver.
+    try {
+      await this.dispatch(delivery.id, user.id);
+    } catch {
+      // sem motoboy disponível no momento — segue REQUESTED
+    }
     return delivery;
   }
 
@@ -128,6 +141,10 @@ export class DeliveriesService {
       )
     ) {
       // full access
+    } else if (user.role === UserRole.CUSTOMER) {
+      qb.andWhere('delivery.customerId = :customerId', {
+        customerId: user.customerId,
+      });
     } else if (user.companyId) {
       qb.andWhere('delivery.companyId = :companyId', {
         companyId: user.companyId,
@@ -466,7 +483,15 @@ export class DeliveriesService {
 
   async rate(id: string, dto: RateDeliveryDto, user: AuthenticatedUser) {
     const delivery = await this.getById(id);
-    if (!user.companyId || delivery.companyId !== user.companyId) {
+    const isCustomer = user.role === UserRole.CUSTOMER;
+    if (isCustomer) {
+      if (
+        delivery.customerId !== user.customerId &&
+        delivery.createdById !== user.id
+      ) {
+        throw new ForbiddenException('Entrega de outro cliente');
+      }
+    } else if (!user.companyId || delivery.companyId !== user.companyId) {
       throw new ForbiddenException('Entrega de outra empresa');
     }
     if (delivery.status !== DeliveryStatus.DELIVERED || !delivery.courierId) {
@@ -480,7 +505,8 @@ export class DeliveriesService {
     return this.ratings.save(
       this.ratings.create({
         deliveryId: id,
-        companyId: user.companyId,
+        companyId: isCustomer ? null : user.companyId,
+        customerId: isCustomer ? user.customerId : null,
         courierId: delivery.courierId,
         score: dto.score,
         comment: dto.comment ?? null,
@@ -543,6 +569,14 @@ export class DeliveriesService {
       )
     )
       return;
+    if (user.role === UserRole.CUSTOMER) {
+      if (
+        delivery.customerId === user.customerId ||
+        delivery.createdById === user.id
+      )
+        return;
+      throw new ForbiddenException('Acesso negado');
+    }
     if (user.companyId === delivery.companyId) return;
     const courier = await this.getCourierByUser(user.id);
     if (courier.id !== delivery.courierId)
@@ -562,6 +596,18 @@ export class DeliveriesService {
       ) {
         throw new ForbiddenException(
           'Empresa pode apenas cancelar suas entregas',
+        );
+      }
+      return;
+    }
+    if (user.role === UserRole.CUSTOMER) {
+      if (
+        target !== DeliveryStatus.CANCELED ||
+        (delivery.customerId !== user.customerId &&
+          delivery.createdById !== user.id)
+      ) {
+        throw new ForbiddenException(
+          'Cliente pode apenas cancelar seus pedidos',
         );
       }
       return;

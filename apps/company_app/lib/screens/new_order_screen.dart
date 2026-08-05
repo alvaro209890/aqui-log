@@ -4,8 +4,6 @@ import 'package:aqui_log_ui/aqui_log_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../order_meta.dart';
-
 /// Formulário de pedido do cliente (B2C).
 ///
 /// O cliente descreve a encomenda (tipo, tamanho, peso, foto), o alcance

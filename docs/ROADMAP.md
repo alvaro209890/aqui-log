@@ -220,3 +220,27 @@ Quando for implementar, ordem fechada:
 Comando sugerido ao agente:
 
 > Implementa o Sprint 1 do `docs/ROADMAP.md` (B1–B10), com TDD nos locks/pricing/expiry e smoke verde.
+
+---
+
+## 8. Rota B2C (2026-08-04) — produto sem empresa
+
+**Feito (validado ao vivo):**
+- Cadastro/login de cliente (`POST /auth/register/customer`, auto-aprovado)
+- Pedido do cliente com encomenda (tipo/tamanho/peso/alcance/foto) → `notes` estruturado
+- **Auto-dispatch**: pedido vira oferta direto pros motoboys disponíveis
+- Apps cliente + motoboy mostram a encomenda; smoke/CI atualizados
+
+**Próximas sprints B2C (com pedido do Álvaro):**
+
+| # | Fase | Docs |
+|---|---|---|
+| 1 | Colunas próprias de encomenda no backend (weight_kg, product_type, photos) + foto obrigatória | `PLANO_CONFIANCA_E_PRECO.md` |
+| 2 | Preço com faixas de peso/tamanho + aumento automático | `PLANO_CONFIANCA_E_PRECO.md` |
+| 3 | Avaliação mútua (ratings por papel) | `PLANO_CONFIANCA_E_PRECO.md` |
+| 4 | Validação de telefone (SMS) | `PLANO_CONFIANCA_E_PRECO.md` |
+| 5 | Carteira do cliente + reserva/estorno; PIX depois | `PLANO_PAGAMENTOS.md` |
+| 6 | Transportadora: rota multi-pedido por proximidade | `PLANO_TRANSPORTADORA.md` |
+| 7 | Dashboard: gestão de clientes + relatórios por categoria/peso | — |
+
+Regra: nada de cloud (Render/Vercel/Firebase) sem pedido explícito.

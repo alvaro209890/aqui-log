@@ -8,6 +8,7 @@ import {
   RefreshTokenDto,
   RegisterCompanyDto,
   RegisterCourierDto,
+  RegisterCustomerDto,
   ResetPasswordDto,
 } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -51,6 +52,11 @@ export class AuthController {
   @Post('register/courier')
   registerCourier(@Body() dto: RegisterCourierDto) {
     return this.auth.registerCourier(dto);
+  }
+
+  @Post('register/customer')
+  registerCustomer(@Body() dto: RegisterCustomerDto) {
+    return this.auth.registerCustomer(dto);
   }
 
   @Get('me')

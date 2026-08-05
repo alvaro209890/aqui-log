@@ -1,10 +1,10 @@
 import 'package:aqui_log_empresa/main.dart';
-import 'package:aqui_log_empresa/order_meta.dart';
 import 'package:aqui_log_empresa/screens/deliveries_screen.dart';
 import 'package:aqui_log_empresa/screens/delivery_detail_screen.dart';
 import 'package:aqui_log_empresa/screens/home_screen.dart';
 import 'package:aqui_log_empresa/screens/login_screen.dart';
 import 'package:aqui_log_empresa/screens/new_order_screen.dart';
+import 'package:aqui_log_empresa/screens/register_screen.dart';
 import 'package:aqui_log_empresa/screens/settings_screen.dart';
 import 'package:aqui_log_core/aqui_log_core.dart';
 import 'package:flutter/material.dart';
@@ -116,6 +116,25 @@ void main() {
     );
     expect(find.text('Meu perfil'), findsOneWidget);
     expect(find.text('Sair'), findsOneWidget);
+  });
+
+  testWidgets('RegisterScreen renders customer form', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RegisterScreen(
+          onSubmit: ({
+            required name,
+            required email,
+            required password,
+            required document,
+            required phone,
+          }) async => true,
+        ),
+      ),
+    );
+    expect(find.text('Criar conta'), findsNWidgets(2)); // AppBar + botão
+    expect(find.text('CPF (somente números)'), findsOneWidget);
+    expect(find.byType(TextFormField), findsNWidgets(5));
   });
 
   testWidgets('CustomerApp boots login shell', (tester) async {

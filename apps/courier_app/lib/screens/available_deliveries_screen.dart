@@ -1,3 +1,4 @@
+import 'package:aqui_log_core/aqui_log_core.dart';
 import 'package:aqui_log_ui/aqui_log_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -137,6 +138,9 @@ class AvailableDeliveriesScreen extends StatelessWidget {
               final drop = delivery is Map
                   ? '${delivery['deliveryAddress'] ?? ''}'
                   : '';
+              final meta = OrderMeta.fromNotes(
+                delivery is Map ? '${delivery['notes'] ?? ''}' : null,
+              );
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: Padding(
@@ -144,12 +148,65 @@ class AvailableDeliveriesScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        code,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              code,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          if (meta != null)
+                            Text(
+                              '${meta.size} · ${_weight(meta)}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AquiLogColors.forest,
+                              ),
+                            ),
+                        ],
                       ),
+                      if (meta != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.inventory_2_outlined,
+                              size: 15,
+                              color: AquiLogColors.muted,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                '${meta.productType} · ${meta.scope}',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AquiLogColors.ink,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                       if (pickup.isNotEmpty) Text('Coleta: $pickup'),
                       if (drop.isNotEmpty) Text('Entrega: $drop'),
+                      if (meta?.photoUrl != null &&
+                          meta!.photoUrl!.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            meta.photoUrl!,
+                            height: 120,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 10),
                       Row(
                         children: [
@@ -176,5 +233,11 @@ class AvailableDeliveriesScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  static String _weight(OrderMeta meta) {
+    final weight = meta.weightKg;
+    if (weight == null) return 'peso n/i';
+    return '${weight.toStringAsFixed(1).replaceAll('.', ',')} kg';
   }
 }

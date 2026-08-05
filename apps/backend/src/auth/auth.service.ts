@@ -11,6 +11,7 @@ import { compare, hash } from 'bcryptjs';
 import { DataSource, IsNull, MoreThan, Repository } from 'typeorm';
 import { Company } from '../database/entities/company.entity';
 import { Courier } from '../database/entities/courier.entity';
+import { Customer } from '../database/entities/customer.entity';
 import { PasswordResetToken } from '../database/entities/password-reset-token.entity';
 import { RefreshToken } from '../database/entities/refresh-token.entity';
 import { User } from '../database/entities/user.entity';
@@ -22,6 +23,7 @@ import {
   RefreshTokenDto,
   RegisterCompanyDto,
   RegisterCourierDto,
+  RegisterCustomerDto,
   ResetPasswordDto,
 } from './dto/auth.dto';
 import { generateRawToken, hashToken } from './token-crypto';
@@ -203,6 +205,38 @@ export class AuthService {
     });
   }
 
+  async registerCustomer(dto: RegisterCustomerDto) {
+    await this.ensureEmailAvailable(dto.email);
+    return this.dataSource.transaction(async (manager) => {
+      const user = await manager.save(
+        User,
+        manager.create(User, {
+          name: dto.name,
+          email: dto.email.toLowerCase(),
+          passwordHash: await hash(dto.password, 12),
+          role: UserRole.CUSTOMER,
+          // Cliente pessoa física: auto-aprovado, sem fila de admin
+          status: AccountStatus.ACTIVE,
+          companyId: null,
+          customerId: null,
+        }),
+      );
+      const customer = await manager.save(
+        Customer,
+        manager.create(Customer, {
+          userId: user.id,
+          document: dto.document.replace(/\D/g, ''),
+          phone: dto.phone,
+          status: AccountStatus.ACTIVE,
+        }),
+      );
+      user.customerId = customer.id;
+      await manager.save(User, user);
+      // Auto-login: devolve o par de tokens igual ao /auth/login
+      return this.issueTokenPair(user);
+    });
+  }
+
   private async ensureEmailAvailable(email: string) {
     if (await this.users.findOneBy({ email: email.toLowerCase() })) {
       throw new ConflictException('E-mail ja cadastrado');
@@ -215,6 +249,7 @@ export class AuthService {
       email: user.email,
       role: user.role,
       companyId: user.companyId,
+      customerId: user.customerId,
     });
     const rawRefresh = generateRawToken();
     const days = Number(this.config.get('JWT_REFRESH_EXPIRES_DAYS') ?? 30);
@@ -238,6 +273,7 @@ export class AuthService {
         email: user.email,
         role: user.role,
         companyId: user.companyId,
+        customerId: user.customerId,
       },
     };
   }

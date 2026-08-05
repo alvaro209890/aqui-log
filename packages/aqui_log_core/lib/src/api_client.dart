@@ -79,6 +79,20 @@ class AquiLogApiClient {
           ))
           as Map<String, dynamic>;
 
+  /// Registro de cliente pessoa física (B2C) — auto-aprovado, devolve tokens.
+  Future<AuthSession> registerCustomer(Map<String, dynamic> form) async {
+    final data = await _request(
+      'POST',
+      '/auth/register/customer',
+      body: form,
+      auth: false,
+    );
+    final session = AuthSession.fromJson(data as Map<String, dynamic>);
+    accessToken = session.accessToken;
+    refreshToken = session.refreshToken;
+    return session;
+  }
+
   Future<List<DeliverySummary>> deliveries() async {
     final data = await _request('GET', '/deliveries') as List<dynamic>;
     return data

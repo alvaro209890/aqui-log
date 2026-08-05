@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import { AuditLog } from './entities/audit-log.entity';
 import { Company } from './entities/company.entity';
 import { Courier } from './entities/courier.entity';
+import { Customer } from './entities/customer.entity';
 import { DeliveryEvent } from './entities/delivery-event.entity';
 import { DeliveryOffer } from './entities/delivery-offer.entity';
 import { Delivery } from './entities/delivery.entity';
@@ -27,6 +28,7 @@ export default new DataSource({
     User,
     Company,
     Courier,
+    Customer,
     Delivery,
     DeliveryOffer,
     DeliveryEvent,

@@ -95,3 +95,16 @@ Legenda: **funcional** = fluxo exercitado pela API/smoke test ou painel/apps; **
 - Abas: Inicio · Pedir · Entregas · Perfil; lista/detalhe mostram a encomenda parseada (com foto)
 - `flutter analyze` limpo; `flutter test` 9/9 (round-trip OrderMeta incluso)
 - APK release gerado; plano B2C e pendentes: `docs/PLANO_B2C.md`
+
+## B2C — Backend funcional (2026-08-04, 2ª rodada) ✅
+
+- `POST /auth/register/customer`: cliente pessoa fisica auto-aprovado, devolve tokens (auto-login)
+- Role `CUSTOMER` no enum (`users_role_enum` + migration), entidade/tabela `customers`, `users.customer_id`
+- `deliveries.company_id` nullable + `deliveries.customer_id`; `ratings.company_id` nullable + `customer_id`
+- **Auto-dispatch no create**: pedido do cliente publicado direto como oferta pros motoboys disponiveis (sem admin); sem motoboy fica REQUESTED e redespacha
+- Cliente: lista/cancela/avalia so os proprios pedidos (findAll/ensureCanView/ensureCanTransition/rate por customerId)
+- App cliente: cadastro + auto-login ("Criar conta de cliente")
+- App motoboy: card da oferta mostra encomenda (tipo/tamanho/peso/alcance/foto) via `OrderMeta`
+- `OrderMeta` movido p/ `packages/aqui_log_core` (compartilhado)
+- Smoke e2e atualizado p/ auto-dispatch (fallback dispatch manual); validado ao vivo: register → create → OFFERED → accept → ACCEPTED
+- Testes: backend 27/27, cliente 10/10, motoboy 7/7; planos futuros: PLANO_TRANSPORTADORA / PLANO_PAGAMENTOS / PLANO_CONFIANCA_E_PRECO

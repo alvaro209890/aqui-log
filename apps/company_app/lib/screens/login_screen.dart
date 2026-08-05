@@ -2,9 +2,16 @@ import 'package:aqui_log_ui/aqui_log_ui.dart';
 import 'package:flutter/material.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, required this.onSubmit, this.error, this.loading = false});
+  const LoginScreen({
+    super.key,
+    required this.onSubmit,
+    this.onCreateAccount,
+    this.error,
+    this.loading = false,
+  });
 
   final Future<bool> Function(String email, String password) onSubmit;
+  final VoidCallback? onCreateAccount;
   final String? error;
   final bool loading;
 
@@ -82,7 +89,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Cadastro de cliente (CPF) chega com a Fase 1 do backend.',
+                    'É novo por aqui?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AquiLogColors.muted, fontSize: 13),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    onPressed: widget.onCreateAccount,
+                    child: const Text('Criar conta de cliente'),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Cadastro simples, sem aprovação. Você pede e o motoboy aceita.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: AquiLogColors.muted, fontSize: 12),
                   ),

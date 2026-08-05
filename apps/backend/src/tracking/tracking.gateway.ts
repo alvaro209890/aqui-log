@@ -64,12 +64,14 @@ export class TrackingGateway
         email: string;
         role: UserRole;
         companyId: string | null;
+        customerId?: string | null;
       }>(token);
       this.authenticatedUsers.set(client.id, {
         id: payload.sub,
         email: payload.email,
         role: payload.role,
         companyId: payload.companyId,
+        customerId: payload.customerId ?? null,
       });
     } catch {
       client.disconnect(true);
