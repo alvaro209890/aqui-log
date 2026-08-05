@@ -1,8 +1,8 @@
 import 'package:aqui_log_core/aqui_log_core.dart';
 import 'package:flutter/foundation.dart';
 
-class CompanyAppState extends ChangeNotifier {
-  CompanyAppState({AquiLogApiClient? client})
+class CustomerAppState extends ChangeNotifier {
+  CustomerAppState({AquiLogApiClient? client})
     : api =
           client ??
           AquiLogApiClient(
@@ -21,7 +21,7 @@ class CompanyAppState extends ChangeNotifier {
 
   String get userName {
     final name = session?.user['name'];
-    return name is String && name.isNotEmpty ? name : 'Empresa';
+    return name is String && name.isNotEmpty ? name : 'Cliente';
   }
 
   Future<bool> login(String email, String password) async {
@@ -33,7 +33,7 @@ class CompanyAppState extends ChangeNotifier {
       try {
         await api.registerDevice(
           token:
-              'local-dev-company-${session!.user['id']}-${DateTime.now().millisecondsSinceEpoch}',
+              'local-dev-customer-${session!.user['id']}-${DateTime.now().millisecondsSinceEpoch}',
           platform: defaultTargetPlatform == TargetPlatform.iOS
               ? 'ios'
               : 'android',

@@ -18,29 +18,32 @@ class SettingsScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        const Text('Configuracoes', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+        const Text(
+          'Meu perfil',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+        ),
         const SizedBox(height: 16),
         Card(
           child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.business)),
+            leading: const CircleAvatar(child: Icon(Icons.person)),
             title: Text(userName),
-            subtitle: Text(email.isEmpty ? 'Conta empresa' : email),
+            subtitle: Text(email.isEmpty ? 'Conta cliente' : email),
           ),
         ),
         const SizedBox(height: 12),
         const Card(
           child: ListTile(
             leading: Icon(Icons.notifications_outlined),
-            title: Text('Notificacoes'),
-            subtitle: Text('Alertas de status de entrega'),
+            title: Text('Notificações'),
+            subtitle: Text('Alertas de status dos seus pedidos'),
           ),
         ),
         const SizedBox(height: 12),
         const Card(
           child: ListTile(
-            leading: Icon(Icons.policy_outlined),
-            title: Text('Politicas'),
-            subtitle: Text('Preferencias da empresa (MVP)'),
+            leading: Icon(Icons.help_outline),
+            title: Text('Ajuda'),
+            subtitle: Text('Perguntas frequentes e suporte'),
           ),
         ),
         const SizedBox(height: 24),
@@ -51,7 +54,7 @@ class SettingsScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         const Text(
-          'Aqui Log Empresa · MVP',
+          'Aqui Log Cliente · MVP B2C',
           textAlign: TextAlign.center,
           style: TextStyle(color: AquiLogColors.muted, fontSize: 12),
         ),

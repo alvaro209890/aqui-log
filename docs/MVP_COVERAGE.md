@@ -86,3 +86,12 @@ Legenda: **funcional** = fluxo exercitado pela API/smoke test ou painel/apps; **
 - Scaffold Firebase (rules/examples + Nest stubs; `FIREBASE_ENABLED=false`)
 - Documentacao: `docs/DEPLOY_TARGETS.md`, `docs/HANDOFF.md`, `docs/CHANGELOG_SPRINTS.md`
 - Runtime local continua Postgres + Redis + storage filesystem
+
+## B2C — Fase App Cliente (2026-08-04) — front entregue (backend intocado)
+
+- `apps/company_app` reformulado para **cliente** (label "Aqui Log Cliente", applicationId `br.com.aquilog.aqui_log_cliente`)
+- Novo pedido: tipo de encomenda (7 categorias), tamanho P/M/G, peso kg, alcance (mesma cidade / outra cidade ou municipio), foto (image_picker + upload storage), enderecos com geocode, destinatario
+- Metadados da encomenda serializados no campo `notes` (`lib/order_meta.dart`) — `notes` exposto no `DeliverySummary` do `aqui_log_core`
+- Abas: Inicio · Pedir · Entregas · Perfil; lista/detalhe mostram a encomenda parseada (com foto)
+- `flutter analyze` limpo; `flutter test` 9/9 (round-trip OrderMeta incluso)
+- APK release gerado; plano B2C e pendentes: `docs/PLANO_B2C.md`

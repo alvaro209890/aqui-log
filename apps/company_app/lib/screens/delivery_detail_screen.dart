@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../order_meta.dart';
+
 class DeliveryDetailScreen extends StatefulWidget {
   const DeliveryDetailScreen({
     super.key,
@@ -84,6 +86,7 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
                     const SizedBox(height: 8),
                     Text('Destinatario: ${d.recipientName}'),
                   ],
+                  ..._encomendaSection(d),
                   if (d.pickupAddress != null) ...[
                     const SizedBox(height: 12),
                     Text(
@@ -224,5 +227,62 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
         ],
       ),
     );
+  }
+
+  /// Seção "Encomenda" (B2C): tipo, tamanho, peso, alcance e foto do produto.
+  List<Widget> _encomendaSection(DeliverySummary d) {
+    final meta = OrderMeta.fromNotes(d.notes);
+    if (meta == null) return const [];
+    return [
+      const SizedBox(height: 14),
+      const Text(
+        'Encomenda',
+        style: TextStyle(color: AquiLogColors.muted, fontSize: 12),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        '${meta.productType} · ${meta.size}'
+        '${_weightLabel(meta)}',
+        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        'Alcance: ${meta.scope}',
+        style: const TextStyle(color: AquiLogColors.muted, fontSize: 13),
+      ),
+      if (meta.photoUrl != null && meta.photoUrl!.isNotEmpty) ...[
+        const SizedBox(height: 10),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.network(
+            meta.photoUrl!,
+            height: 160,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => Container(
+              height: 160,
+              color: AquiLogColors.line,
+              child: const Icon(
+                Icons.broken_image_outlined,
+                color: AquiLogColors.muted,
+              ),
+            ),
+          ),
+        ),
+      ],
+      if (meta.notes != null && meta.notes!.isNotEmpty) ...[
+        const SizedBox(height: 6),
+        Text(
+          meta.notes!,
+          style: const TextStyle(color: AquiLogColors.muted, fontSize: 13),
+        ),
+      ],
+    ];
+  }
+
+  static String _weightLabel(OrderMeta meta) {
+    final weight = meta.weightKg;
+    if (weight == null) return '';
+    return ' · ${weight.toStringAsFixed(1).replaceAll('.', ',')} kg';
   }
 }

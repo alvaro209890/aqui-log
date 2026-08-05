@@ -20,8 +20,8 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "br.com.aquilog.aqui_log_empresa"
+        // App do cliente (B2C) — id próprio para instalar ao lado do app antigo.
+        applicationId = "br.com.aquilog.aqui_log_cliente"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

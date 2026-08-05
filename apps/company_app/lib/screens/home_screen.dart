@@ -2,20 +2,22 @@ import 'package:aqui_log_core/aqui_log_core.dart';
 import 'package:aqui_log_ui/aqui_log_ui.dart';
 import 'package:flutter/material.dart';
 
-class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({
+import '../order_meta.dart';
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({
     super.key,
     required this.userName,
     required this.deliveries,
     required this.loading,
-    required this.onNewDelivery,
+    required this.onNewOrder,
     required this.onOpenDelivery,
   });
 
   final String userName;
   final List<DeliverySummary> deliveries;
   final bool loading;
-  final VoidCallback onNewDelivery;
+  final VoidCallback onNewOrder;
   final void Function(DeliverySummary) onOpenDelivery;
 
   @override
@@ -29,7 +31,7 @@ class DashboardScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
       children: [
         Text(
-          'Bom dia, $userName',
+          'Olá, $userName',
           style: const TextStyle(
             fontSize: 25,
             fontWeight: FontWeight.w800,
@@ -38,7 +40,7 @@ class DashboardScreen extends StatelessWidget {
         ),
         const SizedBox(height: 5),
         const Text(
-          'Sua operacao, simples e em movimento.',
+          'Sua encomenda, a caminho do seu jeito.',
           style: TextStyle(color: AquiLogColors.muted),
         ),
         const SizedBox(height: 24),
@@ -63,7 +65,7 @@ class DashboardScreen extends StatelessWidget {
               ),
               const SizedBox(height: 13),
               const Text(
-                'Solicite uma entrega\nem poucos passos.',
+                'Descreva a encomenda e um\nmotoboy aceita levar.',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 22,
@@ -77,9 +79,9 @@ class DashboardScreen extends StatelessWidget {
                   backgroundColor: AquiLogColors.mint,
                   foregroundColor: AquiLogColors.forestDark,
                 ),
-                onPressed: onNewDelivery,
+                onPressed: onNewOrder,
                 icon: const Icon(Icons.add_rounded),
-                label: const Text('Nova entrega'),
+                label: const Text('Fazer pedido'),
               ),
             ],
           ),
@@ -100,7 +102,7 @@ class DashboardScreen extends StatelessWidget {
               child: _SummaryCard(
                 icon: Icons.check_circle_outline_rounded,
                 value: '$done',
-                label: 'Concluidas',
+                label: 'Concluídas',
                 color: const Color(0xFF3BA87D),
               ),
             ),
@@ -108,17 +110,22 @@ class DashboardScreen extends StatelessWidget {
         ),
         const SizedBox(height: 26),
         const Text(
-          'Entregas recentes',
+          'Pedidos recentes',
           style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 13),
         if (loading)
-          const Center(child: Padding(
-            padding: EdgeInsets.all(24),
-            child: CircularProgressIndicator(),
-          ))
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: CircularProgressIndicator(),
+            ),
+          )
         else if (deliveries.isEmpty)
-          const Text('Nenhuma entrega ainda.', style: TextStyle(color: AquiLogColors.muted))
+          const Text(
+            'Nenhum pedido ainda. Toque em "Fazer pedido" para começar.',
+            style: TextStyle(color: AquiLogColors.muted),
+          )
         else
           ...deliveries.take(8).map(
             (d) => Padding(
@@ -127,8 +134,15 @@ class DashboardScreen extends StatelessWidget {
                 onTap: () => onOpenDelivery(d),
                 child: Card(
                   child: ListTile(
-                    title: Text(d.code, style: const TextStyle(fontWeight: FontWeight.w800)),
-                    subtitle: Text(d.status),
+                    title: Text(
+                      d.code,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    subtitle: Text(
+                      _subtitle(d),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     trailing: StatusPill(d.status),
                   ),
                 ),
@@ -137,6 +151,12 @@ class DashboardScreen extends StatelessWidget {
           ),
       ],
     );
+  }
+
+  static String _subtitle(DeliverySummary d) {
+    final meta = OrderMeta.fromNotes(d.notes);
+    if (meta != null) return '${meta.productType} · ${meta.size} · ${d.status}';
+    return d.status;
   }
 }
 
@@ -171,8 +191,14 @@ class _SummaryCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-              Text(label, style: const TextStyle(fontSize: 10, color: AquiLogColors.muted)),
+              Text(
+                value,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+              ),
+              Text(
+                label,
+                style: const TextStyle(fontSize: 10, color: AquiLogColors.muted),
+              ),
             ],
           ),
         ],

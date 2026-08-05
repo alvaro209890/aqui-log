@@ -9,6 +9,25 @@ Leia isto **antes** de mudar código. Fonte de produto: `docs/ROADMAP.md`.
 
 ---
 
+## 0. Atualização 2026-08-04 — pivot B2C iniciado (front do app cliente)
+
+O Álvaro decidiu migrar o produto para **B2C direto** (cliente pessoa física → motoboy,
+sem empresa no meio). Plano completo: **`docs/PLANO_B2C.md`** (10 decisões pendentes na §5).
+
+**Já implementado (commit `B2C`):** front do app cliente em `apps/company_app`
+("Aqui Log Cliente", applicationId `br.com.aquilog.aqui_log_cliente`):
+- Novo pedido com **tipo de encomenda, tamanho P/M/G, peso (kg), alcance (mesma cidade
+  ou outro município), foto do produto**, endereços com geocode, destinatário.
+- Metadados da encomenda vão estruturados no campo `notes`
+  (`lib/order_meta.dart` — `encodeNotes`/`fromNotes`) — **backend intocado**.
+- Abas: Início · Pedir · Entregas · Perfil. `flutter analyze` limpo, `flutter test` 9/9.
+- APK release: `apps/company_app/build/app/outputs/flutter-apk/app-release.apk`.
+
+**Próximo (com pedido do Álvaro):** Fase 1 backend (customers + colunas de encomenda +
+oferta por aceite) → app motoboy → dashboard. Nada de cloud sem pedido.
+
+---
+
 ## 1. O que foi feito (Sprints 1–3 + scaffold Sprint 4)
 
 ### Sprint 1 — Backend robusto ✅

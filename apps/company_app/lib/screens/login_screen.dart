@@ -39,12 +39,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   const AquiLogBrand(),
                   const SizedBox(height: 28),
                   const Text(
-                    'Acesso da empresa',
+                    'Acesso do cliente',
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Entre para solicitar e acompanhar entregas.',
+                    'Entre para pedir e acompanhar suas entregas.',
                     style: TextStyle(color: AquiLogColors.muted),
                   ),
                   const SizedBox(height: 28),
@@ -79,6 +79,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             );
                           },
                     child: Text(widget.loading ? 'Entrando...' : 'Entrar'),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Cadastro de cliente (CPF) chega com a Fase 1 do backend.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AquiLogColors.muted, fontSize: 12),
                   ),
                 ],
               ),

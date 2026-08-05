@@ -30,6 +30,7 @@ class DeliverySummary {
     this.recipientName,
     this.priceCents,
     this.courierFeeCents,
+    this.notes,
   });
 
   final String id;
@@ -45,6 +46,9 @@ class DeliverySummary {
   final int? priceCents;
   final int? courierFeeCents;
 
+  /// Observações do pedido — carrega os metadados da encomenda (B2C).
+  final String? notes;
+
   factory DeliverySummary.fromJson(Map<String, dynamic> json) =>
       DeliverySummary(
         id: json['id'] as String,
@@ -59,6 +63,7 @@ class DeliverySummary {
         recipientName: json['recipientName'] as String?,
         priceCents: json['priceCents'] as int?,
         courierFeeCents: json['courierFeeCents'] as int?,
+        notes: json['notes'] as String?,
       );
 }
 

@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.CAMERA" />
     <application
-        android:label="Aqui Log Empresa"
+        android:label="Aqui Log Cliente"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

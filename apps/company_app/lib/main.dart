@@ -1,29 +1,29 @@
 import 'package:aqui_log_core/aqui_log_core.dart';
 import 'package:aqui_log_ui/aqui_log_ui.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'app_state.dart';
-import 'screens/dashboard_screen.dart';
 import 'screens/deliveries_screen.dart';
 import 'screens/delivery_detail_screen.dart';
+import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
-import 'screens/new_delivery_screen.dart';
-import 'screens/reports_screen.dart';
+import 'screens/new_order_screen.dart';
 import 'screens/settings_screen.dart';
 
-void main() => runApp(const CompanyApp());
+void main() => runApp(const CustomerApp());
 
-class CompanyApp extends StatefulWidget {
-  const CompanyApp({super.key, this.state});
+class CustomerApp extends StatefulWidget {
+  const CustomerApp({super.key, this.state});
 
-  final CompanyAppState? state;
+  final CustomerAppState? state;
 
   @override
-  State<CompanyApp> createState() => _CompanyAppState();
+  State<CustomerApp> createState() => _CustomerAppState();
 }
 
-class _CompanyAppState extends State<CompanyApp> {
-  late final CompanyAppState state = widget.state ?? CompanyAppState();
+class _CustomerAppState extends State<CustomerApp> {
+  late final CustomerAppState state = widget.state ?? CustomerAppState();
 
   @override
   void dispose() {
@@ -36,11 +36,11 @@ class _CompanyAppState extends State<CompanyApp> {
     return AnimatedBuilder(
       animation: state,
       builder: (context, _) => MaterialApp(
-        title: 'Aqui Log Empresa',
+        title: 'Aqui Log Cliente',
         debugShowCheckedModeBanner: false,
         theme: AquiLogTheme.light(),
         home: state.isAuthenticated
-            ? CompanyShell(state: state)
+            ? CustomerShell(state: state)
             : LoginScreen(
                 loading: state.loading,
                 error: state.error,
@@ -51,18 +51,18 @@ class _CompanyAppState extends State<CompanyApp> {
   }
 }
 
-class CompanyShell extends StatefulWidget {
-  const CompanyShell({super.key, required this.state});
-  final CompanyAppState state;
+class CustomerShell extends StatefulWidget {
+  const CustomerShell({super.key, required this.state});
+
+  final CustomerAppState state;
 
   @override
-  State<CompanyShell> createState() => _CompanyShellState();
+  State<CustomerShell> createState() => _CustomerShellState();
 }
 
-class _CompanyShellState extends State<CompanyShell> {
+class _CustomerShellState extends State<CustomerShell> {
   int index = 0;
   List<DeliverySummary> deliveries = [];
-  Map<String, dynamic>? finance;
   bool loading = true;
 
   @override
@@ -74,12 +74,7 @@ class _CompanyShellState extends State<CompanyShell> {
   Future<void> _load() async {
     setState(() => loading = true);
     try {
-      final results = await Future.wait([
-        widget.state.api.deliveries(),
-        widget.state.api.financeSummary().catchError((_) => <String, dynamic>{}),
-      ]);
-      deliveries = results[0] as List<DeliverySummary>;
-      finance = results[1] as Map<String, dynamic>;
+      deliveries = await widget.state.api.deliveries();
     } catch (_) {
       // keep previous data
     } finally {
@@ -109,27 +104,43 @@ class _CompanyShellState extends State<CompanyShell> {
     await _load();
   }
 
-  Future<void> _openNew() async {
+  Future<void> _openNewOrder() async {
     final created = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => NewDeliveryScreen(
+        builder: (_) => NewOrderScreen(
           geocode: widget.state.api.geocode,
           onSubmit: (form) => widget.state.api.createDelivery(form),
+          uploadPhoto: (photo) => _uploadPhoto(photo),
         ),
       ),
     );
     if (created == true) await _load();
   }
 
+  Future<String> _uploadPhoto(XFile photo) async {
+    final bytes = await photo.readAsBytes();
+    final contentType = photo.mimeType ?? 'image/jpeg';
+    return widget.state.api.uploadBytes(
+      bytes: bytes,
+      contentType: contentType,
+      purpose: 'proof',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = [
-      DashboardScreen(
+      HomeScreen(
         userName: widget.state.userName,
         deliveries: deliveries,
         loading: loading,
-        onNewDelivery: _openNew,
+        onNewOrder: _openNewOrder,
         onOpenDelivery: _openDetail,
+      ),
+      NewOrderScreen(
+        geocode: widget.state.api.geocode,
+        onSubmit: (form) => widget.state.api.createDelivery(form),
+        uploadPhoto: _uploadPhoto,
       ),
       DeliveriesScreen(
         deliveries: deliveries,
@@ -137,7 +148,6 @@ class _CompanyShellState extends State<CompanyShell> {
         onOpen: _openDetail,
         onRefresh: _load,
       ),
-      ReportsScreen(deliveries: deliveries, finance: finance),
       SettingsScreen(
         userName: widget.state.userName,
         email: '${widget.state.session?.user['email'] ?? ''}',
@@ -150,23 +160,11 @@ class _CompanyShellState extends State<CompanyShell> {
         toolbarHeight: 72,
         title: const AquiLogBrand(),
         actions: [
-          IconButton(
-            onPressed: _load,
-            icon: const Badge(
-              smallSize: 7,
-              child: Icon(Icons.notifications_none_rounded),
-            ),
-          ),
+          IconButton(onPressed: _load, icon: const Icon(Icons.refresh_rounded)),
           const SizedBox(width: 8),
         ],
       ),
       body: pages[index],
-      floatingActionButton: index == 1
-          ? FloatingActionButton(
-              onPressed: _openNew,
-              child: const Icon(Icons.add),
-            )
-          : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
         onDestinationSelected: (i) => setState(() => index = i),
@@ -174,19 +172,22 @@ class _CompanyShellState extends State<CompanyShell> {
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home_rounded),
-            label: 'Inicio',
+            label: 'Início',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.add_box_outlined),
+            selectedIcon: Icon(Icons.add_box_rounded),
+            label: 'Pedir',
           ),
           NavigationDestination(
             icon: Icon(Icons.local_shipping_outlined),
+            selectedIcon: Icon(Icons.local_shipping_rounded),
             label: 'Entregas',
           ),
           NavigationDestination(
-            icon: Icon(Icons.bar_chart_rounded),
-            label: 'Relatorios',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            label: 'Ajustes',
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person_rounded),
+            label: 'Perfil',
           ),
         ],
       ),

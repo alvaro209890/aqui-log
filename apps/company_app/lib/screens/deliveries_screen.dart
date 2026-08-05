@@ -2,6 +2,8 @@ import 'package:aqui_log_core/aqui_log_core.dart';
 import 'package:aqui_log_ui/aqui_log_ui.dart';
 import 'package:flutter/material.dart';
 
+import '../order_meta.dart';
+
 class DeliveriesScreen extends StatelessWidget {
   const DeliveriesScreen({
     super.key,
@@ -38,8 +40,15 @@ class DeliveriesScreen extends StatelessWidget {
                 final d = deliveries[index];
                 return Card(
                   child: ListTile(
-                    title: Text(d.code, style: const TextStyle(fontWeight: FontWeight.w800)),
-                    subtitle: Text(d.status),
+                    title: Text(
+                      d.code,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    subtitle: Text(
+                      _subtitle(d),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     trailing: StatusPill(d.status),
                     onTap: () => onOpen(d),
                   ),
@@ -47,5 +56,11 @@ class DeliveriesScreen extends StatelessWidget {
               },
             ),
     );
+  }
+
+  static String _subtitle(DeliverySummary d) {
+    final meta = OrderMeta.fromNotes(d.notes);
+    if (meta != null) return '${meta.productType} · ${meta.size} · ${d.status}';
+    return d.status;
   }
 }
