@@ -27,9 +27,7 @@ export class B2CCustomers1785000000000 implements MigrationInterface {
       `CREATE UNIQUE INDEX "IDX_customers_document" ON "customers" ("document")`,
     );
 
-    await queryRunner.query(
-      `ALTER TABLE "users" ADD "customer_id" uuid`,
-    );
+    await queryRunner.query(`ALTER TABLE "users" ADD "customer_id" uuid`);
     await queryRunner.query(
       `CREATE INDEX "IDX_users_customer_id" ON "users" ("customer_id")`,
     );
@@ -53,17 +51,25 @@ export class B2CCustomers1785000000000 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_ratings_customer_id"`);
-    await queryRunner.query(`ALTER TABLE "ratings" DROP COLUMN IF EXISTS "customer_id"`);
+    await queryRunner.query(
+      `ALTER TABLE "ratings" DROP COLUMN IF EXISTS "customer_id"`,
+    );
     await queryRunner.query(
       `ALTER TABLE "ratings" ALTER COLUMN "company_id" SET NOT NULL`,
     );
-    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_deliveries_customer_id"`);
-    await queryRunner.query(`ALTER TABLE "deliveries" DROP COLUMN IF EXISTS "customer_id"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "IDX_deliveries_customer_id"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "deliveries" DROP COLUMN IF EXISTS "customer_id"`,
+    );
     await queryRunner.query(
       `ALTER TABLE "deliveries" ALTER COLUMN "company_id" SET NOT NULL`,
     );
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_users_customer_id"`);
-    await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "customer_id"`);
+    await queryRunner.query(
+      `ALTER TABLE "users" DROP COLUMN IF EXISTS "customer_id"`,
+    );
     await queryRunner.query(`DROP TABLE IF EXISTS "customers"`);
   }
 }
