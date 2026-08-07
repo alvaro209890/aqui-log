@@ -1,246 +1,225 @@
-# Aqui Log — Roadmap (decisões fechadas)
+# Aqui Log — Roadmap executivo B2C
 
-> **Atualizado:** 2026-07-16  
-> **Repo:** `/home/acer/Documentos/aqui-log` · `main`  
-> **Base técnica:** MVP operacional (`SESSAO_IMPLEMENTACAO.md`, `MVP_COVERAGE.md`)  
-> **Plano detalhado Hermes:** `~/.hermes/plans/2026-07-16_161507-aqui-log-melhorias.md`
+> **Atualizado:** 2026-08-07
+> **Status:** fonte de verdade para prioridade, dependências e ordem de execução
+> **Produto principal:** cliente pessoa física → motoboy, sem empresa no fluxo
+> **Regra operacional:** desenvolvimento e validação local primeiro; nenhuma cloud é ligada sem pedido explícito do Álvaro
 
-**Goal:** Endurecer backend e fechar apps mobile para piloto local, sem pagamentos e sem deploy cloud ainda.
+## 1. Objetivo atual
 
----
+Transformar o MVP B2C já funcional em um piloto confiável, mensurável e preparado para cobrança, sem antecipar complexidade de gateway, cloud ou rotas compartilhadas.
 
-## 1. Decisões do produto (Álvaro · 2026-07-16)
-
-| # | Tema | Decisão |
-| --- | --- | --- |
-| 1 | Mapas / geocoding | **Provedor em aberto** por enquanto. Apps usam **mapa embutido** (não só deep-link). Implementar atrás de interface (`GeoProvider` / tiles abstratos); default dev: OSM + `flutter_map` / Leaflet até escolher Google/Mapbox. |
-| 2 | Storage (comprovantes/docs) | **Firebase Storage** quando for para produção de verdade. Até lá: adapter local (filesystem ou emulador Firebase) com a **mesma interface** `StorageService`, para trocar sem reescrever apps. |
-| 3 | Push | **Firebase** (FCM). Pode ficar skeleton/register token agora; envio real quando projeto Firebase estiver configurado. |
-| 4 | Pagamentos | **Fora de escopo agora.** Carteira/extrato de crédito interno permanece; sem saque, gateway PIX ou conciliação. |
-| 5 | Prioridade | **A depois B:** (1) backend robusto · (2) mobile piloto. Não misturar grandes mudanças de contrato no meio do app sem fechar locks/auth. |
-| 6 | Precificação | **Servidor calcula** (km + taxa base + % plataforma). Cliente não manda `priceCents`/`courierFeeCents` livres em produção. |
-| 7 | Geografia | **Em aberto.** Timezone padrão: **`America/Sao_Paulo`** (horário de Brasília) em trends, “dia local”, jobs e relatórios. |
-| 8 | Deploy | **Alvo cloud (estrutura):** API **Render**, dashboard **Vercel**, storage/push **Firebase**. Runtime de desenvolvimento continua **local**. Contas **não** vinculadas nesta fase (scaffold apenas). |
-
-### Explicitamente fora (agora)
-
-- Gateway de pagamento / saque / fiscal  
-- **Vínculo real** de contas Render/Vercel/Firebase (só estrutura de pastas/YAML)  
-- IA de rotas, heatmap, agrupamento multi-parada  
-- API pública / webhooks ERP  
-- MFA administrativo  
-- Migração completa Postgres → Firestore sem plano de dados  
-
----
-
-## 2. Estado atual (resumo · pós Sprints 1–3 + scaffold 4)
-
-| Camada | OK | Próximo |
-| --- | --- | --- |
-| API Nest | Fluxo completo, Redis locks, pricing, refresh auth, storage, geo, jobs | Ligar Firebase adapters; FKs; logs |
-| Dashboard | KPIs, mapa, gestão users/audit/settings, ações entrega | Deploy Vercel |
-| Apps Flutter | Mapa OSM, geocode, prova upload, GPS, refresh client | FCM real; deep-link maps opcional |
-| Infra | Compose local + smoke/CI; **scaffold** Render/Vercel/Firebase | Provisionar contas (Álvaro) e secrets |
-
-Portas locais: API **3001**, Postgres **5433**, Redis **6379**, Vite **5173**.
-
-Auth piloto: refresh + reset. Docs: `ROADMAP` + `HANDOFF`.
-
----
-
-## 3. Ordem de implementação
-
-### Sprint 1 — Backend robusto (prioridade A)
-
-| ID | Entrega | Notas |
-| --- | --- | --- |
-| B1 | Higiene env/docs | `.env.example` + `API.md` com portas reais; timezone `America/Sao_Paulo` documentado |
-| B2 | Módulo Redis | `REDIS_URL`; health ping Redis |
-| B3 | Lock no aceite de oferta | `SET NX` + revalidação; segundo aceite → 409 |
-| B4 | Expiração de ofertas + re-despacho | `expiresAt` honrado; delivery volta `REQUESTED` e tenta outro courier |
-| B5 | Despacho agendado | Tick para `scheduledAt <= now` |
-| B6 | Pricing server-side | `PricingService`: distância (Haversine) × `price_per_km` + base + `platform_fee_percent`; settings em env ou tabela |
-| B7 | Refresh token + logout | Access curto + refresh; `POST /auth/refresh`, `POST /auth/logout` |
-| B8 | Recuperação de senha | `forgot` / `reset`; e-mail console em local |
-| B9 | Alertas mark-read no dashboard | Usa API já existente (ganho rápido) |
-| B10 | Smoke + testes | Não quebrar `pnpm smoke`; unit nos locks/pricing/expiry |
-
-**Definition of Done Sprint 1**
-
-- [x] `pnpm build && pnpm lint && pnpm test && pnpm smoke` verdes  
-- [x] Redis usado em lock e health  
-- [x] Oferta expira e re-despacha sem intervenção manual (job 10s)  
-- [x] Aceite concorrente: lock Redis  
-- [x] Criar entrega: preço/fee calculados no servidor  
-- [x] Login emite refresh; refresh renova access; logout revoga  
-- [x] Fluxo forgot/reset testável localmente (token no log)  
-- [x] Docs: `ROADMAP` + `MVP_COVERAGE` + `API` alinhados  
-
-### Sprint 2 — Mobile piloto (prioridade B)
-
-| ID | Entrega | Notas |
-| --- | --- | --- |
-| M1 | Interface `StorageService` + adapter local | Contrato idêntico ao futuro **Firebase Storage** |
-| M2 | Presign/upload API | Apps sobem prova/docs; `proofUrl` só de host permitido |
-| M3 | Geo abstrato | Geocode atrás de interface; coords deixam de ser hardcoded no company app |
-| M4 | Mapa embutido courier | `flutter_map` + OSM (default); pins das ofertas |
-| M5 | Mapa embutido company (detalhe/tracking) | Quando houver coords/histórico |
-| M6 | Câmera real + upload prova | `image_picker` → storage |
-| M7 | GPS + envio location | REST e/ou Socket.IO `courier:location` em corrida ativa |
-| M8 | Detalhe entrega rico | Endereços, histórico, status, avaliação (empresa) |
-| M9 | Clients com refresh token | `aqui_log_core` renova em 401 |
-| M10 | Device token register (Firebase push skeleton) | `POST /devices`; envio real quando Firebase prod existir |
-
-**Definition of Done Sprint 2**
-
-- [x] `flutter analyze` + `flutter test` nos dois apps e `aqui_log_core`  
-- [x] Nova entrega sem lat/lng mágicos de BH (geocode API)  
-- [x] Comprovante não usa `example.com` (storage local + policy)  
-- [x] Mapa embutido mostra pins reais (`flutter_map` + OSM)  
-- [x] Entregador em corrida atualiza localização (timer + Geolocator)  
-- [x] Smoke ainda verde (API + upload de prova)  
-
-### Sprint 3 — Dashboard gestão + qualidade (quando A+B estáveis)
-
-- [x] Páginas reais: Usuários, Auditoria, Configurações (TTL oferta, taxas pricing)  
-- [x] Ações em entregas: despachar, cancelar, assign  
-- [x] Empresas/couriers: reject/suspend  
-- [x] Relatórios com `from`/`to` (timezone SP)  
-- [x] Paginação nas listagens  
-
-### Sprint 4 — Produção Firebase + cloud (estrutura → ligação)
-
-**Feito (estrutura, sem vincular contas):**
-- [x] Blueprint Render (`infra/render.yaml`)  
-- [x] Config Vercel (`vercel.json`, `apps/dashboard/vercel.json`)  
-- [x] Scaffold Firebase (`infra/firebase/*` + `apps/backend/src/firebase/*` stubs)  
-- [x] Docs `DEPLOY_TARGETS.md` + `HANDOFF.md`  
-
-**Pendente (próximo agente):**
-- [ ] Ligar **Firebase Storage** + **FCM** de verdade (projeto + secrets)  
-- [ ] Trocar adapter de storage/push sem quebrar apps  
-- [ ] FKs no Postgres, retenção de provas, logs estruturados  
-- [ ] Deploy real Render + Vercel (quando Álvaro criar projetos)  
-
-### Depois (backlog)
-
-- Pagamentos (PIX/saque)  
-- Escolha final de provedor de mapas pago  
-- API pública, IA, heatmap  
-- MFA admin  
-
----
-
-## 4. Contratos-chave a introduzir
-
-### Pricing (servidor)
+O fluxo que precisa permanecer íntegro em todas as fases é:
 
 ```text
-inputs: pickup(lat,lng), delivery(lat,lng) [, vehicleType]
-config: base_fee_cents, price_per_km_cents, platform_fee_percent, min_fee_cents
-output:
-  distanceKm
-  courierFeeCents   // o que o entregador recebe
-  priceCents        // o que a empresa paga
-  platformFeeCents  // price - courierFee (ou % explícita)
+cliente cadastra → descreve encomenda → recebe preço do servidor → cria pedido
+→ sistema oferece → motoboy aceita → coleta/prova → trânsito → entrega/prova
+→ cliente e motoboy avaliam
 ```
 
-`POST /deliveries` **ignora** ou sobrescreve `priceCents`/`courierFeeCents` do body (manter campos opcionais só para smoke legado até migrar o script).
+## 2. Como os documentos se relacionam
 
-### Auth
+| Documento | Papel | Pode definir prioridade? |
+| --- | --- | --- |
+| `ROADMAP.md` | Ordem executiva, dependências, gates e Definition of Done | **Sim — fonte principal** |
+| `PLANO_B2C.md` | Estado funcional e visão do domínio B2C | Não; segue este roadmap |
+| `PLANO_CONFIANCA_E_PRECO.md` | Especificação de encomenda, preço, avaliações, SMS e oferta | Não; detalha `B2C-01` a `B2C-04` |
+| `DIRETRIZES_VISUAIS.md` | Paleta e regras da futura identidade laranja | Não; detalha `UX-01` |
+| `PLANO_PAGAMENTOS.md` | Ledger, reserva, estorno e gateway | Não; detalha `PAY-01` e `PAY-02` |
+| `PLANO_TRANSPORTADORA.md` | Descoberta e execução de rotas multi-pedido | Não; só depois do gate `TRIP-00` |
+| `MVP_COVERAGE.md` | Evidência do que existe e limitações atuais | Não |
+| `CHANGELOG_SPRINTS.md` / `SESSAO_IMPLEMENTACAO.md` | Histórico das entregas anteriores | Não |
+| `PLANO_IMPLEMENTACOES.md` | Plano histórico de julho de 2026 | **Não executar** |
 
-```text
-POST /auth/login     → { accessToken, refreshToken, user, expiresIn }
-POST /auth/refresh   → { accessToken, refreshToken?, expiresIn }
-POST /auth/logout    → { ok: true }  // revoga refresh
-POST /auth/forgot-password → { ok: true }  // sempre 200
-POST /auth/reset-password  → { ok: true }
-```
+## 3. Legenda de status
 
-### Storage (Firebase-ready)
-
-```text
-POST /storage/presign { purpose: 'proof'|'document', contentType, deliveryId? }
-→ { uploadUrl, fileUrl, key, expiresIn }
-
-// Local adapter: PUT no próprio API ou path /uploads
-// Prod adapter: Firebase Storage signed URL / upload token
-```
-
-### Timezone
-
-- “Hoje”, trends e charts: janela local **`America/Sao_Paulo`**  
-- Persistir timestamps em `timestamptz` (UTC no banco)  
-
----
-
-## 5. Arquivos principais
-
-| Área | Paths |
+| Símbolo | Significado |
 | --- | --- |
-| Redis / locks / expiry | `apps/backend/src/redis/**`, `apps/backend/src/deliveries/**` |
-| Pricing | `apps/backend/src/pricing/**` (novo) |
-| Auth refresh/reset | `apps/backend/src/auth/**`, migration `refresh_tokens` |
-| Storage | `apps/backend/src/storage/**` |
-| Geo | `apps/backend/src/geo/**` |
-| Dashboard quick wins | `apps/dashboard/src/pages/AlertsPage.tsx`, `api.ts` |
-| Core mobile | `packages/aqui_log_core/**` |
-| Apps | `apps/company_app/lib/**`, `apps/courier_app/lib/**` |
-| Infra | `infra/docker-compose.yml`, `.env.example` |
-| Docs | `docs/ROADMAP.md` (este), `docs/MVP_COVERAGE.md`, `docs/API.md` |
+| ✅ | Entregue e anteriormente validado |
+| ▶️ | Próximo trabalho pronto para execução |
+| ⏸️ | Depende de decisão, credencial ou autorização externa |
+| ⏳ | Planejado, mas bloqueado por uma fase anterior |
+| 🔬 | Descoberta/medição antes de autorizar implementação |
 
----
+## 4. Decisões vigentes
 
-## 6. Verificação
+| Tema | Decisão atual |
+| --- | --- |
+| Produto | O produto principal é **B2C**. Empresa/B2B permanece apenas por compatibilidade até existir plano de remoção ou reativação. |
+| Preço | Calculado e congelado pelo servidor. O cliente nunca define `priceCents` ou `courierFeeCents`. |
+| Persistência | PostgreSQL continua fonte de verdade; Redis continua suporte para locks, jobs e settings. |
+| Encomenda | Campos próprios entregues em 2026-08-07; manter fallback de `notes` até medir que o legado não é mais usado. |
+| Mapas | OSM/Leaflet/`flutter_map` continuam no piloto; provedor pago permanece em aberto. |
+| Storage e push | Firebase é o alvo futuro, mas o adapter local deve continuar funcionando. |
+| Identidade | Tema laranja inspirado no AquiResolve implementado nos dois apps Flutter; dashboard ainda segue a identidade anterior. |
+| Pagamentos | Nenhuma cobrança real está autorizada. Primeiro desenhar e testar o ledger interno; gateway exige decisão própria. |
+| Cloud | Render/Vercel/Firebase possuem somente estrutura. Não provisionar, conectar nem publicar sem pedido explícito. |
+| Tempo | Persistência em UTC; janelas de negócio em `America/Sao_Paulo`. |
 
-```bash
-cd /home/acer/Documentos/aqui-log
-docker compose --env-file .env -f infra/docker-compose.yml up -d
-pnpm install
-pnpm db:migrate && pnpm db:admin
-pnpm build && pnpm lint && pnpm test
-pnpm smoke
-# apps
-cd apps/company_app && flutter analyze && flutter test
-cd ../courier_app && flutter analyze && flutter test
-cd ../../packages/aqui_log_core && dart analyze && dart test
-```
+## 5. Estado atual confirmado
 
----
+| Capacidade | Estado | Limitação que orienta o próximo passo |
+| --- | --- | --- |
+| Cadastro/login de cliente | ✅ | Telefone ainda não é verificado por SMS |
+| Pedido B2C e auto-dispatch | ✅ | Pedidos novos usam campos próprios; `notes` permanece como fallback legado |
+| Oferta/aceite do motoboy | ✅ | Apenas um candidato por rodada; baixa transparência quando ninguém aceita |
+| Preço server-side | ✅ básico | Não considera peso/tamanho e não expõe versão/breakdown persistido |
+| Provas, GPS e tracking | ✅ piloto | Storage local; retenção e push real pendentes |
+| Avaliação | ✅ unilateral | Falta avaliação mútua com origem explícita |
+| Carteira do motoboy | ✅ básica | Não equivale a pagamento/repasse financeiro real |
+| Carteira/pagamento do cliente | Não existe | Exige ledger, política de cancelamento e idempotência antes de gateway |
+| Dashboard | ✅ operacional | Falta gestão B2C por cliente/categoria/peso e futura identidade visual |
+| Cloud | Estrutura apenas | Sem projeto ou credencial conectado segundo a documentação e o Segundo Cérebro |
 
-## 7. Próximo passo de execução
+## 6. Caminho crítico de implementação
 
-Quando for implementar, ordem fechada:
+### Fase 0 — baseline e gates de produto
 
-1. **Sprint 1 (Backend A)** completo  
-2. **Sprint 2 (Mobile B)**  
-3. Sprint 3 dashboard  
-4. Sprint 4 Firebase prod  
+| ID | Status | Entrega | Saída obrigatória |
+| --- | --- | --- | --- |
+| BASE-01 | ✅ | MVP B2C ponta a ponta | Smoke e testes anteriores documentados em `PLANO_B2C.md` |
+| BASE-02 | ▶️ | Fechar decisões mínimas de produto | Registrar respostas de `DEC-01` a `DEC-03` na seção 8 |
+| BASE-03 | ▶️ | Congelar contratos antes de migrar dados | DTO, resposta da API, compatibilidade e rollback descritos em `PLANO_CONFIANCA_E_PRECO.md` |
 
-Comando sugerido ao agente:
+`BASE-02` não impede preparar código aditivo, mas impede ativar obrigatoriedade de foto, aumento de preço ou cobrança.
 
-> Implementa o Sprint 1 do `docs/ROADMAP.md` (B1–B10), com TDD nos locks/pricing/expiry e smoke verde.
+### Fase 1 — fundação da encomenda
 
----
+| ID | Status | Dependências | Entrega |
+| --- | --- | --- | --- |
+| B2C-01 | ✅ | `BASE-03` | Colunas próprias para tipo, tamanho, peso, alcance e fotos; leitura compatível com `notes` legado |
+| B2C-01A | ✅ | `B2C-01` | Apps e core consomem campos próprios com fallback legado |
+| B2C-01B | ▶️ | `B2C-01` | Dashboard filtra/relata por cliente, categoria, tamanho e peso |
 
-## 8. Rota B2C (2026-08-04) — produto sem empresa
+**Estratégia de migração:** mudança aditiva, leitura dupla durante a transição e remoção do parser legado somente em uma versão posterior, após medir que não existem pedidos antigos dependentes dele.
 
-**Feito (validado ao vivo):**
-- Cadastro/login de cliente (`POST /auth/register/customer`, auto-aprovado)
-- Pedido do cliente com encomenda (tipo/tamanho/peso/alcance/foto) → `notes` estruturado
-- **Auto-dispatch**: pedido vira oferta direto pros motoboys disponíveis
-- Apps cliente + motoboy mostram a encomenda; smoke/CI atualizados
+**Gate de saída:** pedido novo e pedido legado precisam abrir nos dois apps e no dashboard; migration precisa subir e reverter em banco de teste.
 
-**Próximas sprints B2C (com pedido do Álvaro):**
+### Fase 2 — preço v2 e transparência
 
-| # | Fase | Docs |
-|---|---|---|
-| 1 | Colunas próprias de encomenda no backend (weight_kg, product_type, photos) + foto obrigatória | `PLANO_CONFIANCA_E_PRECO.md` |
-| 2 | Preço com faixas de peso/tamanho + aumento automático | `PLANO_CONFIANCA_E_PRECO.md` |
-| 3 | Avaliação mútua (ratings por papel) | `PLANO_CONFIANCA_E_PRECO.md` |
-| 4 | Validação de telefone (SMS) | `PLANO_CONFIANCA_E_PRECO.md` |
-| 5 | Carteira do cliente + reserva/estorno; PIX depois | `PLANO_PAGAMENTOS.md` |
-| 6 | Transportadora: rota multi-pedido por proximidade | `PLANO_TRANSPORTADORA.md` |
-| 7 | Dashboard: gestão de clientes + relatórios por categoria/peso | — |
+| ID | Status | Dependências | Entrega |
+| --- | --- | --- | --- |
+| B2C-02 | ⏳ | `B2C-01` | Preço com faixas de peso/tamanho e configuração server-side |
+| B2C-02A | ⏳ | `B2C-02` | Persistir breakdown e versão da regra usada no pedido |
+| B2C-02B | ⏳ | `B2C-02` | Prévia de preço antes da confirmação, sem confiar em valores enviados pelo app |
 
-Regra: nada de cloud (Render/Vercel/Firebase) sem pedido explícito.
+O preço de uma oferta aceita é imutável. Qualquer aumento posterior exige nova oferta e consentimento do cliente; não deve ser aplicado silenciosamente.
+
+**Gate de saída:** invariantes `price = courierFee + platformFee`, arredondamento, mínimo, faixas limítrofes e replay da regra antiga cobertos por testes.
+
+### Fase 3 — confiança e segurança do piloto
+
+| ID | Status | Dependências | Entrega |
+| --- | --- | --- | --- |
+| B2C-03 | ⏳ | `B2C-01` | Avaliação mútua, uma por papel e entrega |
+| B2C-03A | ⏳ | `B2C-03` | Exibir média, contagem e contexto sem revelar dados sensíveis |
+| B2C-04 | ⏸️ | Escolha de provedor | Verificação de telefone com expiração, limite de tentativas e ambiente local seguro |
+
+SMS não bloqueia a fundação de dados nem o preço v2, mas é gate para abrir cadastro público em produção.
+
+### Fase 4 — oferta resiliente
+
+| ID | Status | Dependências | Entrega |
+| --- | --- | --- | --- |
+| DISP-01 | ⏳ | `B2C-02`, `DEC-03` | Busca por anéis de raio, exclusão de recusas e limite de rodadas |
+| DISP-02 | ⏳ | `DISP-01` | Notificar cliente sobre demora e oferecer ação explícita |
+| DISP-03 | ⏳ | `DISP-02` | Telemetria de tempo até aceite, recusas, expiração e ausência de candidato |
+
+Falha de aceite deve terminar em estado recuperável e compreensível, nunca em loop infinito de reofertas.
+
+### Fase 5 — carteira interna do cliente
+
+| ID | Status | Dependências | Entrega |
+| --- | --- | --- | --- |
+| PAY-01 | ⏸️ | Autorização de pagamentos, `B2C-02` | Ledger imutável, saldo disponível/reservado, reserva e estorno sem gateway |
+| PAY-01A | ⏳ | `PAY-01` | Políticas de cancelamento e liquidação idempotente ao concluir entrega |
+| PAY-01B | ⏳ | `PAY-01A` | Operação administrativa auditada para crédito manual de ambiente de teste |
+
+Nenhuma integração PIX/cartão entra nesta fase. O objetivo é provar a contabilidade e as transições.
+
+### Fase 6 — prontidão operacional e publicação
+
+| ID | Status | Dependências | Entrega |
+| --- | --- | --- | --- |
+| OPS-01 | ⏳ | Fases 1–4 | FKs, índices, logs estruturados, auditoria, retenção, backup e restauração testada |
+| OPS-02 | ⏸️ | Pedido explícito + credenciais | Firebase Storage e FCM reais, mantendo fallback local |
+| OPS-03 | ⏸️ | Pedido explícito + `OPS-01/02` | Deploy Render/Vercel e smoke público |
+| PAY-02 | ⏸️ | Gateway escolhido + `PAY-01` | PIX por gateway, webhook assinado e reconciliação |
+
+Build verde não comprova deploy. `OPS-03` só fecha com health real, fluxo B2C público, upload privado e push em dispositivo/emulador.
+
+### Fase 7 — transportadora multi-pedido
+
+| ID | Status | Dependências | Entrega |
+| --- | --- | --- | --- |
+| TRIP-00 | 🔬 | Telemetria `DISP-03` + operação estável | Medir densidade de pedidos compatíveis, desvio e economia potencial |
+| TRIP-01 | ⏳ | Gate econômico aprovado | Modelo de viagens e agrupador em shadow mode, sem afetar ofertas reais |
+| TRIP-02 | ⏳ | `TRIP-01` validado | Piloto com no máximo 3 pedidos, capacidade e prova por pacote |
+
+Não implementar CRUD/telas de rota antes de `TRIP-00` demonstrar demanda suficiente.
+
+## 7. Trilha paralela de experiência
+
+Esta trilha pode ocorrer em paralelo às Fases 1–4 quando houver autorização, mas não deve alterar contratos de negócio.
+
+| ID | Status | Entrega | Referência |
+| --- | --- | --- | --- |
+| UX-01 | ✅ | Tokens laranja e cores semânticas no `aqui_log_ui` | `DIRETRIZES_VISUAIS.md` |
+| UX-01A | ✅ | Aplicar tema no app cliente e cobrir por testes | `DIRETRIZES_VISUAIS.md` |
+| UX-01B | ✅ | Aplicar tema no app motoboy e cobrir por testes | `DIRETRIZES_VISUAIS.md` |
+| UX-01C | ▶️ | Aplicar os tokens equivalentes no dashboard | `DIRETRIZES_VISUAIS.md` |
+| UX-02 | ▶️ | Acessibilidade, estados, responsividade e QA visual em dispositivo | Critérios do documento visual |
+
+## 8. Registro de decisões pendentes
+
+| ID | Decisão necessária | Recomendação | Bloqueia |
+| --- | --- | --- | --- |
+| DEC-01 | Foto da encomenda obrigatória? | Sim para publicar oferta; feature flag desligada durante migração | Ativação final de `B2C-01` |
+| DEC-02 | Faixas e adicionais de peso/tamanho | Configuração server-side versionada; definir valores com dados do piloto | Valores de `B2C-02`, não sua estrutura |
+| DEC-03 | Sem aceite: aumentar preço, ampliar raio ou cancelar? | Ampliar raio com limite, avisar cliente e exigir consentimento para qualquer aumento | `DISP-01/02` |
+| DEC-04 | Provedor de SMS | Escolher por custo, cobertura BR, webhook e sandbox | `B2C-04` |
+| DEC-05 | Iniciar carteira interna sem gateway? | Sim, mas somente após autorização explícita de pagamentos | `PAY-01` |
+| DEC-06 | Gateway PIX | Avaliar Pagar.me, Asaas e Mercado Pago com sandbox/webhooks | `PAY-02` |
+| DEC-07 | Rota compartilhada automática ou opt-in? | Opt-in no primeiro piloto | `TRIP-02` |
+
+Toda decisão fechada deve registrar data, autor e consequência nos planos afetados.
+
+## 9. Definition of Done comum
+
+Uma fase só pode mudar para ✅ quando cumprir o que for aplicável:
+
+- migration aditiva testada para frente e para trás, sem `synchronize=true`;
+- contrato da API e compatibilidade documentados;
+- autorização e isolamento por papel testados;
+- unitários para regras puras e integração para persistência/transações;
+- `pnpm build`, `pnpm lint`, `pnpm test` e `pnpm smoke` verdes;
+- `flutter analyze` e `flutter test` nos dois apps e testes do `aqui_log_core`;
+- fluxo real exercitado, incluindo pelo menos um erro/rollback relevante;
+- validação visual em app/painel quando houver UI;
+- `MVP_COVERAGE.md`, `HANDOFF.md` e changelog atualizados com evidência;
+- estado comunicado corretamente como local, validado, commitado, enviado ou publicado.
+
+## 10. Riscos controlados pelo plano
+
+| Risco | Controle |
+| --- | --- |
+| Quebrar pedidos antigos ao sair de `notes` | Leitura dupla, migração aditiva e telemetria de fallback |
+| Divergir preço entre app, oferta e cobrança | Servidor único, breakdown persistido e versão da regra |
+| Crédito/estorno duplicado | Ledger imutável, chave idempotente e transação de banco |
+| Reoferta infinita | Limite de anéis/rodadas e estado terminal recuperável |
+| Misturar cor de marca com status | Tokens semânticos e QA conforme `DIRETRIZES_VISUAIS.md` |
+| Ligar cloud cedo demais | Gates `OPS-02/03` dependem de pedido explícito e credenciais |
+| Construir transportadora sem densidade | Gate de descoberta `TRIP-00` antes de código operacional |
+
+## 11. Próximo pacote recomendado
+
+Próximo trabalho técnico: **`B2C-01B — filtros e relatórios B2C no dashboard`**.
+
+Ao retomar:
+
+1. aplicar a migration `1785100000000-DeliveryPackageFields` em banco de teste e executar o smoke vivo;
+2. adicionar filtros/relatórios por cliente, categoria, tamanho e peso no dashboard;
+3. manter `notes` como fallback de leitura e foto opcional até `DEC-01` ser confirmada;
+4. concluir `UX-01C/UX-02` com dashboard laranja e QA visual em dispositivo.
+
+Não iniciar Firebase, deploy, gateway ou transportadora como parte desse pacote.

@@ -81,6 +81,38 @@ export class Delivery {
   @Column({ type: 'text', nullable: true })
   notes!: string | null;
 
+  @Index()
+  @Column({ name: 'product_type', type: 'varchar', length: 40, nullable: true })
+  productType!: string | null;
+
+  @Index()
+  @Column({ name: 'package_size', type: 'varchar', length: 16, nullable: true })
+  packageSize!: string | null;
+
+  @Column({
+    name: 'weight_kg',
+    type: 'decimal',
+    precision: 8,
+    scale: 3,
+    nullable: true,
+  })
+  weightKg!: number | null;
+
+  @Column({
+    name: 'delivery_scope',
+    type: 'varchar',
+    length: 24,
+    nullable: true,
+  })
+  deliveryScope!: string | null;
+
+  @Column({
+    name: 'product_photo_urls',
+    type: 'jsonb',
+    default: () => "'[]'::jsonb",
+  })
+  productPhotoUrls!: string[];
+
   @Column({ name: 'price_cents', type: 'integer', default: 0 })
   priceCents!: number;
 

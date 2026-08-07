@@ -1,69 +1,182 @@
-# Plano — Pagamentos e Carteira
+# Plano técnico — Carteira, pagamentos e repasses
 
-> **Status:** FUTURO — hoje existe só a carteira do entregador (crédito automático
-> ao entregar) e o preço é calculado no servidor. Cliente ainda não paga.
-> **Data:** 2026-08-04
+> **Atualizado:** 2026-08-07
+> **Status:** especificação futura; nenhuma cobrança real autorizada
+> **Roadmap:** `PAY-01`, `PAY-01A`, `PAY-01B` e `PAY-02`
+> **Pré-requisito:** preço v2 (`B2C-02`) estável e política de cancelamento aprovada
 
----
+## 1. Separar os conceitos
 
-## 1. Situação atual
+| Conceito | Significado |
+| --- | --- |
+| Preço | Valor congelado do pedido, calculado pelo servidor |
+| Carteira | Visão contábil do saldo do participante |
+| Reserva | Parte do saldo do cliente indisponível enquanto a entrega está aberta |
+| Liquidação | Conversão da reserva em receita da plataforma e obrigação com o motoboy |
+| Pagamento | Entrada de dinheiro confirmada por gateway ou operação autorizada |
+| Repasse/payout | Saída real de dinheiro para o motoboy |
 
-- **Carteira do motoboy** ✅ (já existe): crédito automático ao concluir entrega,
-  extrato (`/finance/statement`), saldo.
-- **Pagamento do cliente** ❌: o pedido é criado sem pagamento; não há recarga,
-  cobrança nem repasse reverso.
+A carteira atual do motoboy é um crédito interno do MVP. Ela não comprova recebimento financeiro real nem substitui uma integração de payout.
 
-## 2. Modelo proposto (recomendado pelo plano B2C §5-5a)
+## 2. Decisão arquitetural recomendada
 
-Carteira interna do cliente com **recarga antes de pedir**:
+Usar **ledger imutável de partidas balanceadas**, com projeções de saldo, em vez de atualizar apenas uma coluna `balance_cents`.
 
-1. Cliente recarrega a carteira (PIX via QR; cartão depois).
-2. Ao criar o pedido, o valor é **reservado (bloqueado)** da carteira.
-3. Entrega concluída → valor reservado vira repasse pro motoboy (payout).
-4. Cancelamento (cliente ou sistema) → estorno automático do valor reservado.
+Cada evento financeiro gera lançamentos vinculados por uma transação lógica:
 
-## 3. Tabelas/entidades futuras
+```text
+recarga confirmada     gateway-clearing → cliente-disponível
+reserva do pedido      cliente-disponível → cliente-reservado
+cancelamento integral  cliente-reservado → cliente-disponível
+entrega concluída      cliente-reservado → receita-plataforma + pagar-motoboy
+payout confirmado      pagar-motoboy → gateway-clearing
+```
 
-- `customer_wallets` (id, customer_id, balance_cents) — ou reusar o conceito da
-  carteira de courier com `owner_type`.
-- `wallet_transactions` já existe — ganha `customer_id` e `type` de reserva/estorno.
-- `payments` (nova): gateway ref, status, valor, método (PIX/cartão/dinheiro).
-- `payouts` (nova): transferência da plataforma para o motoboy (PIX).
+Invariantes:
 
-## 4. Regras de negócio
+- soma dos lançamentos de cada transação = zero;
+- valores sempre em centavos inteiros e positivos no contrato de entrada;
+- ledger não é editado/apagado; correção ocorre por transação reversa;
+- cada operação externa ou de domínio possui chave idempotente única;
+- saldo disponível nunca fica negativo;
+- reserva, liquidação e estorno ocorrem em transação de banco com lock adequado.
 
-| Regra | Comportamento |
-|---|---|
-| Saldo insuficiente | Bloqueia criação do pedido (ou permite "pagar na entrega" se habilitado) |
-| Reserva | `RESERVED` no momento do pedido; nunca soma ao saldo disponível |
-| Estorno | Automático em CANCELED (antes de coleta: 100%; depois: decisão) |
-| Repasse | Na entrega: reserva vira receita; repasse ao motoboy = courier_fee_cents |
-| Comissão | Plataforma fica com (price_cents - courier_fee_cents) |
-| Dinheiro na entrega | Flag por pedido; repasse manual depois (fora da carteira do cliente) |
+## 3. Modelo de dados proposto
 
-## 5. Gateway externo (futuro, fora do MVP)
+Não ampliar `wallet_transactions` de modo ambíguo sem migração planejada. Preferir modelo genérico:
 
-- **PIX**: Asaas / Mercado Pago / Pagar.me (o Álvaro já usa Pagar.me no AquiResolve).
-- **Cartão**: mesmo gateway, checkout transparente.
-- Nunca armazenar dados de cartão no nosso backend (tokenização no gateway).
+| Entidade | Campos essenciais |
+| --- | --- |
+| `financial_accounts` | `id`, `owner_type`, `owner_id`, `purpose`, `currency`, status |
+| `ledger_transactions` | `id`, `type`, `reference_type/id`, `idempotency_key`, status, metadata, timestamps |
+| `ledger_entries` | `transaction_id`, `account_id`, `direction`, `amount_cents` |
+| `payment_intents` | pedido/recarga, gateway, método, valor, status, referência externa |
+| `payouts` | courier, valor, gateway, status, referência externa |
 
-## 6. Fases
+Projeções de saldo podem ser tabela/cache, mas devem ser reconstruíveis a partir do ledger.
 
-| Fase | Entrega | Esforço |
-|---|---|---|
-| 1 | Carteira do cliente + reserva/estorno (sem gateway; saldo só via admin/PIX manual) | Médio |
-| 2 | PIX via gateway (QR code) + webhook de confirmação | Médio-Alto |
-| 3 | Payout automático pro motoboy (PIX) | Médio |
-| 4 | Cartão (checkout transparente) | Alto |
-| 5 | Dashboard financeiro (receita, repasses, inadimplência) | Baixo |
+## 4. Estados
 
-## 7. Fora de escopo
+### 4.1 Reserva do pedido
 
-- Crédito/parcelamento, antifraude avançado, chargeback automatizado.
-- "Pagar depois" sem recarga (avalista).
+```text
+NONE → RESERVED → SETTLED
+          └──────→ RELEASED
+```
 
-## 8. Decisões pendentes (para o Álvaro)
+- `RESERVED`: saldo bloqueado após criação confirmada;
+- `SETTLED`: entrega concluída e valor distribuído contabilmente;
+- `RELEASED`: cancelamento/expiração devolveu saldo disponível.
 
-1. Recarga mínima (recomendo R$ 10).
-2. Aceitar dinheiro na entrega na v1? (recomendo NÃO — só carteira).
-3. Gateway preferido para PIX (Asaas vs Mercado Pago vs Pagar.me).
+Transições repetidas retornam o resultado anterior pela mesma chave idempotente.
+
+### 4.2 Payment intent
+
+```text
+CREATED → PENDING → PAID
+    │         ├──→ EXPIRED
+    │         └──→ FAILED
+    └────────────→ CANCELED
+PAID → REFUND_PENDING → REFUNDED | REFUND_FAILED
+```
+
+O estado interno é atualizado por webhook validado e reconciliação; redirecionamento do navegador/app não confirma pagamento.
+
+## 5. `PAY-01` — ledger interno sem gateway
+
+Objetivo: provar contabilidade e regras usando apenas saldo de teste creditado por operação administrativa auditada.
+
+### Entregas
+
+1. contas e ledger imutável;
+2. saldo disponível e reservado do cliente;
+3. reserva atômica ao confirmar pedido;
+4. liberação em cancelamento/expiração;
+5. liquidação idempotente em `DELIVERED`;
+6. obrigação contábil com o motoboy, sem payout real;
+7. extrato legível nos apps e dashboard;
+8. ajuste administrativo somente com papel apropriado, motivo e auditoria.
+
+### Política de cancelamento a fechar
+
+| Momento | Recomendação inicial |
+| --- | --- |
+| Antes de aceite | liberar 100% |
+| Aceito, antes da coleta | regra configurável com possível taxa; decisão explícita |
+| Após coleta | não automatizar na v1; abrir análise administrativa |
+| Cancelamento do sistema/sem motoboy | liberar 100% |
+
+### Aceite
+
+- duas tentativas simultâneas não reservam além do saldo;
+- replay de create/cancel/deliver não duplica lançamentos;
+- falha no meio da transação não altera saldos parcialmente;
+- soma do ledger fecha e projeção pode ser reconstruída;
+- autorização impede cliente de consultar carteira alheia;
+- testes cobrem reserva, liberação, liquidação, ajuste e concorrência.
+
+## 6. `PAY-02` — PIX por gateway
+
+Só iniciar após `DEC-06`, credenciais de sandbox e `PAY-01` validado.
+
+### Critérios para escolher fornecedor
+
+- PIX cobrança e devolução via API;
+- webhook assinado/documentado e reenvio;
+- idempotência;
+- sandbox útil;
+- cobertura e suporte no Brasil;
+- split/payout, se necessário, sem assumir que estará habilitado;
+- taxas e prazos de liquidação;
+- exportação/reconciliação.
+
+Pagar.me pode ser avaliado por já existir experiência no AquiResolve, mas isso não substitui validar disponibilidade real de PIX e payout na conta destinada ao Aqui Log.
+
+### Segurança e operação
+
+- segredo apenas no servidor/secret manager;
+- verificar assinatura, timestamp e replay do webhook;
+- armazenar payload mínimo necessário, com proteção de dados;
+- processar webhook em transação e responder idempotentemente;
+- job de reconciliação compara estados internos e gateway;
+- nunca armazenar dados brutos de cartão;
+- logs não exibem token, QR completo ou dados sensíveis.
+
+### Aceite
+
+- criar cobrança PIX e confirmar por webhook de sandbox;
+- webhook duplicado e fora de ordem não duplica crédito;
+- expiração e devolução refletidas no ledger;
+- reconciliação detecta divergência;
+- fluxo de erro é visível ao cliente e ao admin;
+- procedimento de contingência e suporte documentado.
+
+## 7. Ordem futura
+
+| Ordem | ID | Entrega | Gate |
+| --- | --- | --- | --- |
+| 1 | `PAY-01` | Ledger + reserva/liberação | autorização de pagamentos + `B2C-02` |
+| 2 | `PAY-01A` | Liquidação e política completa de cancelamento | regras aprovadas |
+| 3 | `PAY-01B` | Operação/admin e extratos | `PAY-01A` |
+| 4 | `PAY-02` | Recarga PIX + webhook + reconciliação | gateway/sandbox |
+| 5 | futuro | Payout real ao motoboy | viabilidade regulatória/operacional |
+| 6 | futuro | Cartão tokenizado | PIX estável e necessidade comprovada |
+
+## 8. Decisões pendentes
+
+1. Autorizar ou não `PAY-01` no próximo ciclo.
+2. Política de cancelamento após aceite e após coleta.
+3. Recarga mínima e saldo máximo.
+4. Gateway PIX e conta comercial que será usada.
+5. Quem assume taxas e devoluções.
+6. Quando o crédito do motoboy se torna sacável.
+7. Necessidade fiscal/contábil antes do piloto pago.
+
+## 9. Fora de escopo inicial
+
+- cartão, parcelamento e crédito;
+- dinheiro na entrega;
+- split/payout automático sem validação jurídica e operacional;
+- chargeback/antifraude avançado;
+- saldo negativo ou “pagar depois”;
+- produção cloud como efeito colateral deste plano.

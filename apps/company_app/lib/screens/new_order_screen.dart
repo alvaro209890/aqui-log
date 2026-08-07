@@ -8,8 +8,8 @@ import 'package:image_picker/image_picker.dart';
 ///
 /// O cliente descreve a encomenda (tipo, tamanho, peso, foto), o alcance
 /// (mesma cidade ou outro município) e os pontos de retirada/entrega.
-/// Os metadados da encomenda vão estruturados no campo `notes` — o motoboy
-/// vê tudo isso na oferta e decide aceitar ou recusar.
+/// Novos pedidos usam campos próprios na API; `notes` contém apenas a
+/// observação livre. O core mantém leitura compatível com pedidos antigos.
 class NewOrderScreen extends StatefulWidget {
   const NewOrderScreen({
     super.key,
@@ -121,7 +121,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
         size: size,
         weightKg: double.tryParse(weight.text.trim().replaceAll(',', '.')),
         scope: scope,
-        photoUrl: photoUrl,
+        photoUrls: photoUrl == null ? const [] : [photoUrl],
         notes: obs.text.trim().isEmpty ? null : obs.text.trim(),
       );
 
@@ -138,7 +138,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
         'deliveryLongitude': deliveryGeo.longitude,
         'recipientName': recipient.text.trim(),
         'recipientPhone': phone.text.trim(),
-        'notes': meta.encodeNotes(),
+        ...meta.toApiJson(),
       });
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -167,14 +167,15 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 prefixIcon: Icon(Icons.inventory_2_outlined),
               ),
               items: OrderMeta.productTypes
-                  .map(
-                    (t) => DropdownMenuItem(value: t, child: Text(t)),
-                  )
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                   .toList(),
               onChanged: (v) => setState(() => productType = v ?? productType),
             ),
             const SizedBox(height: 14),
-            const Text('Tamanho', style: TextStyle(fontWeight: FontWeight.w700)),
+            const Text(
+              'Tamanho',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 6),
             SegmentedButton<String>(
               segments: const [
@@ -223,7 +224,10 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
               },
             ),
             const SizedBox(height: 14),
-            const Text('Alcance', style: TextStyle(fontWeight: FontWeight.w700)),
+            const Text(
+              'Alcance',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 6),
             SegmentedButton<String>(
               segments: const [
@@ -314,9 +318,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.rocket_launch_outlined),
-              label: Text(
-                loading ? 'Publicando...' : 'Publicar pedido',
-              ),
+              label: Text(loading ? 'Publicando...' : 'Publicar pedido'),
             ),
             const SizedBox(height: 8),
             const Text(

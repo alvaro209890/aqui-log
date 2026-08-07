@@ -17,7 +17,6 @@ Future<void> _noopProof({
   required String status,
 }) async {}
 
-
 void main() {
   testWidgets('LoginScreen renders', (tester) async {
     await tester.pumpWidget(
@@ -38,6 +37,11 @@ void main() {
                   'code': 'AQL-MAP',
                   'pickupAddress': 'A',
                   'deliveryAddress': 'B',
+                  'productType': 'ELECTRONICS',
+                  'packageSize': 'MEDIUM',
+                  'weightKg': 2.5,
+                  'deliveryScope': 'SAME_CITY',
+                  'productPhotoUrls': <String>[],
                 },
               },
             ],
@@ -53,6 +57,8 @@ void main() {
     );
     expect(find.textContaining('oferta'), findsOneWidget);
     expect(find.text('AQL-MAP'), findsOneWidget);
+    expect(find.text('Eletrônico · Mesma cidade'), findsOneWidget);
+    expect(find.text('Médio · 2,5 kg'), findsOneWidget);
     expect(find.text('Aceitar'), findsOneWidget);
   });
 
@@ -94,10 +100,7 @@ void main() {
   testWidgets('ProofScreen camera UI exists', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: ProofScreen(
-          deliveryId: 'd1',
-          onSubmit: _noopProof,
-        ),
+        home: ProofScreen(deliveryId: 'd1', onSubmit: _noopProof),
       ),
     );
     await tester.pump();

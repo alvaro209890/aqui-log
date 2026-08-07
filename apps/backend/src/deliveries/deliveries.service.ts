@@ -68,6 +68,10 @@ export class DeliveriesService {
       throw new ForbiddenException('Usuario sem empresa vinculada');
     if (isCustomer && !user.customerId)
       throw new ForbiddenException('Cliente sem cadastro completo');
+    const productPhotoUrls = dto.productPhotoUrls ?? [];
+    for (const url of productPhotoUrls) {
+      this.storage.assertAllowedProductPhotoUrl(url);
+    }
     const quote = await this.pricing.quoteAsync({
       pickupLatitude: dto.pickupLatitude,
       pickupLongitude: dto.pickupLongitude,
@@ -83,6 +87,11 @@ export class DeliveriesService {
         createdById: user.id,
         courierId: null,
         notes: dto.notes ?? null,
+        productType: dto.productType ?? null,
+        packageSize: dto.packageSize ?? null,
+        weightKg: dto.weightKg ?? null,
+        deliveryScope: dto.deliveryScope ?? null,
+        productPhotoUrls,
         scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : null,
         // Server-side pricing always wins (client price fields ignored)
         priceCents: quote.priceCents,
@@ -106,6 +115,13 @@ export class DeliveriesService {
         code: delivery.code,
         companyId: delivery.companyId,
         customerId: delivery.customerId,
+        package: {
+          productType: delivery.productType,
+          packageSize: delivery.packageSize,
+          weightKg: delivery.weightKg,
+          deliveryScope: delivery.deliveryScope,
+          productPhotoCount: delivery.productPhotoUrls.length,
+        },
         pricing: quote,
       },
     });

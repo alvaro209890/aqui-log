@@ -1,79 +1,219 @@
-# Plano — Confiança e Preço (avaliações, SMS, foto, valor da corrida)
+# Plano técnico — Encomenda, confiança, preço e oferta
 
-> **Status:** FUTURO — decisões pendentes do PLANO_B2C.md §5 (#1, #3, #6, #8, #9).
-> **Data:** 2026-08-04
+> **Atualizado:** 2026-08-07
+> **Papel:** especificação subordinada ao `ROADMAP.md`
+> **Abrange:** `B2C-01` a `B2C-04` e `DISP-01` a `DISP-03`
+> **Não autoriza:** gateway, SMS pago, cloud ou aumento automático de preço
+> **Estado de `B2C-01`:** schema/API/core/apps implementados em 2026-08-07; dashboard e execução da migration em banco de teste permanecem no próximo pacote
 
----
+## 1. Objetivos e invariantes
 
-## 1. Preço da corrida (#1 do plano B2C)
+Este plano remove o acoplamento dos dados da encomenda ao campo `notes`, torna o preço explicável e fortalece a confiança entre cliente e motoboy.
 
-**Decisão recomendada: (a) sistema calcula sempre** — estilo Uber.
-Motoboy aceita/recusa com base no valor; sem negociação de preço na v1.
+Invariantes:
 
-### Implementação futura
-- Já existe `PricingService` server-side (base + km + % plataforma).
-- Evoluir para **faixas de peso/tamanho** somando ao preço (ver §2 do plano B2C).
-- Opção futura: **aumento automático** se ninguém aceitar em X minutos
-  (configurável: ex. +15% por rodada, teto de +60%).
+- o servidor é a única autoridade de preço;
+- pedido antigo continua legível durante toda a migração;
+- oferta aceita conserva preço e repasse congelados;
+- foto de produto e comprovantes de coleta/entrega são conceitos diferentes;
+- avaliação só pode ser criada por participante da entrega concluída;
+- reoferta possui limite de tentativas e nunca altera preço sem consentimento.
 
-### Regras
-| Item | Regra |
-|---|---|
-| Preço exibido ao cliente | Antes de publicar (estimativa do servidor) |
-| Preço no aceite | Congelado no momento da oferta |
-| Mudança de rota | Recalcular (só com consentimento) |
-| Reembolso | Proporcional ao trecho não executado |
+## 2. `B2C-01` — dados estruturados da encomenda
 
-## 2. Foto do produto (#3)
+### 2.1 Contrato implementado
 
-**Decisão recomendada: obrigatória** — é o que dá confiança pro motoboy aceitar.
+Adicionar a `deliveries`, inicialmente como campos opcionais:
 
-### Implementação futura
-- Front já envia foto (upload no storage, URL no `notes`).
-- Backend: campo `product_photo_urls` (array) com validação de host (mesma
-  policy do `proofUrl`).
-- Regra: sem foto → não publica oferta (ou status `AWAITING_PHOTO`).
+| Campo | Tipo sugerido | Validação |
+| --- | --- | --- |
+| `product_type` | `varchar(40)` | catálogo aceito pelo backend; `OTHER` admite descrição livre separada |
+| `package_size` | `varchar(16)` | `SMALL`, `MEDIUM` ou `LARGE` |
+| `weight_kg` | `numeric(8,3)` | maior que zero e menor ou igual a 1000 kg; até 3 casas decimais |
+| `delivery_scope` | `varchar(24)` | `SAME_CITY` ou `OTHER_CITY` |
+| `product_photo_urls` | `jsonb` | array sem repetição, máximo de 3 URLs e host permitido pelo storage |
 
-## 3. Validação de telefone (#8)
+Evitar enum nativo do PostgreSQL para catálogo mutável. DTOs e domínio devem expor valores estáveis em inglês; textos pt-BR ficam na apresentação.
 
-**Decisão recomendada: código SMS no cadastro** pra reduzir lixo/bots.
+`notes` volta a representar somente observação livre. Enquanto houver legado, a leitura segue:
 
-### Implementação futura
-- Enviar código de 6 dígitos via SMS (provedor a escolher — Twilio/TotalVoice/Zenvia).
-- `customers.phone_verified_at`; pedido só com telefone verificado.
-- Fallback local: log do código (como o reset de senha) enquanto não há provedor.
+```text
+campos próprios completos → usar campos próprios
+campos próprios ausentes  → parsear OrderMeta.fromNotes(notes)
+parse impossível          → exibir como pedido legado, sem inventar valores
+```
 
-## 4. Avaliação mútua (#9)
+### 2.2 Migração em três passos
 
-**Decisão recomendada: mútua** — cliente avalia motoboy e motoboy avalia cliente.
+1. **Expandir:** criar colunas opcionais e índices úteis sem remover `notes`.
+2. **Migrar tráfego:** backend grava campos próprios; core/apps leem campos próprios e mantêm fallback.
+3. **Contrair depois:** somente após telemetria indicar zero fallback relevante, retirar o bloco estruturado de novos `notes`; remoção definitiva do parser fica para outra versão.
 
-### Implementação futura
-- `ratings` hoje: 1 registro por delivery (quem avaliou = dono do pedido).
-- Evoluir: `ratings.from_role` (CUSTOMER/COURIER) + 2 registros por delivery
-  (unique: delivery_id + from_role).
-- Perfis: média de avaliação no perfil do motoboy (card da oferta) e no do cliente.
+Não fazer backfill SQL frágil sobre texto localizado. Se o backfill for necessário, usar rotina versionada que reutilize regras equivalentes ao parser e produza relatório de sucessos/falhas antes de escrever.
 
-## 5. Oferta sem aceite (#6 e #7)
+### 2.3 Compatibilidade vertical
 
-**Decisões recomendadas:** avisar o cliente na 1ª versão; re-oferecer com raio
-maior uma vez, depois cancelar.
+| Camada | Estado em 2026-08-07 |
+| --- | --- |
+| Backend | ✅ Entity, migration, DTO, persistência e validação de URL |
+| `aqui_log_core` | ✅ aceita JSON da API e mantém `fromNotes` como fallback |
+| App cliente | ✅ envia campos próprios; observação permanece livre |
+| App motoboy | ✅ mostra dados próprios ou legado, sem diferença funcional |
+| Dashboard | ▶️ filtros por cliente/categoria/tamanho/peso e sinalização de legado |
 
-### Implementação futura
-- Job `offerSweep`: pedido sem aceite há X min → notificação push pro cliente
-  ("Ninguém aceitou ainda — quer aumentar o valor ou ampliar a área?").
-- **Raio maior**: despacho hoje é "courier mais próximo com localização"; evoluir
-  para candidatos num raio configurável com fallback em anéis crescentes.
+### 2.4 Foto da encomenda
 
-## 6. Fases
+Recomendação: exigir ao menos uma foto antes de publicar uma oferta, com `REQUIRE_PRODUCT_PHOTO=false` durante a migração e ativação somente após `DEC-01`.
 
-| Fase | Entrega | Esforço |
-|---|---|---|
-| 1 | Colunas de encomenda no backend (weight_kg, product_type, photos) + validação foto | Médio |
-| 2 | Preço com faixas de peso/tamanho + teto de aumento automático | Médio |
-| 3 | Avaliação mútua (ratings por papel) | Baixo |
-| 4 | Validação de telefone por SMS | Médio |
-| 5 | Notificação de oferta sem aceite + anéis de raio | Médio |
+- validar MIME, tamanho, quantidade e host no backend;
+- armazenar chaves/URLs privadas conforme o adapter de storage;
+- não aceitar URL arbitrária enviada pelo cliente;
+- não reutilizar `collectionProofUrl` ou `deliveryProofUrl`.
 
-## 7. Fora de escopo
+### 2.5 Aceite de `B2C-01`
 
-- Seguro de carga, verificações biométricas, score de risco avançado.
+- migration sobe e reverte em banco de teste;
+- pedido novo persiste e devolve campos estruturados;
+- pedido legado abre nos dois apps e dashboard;
+- peso inválido, catálogo inválido e URL não permitida são recusados;
+- cliente só altera/cria dados do próprio pedido nos estados permitidos;
+- smoke B2C e B2B legado permanecem verdes.
+
+## 3. `B2C-02` — preço v2
+
+### 3.1 Modelo
+
+```text
+subtotal = base + distância + adicional_tamanho + adicional_peso
+priceCents = max(minFee, arredondar(subtotal))
+platformFeeCents = arredondar(priceCents * percentual_plataforma)
+courierFeeCents = priceCents - platformFeeCents
+```
+
+Persistir no pedido:
+
+- `pricing_version` — identifica a configuração/regra;
+- `pricing_breakdown` — componentes em centavos e entradas relevantes;
+- `quoted_at` — instante da cotação;
+- `price_cents` e `courier_fee_cents` — snapshot já existente;
+- `platform_fee_cents` — persistir explicitamente ou provar derivação invariável.
+
+Configuração pode continuar em settings/Redis, mas cada pedido deve guardar dados suficientes para auditoria mesmo que a configuração mude.
+
+### 3.2 Prévia e confirmação
+
+Adicionar uma operação de cotação server-side antes da confirmação. A criação recalcula com as mesmas entradas e rejeita/solicita nova confirmação se a cotação expirou ou mudou além da tolerância definida.
+
+O app envia características e coordenadas, nunca totais financeiros confiáveis.
+
+### 3.3 Aumento por falta de aceite
+
+Não aplicar aumento silencioso. Uma nova proposta precisa:
+
+1. informar valor anterior, novo valor e motivo;
+2. obter consentimento do cliente;
+3. gerar nova versão de cotação/oferta;
+4. preservar trilha de auditoria.
+
+Na primeira versão, priorizar ampliação de raio e aviso ao cliente.
+
+### 3.4 Aceite de `B2C-02`
+
+- testes de limites P/M/G, faixas exatas de peso, arredondamento e tarifa mínima;
+- `priceCents = courierFeeCents + platformFeeCents` em todos os casos;
+- duas requisições iguais sob a mesma versão retornam o mesmo breakdown;
+- pedido existente mantém seu valor quando settings mudam;
+- valor mostrado ao cliente, motoboy, dashboard e extrato é consistente.
+
+## 4. `B2C-03` — avaliação mútua
+
+### 4.1 Modelo
+
+Substituir a unicidade atual apenas em `delivery_id` por:
+
+```text
+unique(delivery_id, from_role)
+from_role: CUSTOMER | COURIER
+from_user_id
+to_user_id
+score: 1..5
+comment: opcional, com limite
+```
+
+Manter os vínculos de domínio necessários para consultas e auditoria. Migração precisa classificar ratings antigos como `CUSTOMER` quando a autoria puder ser comprovada; casos ambíguos ficam registrados em relatório, não são adivinhados.
+
+### 4.2 Regras
+
+- apenas após `DELIVERED`;
+- somente cliente e motoboy daquela entrega;
+- uma avaliação por papel;
+- alteração, se permitida, tem janela limitada e auditoria;
+- médias exibem quantidade de avaliações;
+- moderação/denúncia de comentário fica em backlog separado.
+
+### 4.3 Aceite de `B2C-03`
+
+- os dois participantes avaliam a mesma entrega sem conflito;
+- terceiro, papel errado, duplicata e entrega não concluída são recusados;
+- média e contagem não expõem telefone, endereço ou observação do pedido;
+- ratings legados continuam visíveis.
+
+## 5. `B2C-04` — verificação de telefone
+
+Depende de `DEC-04`. O contrato independe do fornecedor:
+
+- código de uso único com hash, TTL curto e número máximo de tentativas;
+- cooldown e rate limit por telefone, IP e conta;
+- `phone_verified_at` e normalização E.164;
+- troca de telefone invalida verificação anterior;
+- respostas não revelam se um telefone já possui conta;
+- ambiente local usa adapter explícito; código nunca aparece em resposta de produção.
+
+Gate: cadastro público em produção exige telefone verificado, mas testes locais e migrações não devem depender de serviço externo.
+
+## 6. `DISP-01/02/03` — oferta sem aceite
+
+### 6.1 Estratégia inicial
+
+1. oferecer ao candidato elegível mais próximo;
+2. em expiração/recusa, excluir candidatos já tentados;
+3. ampliar raio em anéis configuráveis, com máximo de rodadas e duração total;
+4. avisar o cliente após o primeiro atraso significativo;
+5. ao esgotar, manter estado recuperável com ações claras: tentar novamente, editar ou cancelar.
+
+### 6.2 Concorrência e idempotência
+
+- lock e revalidação continuam obrigatórios no aceite;
+- um pedido só pode ter uma oferta pendente efetiva por estratégia atual;
+- jobs repetidos não criam ofertas duplicadas para o mesmo par pedido/motoboy/rodada;
+- cada rodada registra raio, candidatos, motivo de término e timestamps.
+
+### 6.3 Métricas mínimas
+
+- tempo criação → primeira oferta;
+- tempo criação → aceite;
+- candidatos elegíveis e tentados;
+- recusas, expirações e ausência de candidato;
+- raio e rodada do aceite;
+- cancelamento após demora.
+
+Essas métricas alimentam `TRIP-00` e a futura decisão de aumento de preço.
+
+## 7. Ordem executável
+
+| Ordem | Pacote | Dependência | Pode ser entregue sozinho? |
+| --- | --- | --- | --- |
+| 1 | `B2C-01` schema/API/core/apps | contrato fechado | Sim, com foto opcional por flag |
+| 2 | `B2C-01B` dashboard B2C | `B2C-01` | Sim |
+| 3 | `B2C-02` preço v2 | campos estruturados | Sim |
+| 4 | `B2C-03` avaliação mútua | nenhuma externa | Sim |
+| 5 | `DISP-01/02/03` resiliência | preço v2 + `DEC-03` | Sim |
+| 6 | `B2C-04` SMS | provedor/sandbox | Não sem decisão externa |
+
+## 8. Fora de escopo
+
+- seguro de carga, biometria e score de risco avançado;
+- negociação livre de preço entre cliente e motoboy;
+- pagamento, payout e conciliação;
+- agrupamento multi-pedido;
+- publicação cloud.

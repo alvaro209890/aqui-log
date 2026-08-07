@@ -24,23 +24,29 @@ class WalletScreen extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          const Text('Carteira', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+          const Text(
+            'Carteira',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+          ),
           const SizedBox(height: 16),
           Card(
-            color: AquiLogColors.forest,
+            color: AquiLogColors.primaryDark,
             child: Padding(
               padding: const EdgeInsets.all(22),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Saldo', style: TextStyle(color: AquiLogColors.mint)),
+                  const Text(
+                    'Saldo',
+                    style: TextStyle(color: AquiLogColors.primarySoft),
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     balance is num
                         ? 'R\$ ${(balance / 100).toStringAsFixed(2)}'
                         : loading
-                            ? '...'
-                            : 'R\$ 0,00',
+                        ? '...'
+                        : 'R\$ 0,00',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 28,
@@ -52,12 +58,18 @@ class WalletScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          const Text('Extrato', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          const Text(
+            'Extrato',
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+          ),
           const SizedBox(height: 10),
           if (loading && list.isEmpty)
             const Center(child: CircularProgressIndicator())
           else if (list.isEmpty)
-            const Text('Sem lancamentos.', style: TextStyle(color: AquiLogColors.muted))
+            const Text(
+              'Sem lancamentos.',
+              style: TextStyle(color: AquiLogColors.muted),
+            )
           else
             ...list.map((raw) {
               final e = raw is Map ? raw : <String, dynamic>{};

@@ -1,5 +1,12 @@
 # Prompt para Agente — Implementar AquiLog
 
+> [!WARNING]
+> **PROMPT HISTÓRICO — NÃO EXECUTAR.** As entregas abaixo foram concluídas em
+> julho de 2026 e o produto migrou para B2C em agosto. Este arquivo também contém
+> instrução antiga de push direto, que não concede autorização atual. Use
+> `ROADMAP.md` para prioridade, `HANDOFF.md` para continuidade e `PLANO_B2C.md`
+> para o estado do produto.
+
 ## 🎯 Objetivo
 Implementar TODAS as funcionalidades faltantes do AquiLog conforme o mockup do dashboard completo, testar tudo, documentar e commitar no `main`.
 

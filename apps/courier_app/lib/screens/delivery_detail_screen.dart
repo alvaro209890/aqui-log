@@ -27,6 +27,7 @@ class DeliveryDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final d = delivery;
+    final meta = d.orderMeta ?? OrderMeta.fromNotes(d.notes);
     final hasPickup = d.pickupLatitude != null && d.pickupLongitude != null;
     final hasDrop = d.deliveryLatitude != null && d.deliveryLongitude != null;
 
@@ -60,6 +61,61 @@ class DeliveryDetailScreen extends StatelessWidget {
               ),
             ),
           ),
+          if (meta != null) ...[
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Encomenda',
+                      style: TextStyle(
+                        color: AquiLogColors.muted,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${meta.productType} · ${meta.size}${_weight(meta)}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      meta.scope,
+                      style: const TextStyle(color: AquiLogColors.muted),
+                    ),
+                    if (meta.notes != null && meta.notes!.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(meta.notes!),
+                    ],
+                    if (meta.photoUrl != null) ...[
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          meta.photoUrl!,
+                          height: 150,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Container(
+                            height: 100,
+                            color: AquiLogColors.line,
+                            alignment: Alignment.center,
+                            child: const Icon(Icons.broken_image_outlined),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
           if (hasPickup || hasDrop) ...[
             const SizedBox(height: 12),
             SizedBox(
@@ -92,7 +148,7 @@ class DeliveryDetailScreen extends StatelessWidget {
                             height: 36,
                             child: const Icon(
                               Icons.storefront,
-                              color: AquiLogColors.forest,
+                              color: AquiLogColors.primary,
                             ),
                           ),
                         if (hasDrop)
@@ -141,5 +197,11 @@ class DeliveryDetailScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  static String _weight(OrderMeta meta) {
+    final value = meta.weightKg;
+    if (value == null) return '';
+    return ' · ${value.toStringAsFixed(1).replaceAll('.', ',')} kg';
   }
 }

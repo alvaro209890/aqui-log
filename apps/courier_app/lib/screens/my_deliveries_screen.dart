@@ -43,8 +43,11 @@ class MyDeliveriesScreen extends StatelessWidget {
                 final d = deliveries[index];
                 return Card(
                   child: ListTile(
-                    title: Text(d.code, style: const TextStyle(fontWeight: FontWeight.w800)),
-                    subtitle: Text(d.status),
+                    title: Text(
+                      d.code,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    subtitle: Text(_subtitle(d)),
                     trailing: StatusPill(d.status),
                     onTap: () => onOpen(d),
                   ),
@@ -52,5 +55,11 @@ class MyDeliveriesScreen extends StatelessWidget {
               },
             ),
     );
+  }
+
+  static String _subtitle(DeliverySummary delivery) {
+    final meta = delivery.orderMeta ?? OrderMeta.fromNotes(delivery.notes);
+    if (meta == null) return delivery.status;
+    return '${meta.productType} · ${meta.size} · ${delivery.status}';
   }
 }

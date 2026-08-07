@@ -1,23 +1,38 @@
 import 'package:flutter/material.dart';
 
+/// Tokens semânticos compartilhados pelos dois apps móveis.
 abstract final class AquiLogColors {
-  static const forest = Color(0xFF123A31);
-  static const forestDark = Color(0xFF0D2A24);
-  static const mint = Color(0xFF62D6A9);
-  static const surface = Color(0xFFF4F6F3);
-  static const ink = Color(0xFF192A25);
-  static const muted = Color(0xFF71827B);
-  static const line = Color(0xFFE2E8E4);
-  static const warning = Color(0xFFE39A45);
+  // Marca — identidade laranja inspirada no AquiResolve.
+  static const primary = Color(0xFFF97316);
+  static const primaryHover = Color(0xFFEA580C);
+  static const primaryDark = Color(0xFFC2410C);
+  static const primarySoft = Color(0xFFFFF7ED);
+
+  // Bases neutras.
+  static const surface = Color(0xFFF9FAFB);
+  static const ink = Color(0xFF111827);
+  static const muted = Color(0xFF6B7280);
+  static const line = Color(0xFFE5E7EB);
+
+  // Estados — não usar laranja de marca como substituto destes papéis.
+  static const success = Color(0xFF10B981);
+  static const successText = Color(0xFF047857);
+  static const warning = Color(0xFFF59E0B);
+  static const warningText = Color(0xFF92400E);
+  static const error = Color(0xFFEF4444);
+  static const errorText = Color(0xFFB91C1C);
+  static const info = Color(0xFF3B82F6);
+  static const infoText = Color(0xFF1D4ED8);
 }
 
 abstract final class AquiLogTheme {
   static ThemeData light() {
     final scheme = ColorScheme.fromSeed(
-      seedColor: AquiLogColors.forest,
-      primary: AquiLogColors.forest,
-      secondary: AquiLogColors.mint,
+      seedColor: AquiLogColors.primary,
+      primary: AquiLogColors.primary,
+      secondary: AquiLogColors.primaryHover,
       surface: Colors.white,
+      error: AquiLogColors.error,
     );
     return ThemeData(
       useMaterial3: true,
@@ -39,10 +54,28 @@ abstract final class AquiLogTheme {
           side: BorderSide(color: AquiLogColors.line),
         ),
       ),
+      inputDecorationTheme: const InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(14)),
+          borderSide: BorderSide(color: AquiLogColors.line),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(14)),
+          borderSide: BorderSide(color: AquiLogColors.line),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(14)),
+          borderSide: BorderSide(color: AquiLogColors.primary, width: 1.5),
+        ),
+      ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(52),
-          backgroundColor: AquiLogColors.forest,
+          backgroundColor: AquiLogColors.primary,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: AquiLogColors.line,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
@@ -51,7 +84,7 @@ abstract final class AquiLogTheme {
       ),
       navigationBarTheme: const NavigationBarThemeData(
         backgroundColor: Colors.white,
-        indicatorColor: Color(0xFFDFF5EC),
+        indicatorColor: AquiLogColors.primarySoft,
         labelTextStyle: WidgetStatePropertyAll(TextStyle(fontSize: 11)),
       ),
     );

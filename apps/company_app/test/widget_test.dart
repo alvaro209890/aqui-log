@@ -13,9 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   testWidgets('LoginScreen renders form', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: LoginScreen(onSubmit: (e, p) async => true),
-      ),
+      MaterialApp(home: LoginScreen(onSubmit: (e, p) async => true)),
     );
     expect(find.text('Acesso do cliente'), findsOneWidget);
     expect(find.byType(TextFormField), findsNWidgets(2));
@@ -122,13 +120,14 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: RegisterScreen(
-          onSubmit: ({
-            required name,
-            required email,
-            required password,
-            required document,
-            required phone,
-          }) async => true,
+          onSubmit:
+              ({
+                required name,
+                required email,
+                required password,
+                required document,
+                required phone,
+              }) async => true,
         ),
       ),
     );
@@ -150,7 +149,7 @@ void main() {
         size: 'Médio',
         weightKg: 2.5,
         scope: 'Outra cidade ou município',
-        photoUrl: 'http://storage/foto.jpg',
+        photoUrls: ['http://storage/foto.jpg'],
         notes: 'Frágil, manusear com cuidado',
       );
       final decoded = OrderMeta.fromNotes(meta.encodeNotes());

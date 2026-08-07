@@ -22,12 +22,15 @@ class ProfileScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        const Text('Perfil', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+        const Text(
+          'Perfil',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+        ),
         const SizedBox(height: 16),
         Card(
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: AquiLogColors.forest,
+              backgroundColor: AquiLogColors.primary,
               child: Text(
                 userName.isNotEmpty ? userName[0].toUpperCase() : 'E',
                 style: const TextStyle(color: Colors.white),

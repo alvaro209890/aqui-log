@@ -1,16 +1,36 @@
 import {
+  ArrayMaxSize,
+  ArrayUnique,
+  IsArray,
   IsDateString,
   IsEnum,
+  IsIn,
   IsInt,
   IsLatitude,
   IsLongitude,
+  IsNumber,
   IsOptional,
   IsPhoneNumber,
   IsString,
+  IsUrl,
+  MaxLength,
   Min,
   Max,
 } from 'class-validator';
 import { DeliveryStatus } from '../../database/enums';
+
+export const PRODUCT_TYPES = [
+  'DOCUMENT',
+  'FOOD',
+  'ELECTRONICS',
+  'FRAGILE',
+  'CLOTHING',
+  'MEDICINE',
+  'OTHER',
+] as const;
+
+export const PACKAGE_SIZES = ['SMALL', 'MEDIUM', 'LARGE'] as const;
+export const DELIVERY_SCOPES = ['SAME_CITY', 'OTHER_CITY'] as const;
 
 export class CreateDeliveryDto {
   @IsString()
@@ -39,7 +59,33 @@ export class CreateDeliveryDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   notes?: string;
+
+  @IsOptional()
+  @IsIn([...PRODUCT_TYPES])
+  productType?: (typeof PRODUCT_TYPES)[number];
+
+  @IsOptional()
+  @IsIn([...PACKAGE_SIZES])
+  packageSize?: (typeof PACKAGE_SIZES)[number];
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 3 })
+  @Min(0.001)
+  @Max(1000)
+  weightKg?: number;
+
+  @IsOptional()
+  @IsIn([...DELIVERY_SCOPES])
+  deliveryScope?: (typeof DELIVERY_SCOPES)[number];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(3)
+  @ArrayUnique()
+  @IsUrl({ require_tld: false }, { each: true })
+  productPhotoUrls?: string[];
 
   @IsOptional()
   @IsDateString()

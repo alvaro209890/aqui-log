@@ -22,7 +22,7 @@ import { IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
 import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-export type PresignPurpose = 'proof' | 'document';
+export type PresignPurpose = 'proof' | 'document' | 'product';
 
 export type PresignResult = {
   uploadUrl: string;
@@ -32,7 +32,7 @@ export type PresignResult = {
 };
 
 class PresignDto {
-  @IsIn(['proof', 'document'])
+  @IsIn(['proof', 'document', 'product'])
   purpose!: PresignPurpose;
 
   @IsString()
@@ -142,15 +142,23 @@ export class StorageService {
     }
   }
 
-  assertAllowedProofUrl(url: string) {
+  assertAllowedFileUrl(url: string, fieldName = 'fileUrl') {
     if (this.config.get('STORAGE_ALLOW_EXAMPLE') === 'true') {
       if (url.startsWith('https://example.com/')) return;
     }
     if (!this.isAllowedFileUrl(url)) {
       throw new BadRequestException(
-        'proofUrl deve apontar para o storage da plataforma',
+        `${fieldName} deve apontar para o storage da plataforma`,
       );
     }
+  }
+
+  assertAllowedProofUrl(url: string) {
+    this.assertAllowedFileUrl(url, 'proofUrl');
+  }
+
+  assertAllowedProductPhotoUrl(url: string) {
+    this.assertAllowedFileUrl(url, 'productPhotoUrl');
   }
 }
 

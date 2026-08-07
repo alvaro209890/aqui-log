@@ -1,5 +1,12 @@
 # AquiLog — Plano de Próximas Implementações
 
+> [!WARNING]
+> **DOCUMENTO HISTÓRICO — NÃO EXECUTAR COMO PLANO ATUAL.** Este arquivo retrata o
+> estado de 15/07/2026, antes das Sprints 1–3 e do pivot B2C. Os itens de dashboard
+> e apps descritos como faltantes foram entregues e estão registrados em
+> `SESSAO_IMPLEMENTACAO.md` e `MVP_COVERAGE.md`. A ordem vigente está em
+> **`ROADMAP.md`**; detalhes atuais do produto estão em `PLANO_B2C.md`.
+
 > Base atual: commit `6ecc189` (mapa Leaflet + tracking WebSocket no dashboard)
 > Gerado em: 15/07/2026
 

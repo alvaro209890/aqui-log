@@ -47,4 +47,60 @@ void main() {
     expect(d.pickupAddress, 'Rua A');
     expect(d.pickupLatitude, -15.6);
   });
+
+  test('OrderMeta serializa codigos estaveis para a API', () {
+    const meta = OrderMeta(
+      productType: 'Eletrônico',
+      size: 'Médio',
+      weightKg: 2.5,
+      scope: 'Outra cidade ou município',
+      photoUrls: ['http://storage/foto.jpg'],
+      notes: 'Frágil, manusear com cuidado',
+    );
+
+    expect(meta.toApiJson(), {
+      'productType': 'ELECTRONICS',
+      'packageSize': 'MEDIUM',
+      'weightKg': 2.5,
+      'deliveryScope': 'OTHER_CITY',
+      'productPhotoUrls': ['http://storage/foto.jpg'],
+      'notes': 'Frágil, manusear com cuidado',
+    });
+  });
+
+  test('DeliverySummary prefere campos estruturados', () {
+    final delivery = DeliverySummary.fromJson({
+      'id': '2',
+      'code': 'AQL-2',
+      'status': 'OFFERED',
+      'productType': 'FRAGILE',
+      'packageSize': 'LARGE',
+      'weightKg': '8.250',
+      'deliveryScope': 'SAME_CITY',
+      'productPhotoUrls': ['http://storage/novo.jpg'],
+      'notes': 'Manter na vertical',
+    });
+
+    expect(delivery.orderMeta, isNotNull);
+    expect(delivery.orderMeta!.productType, 'Frágil');
+    expect(delivery.orderMeta!.size, 'Grande');
+    expect(delivery.orderMeta!.weightKg, 8.25);
+    expect(delivery.orderMeta!.photoUrl, 'http://storage/novo.jpg');
+    expect(delivery.orderMeta!.notes, 'Manter na vertical');
+  });
+
+  test('DeliverySummary mantem fallback para notes legado', () {
+    final delivery = DeliverySummary.fromJson({
+      'id': '3',
+      'code': 'AQL-3',
+      'status': 'REQUESTED',
+      'notes':
+          'ENCOMENDA | Tipo: Documento | Tamanho: Pequeno | Peso: 0,5 kg | Alcance: Mesma cidade\nOBS: Envelope pardo',
+    });
+
+    expect(delivery.orderMeta, isNotNull);
+    expect(delivery.orderMeta!.productType, 'Documento');
+    expect(delivery.orderMeta!.weightKg, 0.5);
+    expect(delivery.orderMeta!.notes, 'Envelope pardo');
+  });
 }

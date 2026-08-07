@@ -48,7 +48,9 @@ class _ProofScreenState extends State<ProofScreen> {
       // emulator / test without camera
     }
     setState(() {
-      bytes = Uint8List.fromList(List<int>.generate(128, (i) => (i * 17) % 256));
+      bytes = Uint8List.fromList(
+        List<int>.generate(128, (i) => (i * 17) % 256),
+      );
     });
   }
 
@@ -71,7 +73,7 @@ class _ProofScreenState extends State<ProofScreen> {
               children: [
                 Icon(
                   captured ? Icons.check_circle : Icons.photo_camera_outlined,
-                  color: captured ? AquiLogColors.mint : Colors.white70,
+                  color: captured ? AquiLogColors.success : Colors.white70,
                   size: 64,
                 ),
                 Positioned(

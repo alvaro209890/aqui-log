@@ -91,7 +91,7 @@ class AvailableDeliveriesScreen extends StatelessWidget {
                           height: 36,
                           child: const Icon(
                             Icons.location_on,
-                            color: AquiLogColors.forest,
+                            color: AquiLogColors.primary,
                           ),
                         ),
                     ],
@@ -129,18 +129,18 @@ class AvailableDeliveriesScreen extends StatelessWidget {
             ...offers.map((offer) {
               final id = '${offer['id']}';
               final delivery = offer['delivery'];
-              final code = delivery is Map
-                  ? '${delivery['code'] ?? id}'
-                  : id;
+              final code = delivery is Map ? '${delivery['code'] ?? id}' : id;
               final pickup = delivery is Map
                   ? '${delivery['pickupAddress'] ?? ''}'
                   : '';
               final drop = delivery is Map
                   ? '${delivery['deliveryAddress'] ?? ''}'
                   : '';
-              final meta = OrderMeta.fromNotes(
-                delivery is Map ? '${delivery['notes'] ?? ''}' : null,
-              );
+              final meta = delivery is Map
+                  ? OrderMeta.fromDeliveryJson(
+                      Map<String, dynamic>.from(delivery),
+                    )
+                  : null;
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: Padding(
@@ -164,7 +164,7 @@ class AvailableDeliveriesScreen extends StatelessWidget {
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: AquiLogColors.forest,
+                                color: AquiLogColors.primaryDark,
                               ),
                             ),
                         ],

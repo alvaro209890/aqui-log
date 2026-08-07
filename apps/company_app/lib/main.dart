@@ -137,7 +137,7 @@ class _CustomerShellState extends State<CustomerShell> {
     return widget.state.api.uploadBytes(
       bytes: bytes,
       contentType: contentType,
-      purpose: 'proof',
+      purpose: 'product',
     );
   }
 

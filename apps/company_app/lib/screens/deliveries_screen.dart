@@ -27,7 +27,12 @@ class DeliveriesScreen extends StatelessWidget {
           ? ListView(
               children: const [
                 SizedBox(height: 80),
-                Center(child: Text('Nenhuma entrega.', style: TextStyle(color: AquiLogColors.muted))),
+                Center(
+                  child: Text(
+                    'Nenhuma entrega.',
+                    style: TextStyle(color: AquiLogColors.muted),
+                  ),
+                ),
               ],
             )
           : ListView.separated(
@@ -57,7 +62,7 @@ class DeliveriesScreen extends StatelessWidget {
   }
 
   static String _subtitle(DeliverySummary d) {
-    final meta = OrderMeta.fromNotes(d.notes);
+    final meta = d.orderMeta ?? OrderMeta.fromNotes(d.notes);
     if (meta != null) return '${meta.productType} · ${meta.size} · ${d.status}';
     return d.status;
   }

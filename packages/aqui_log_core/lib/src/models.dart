@@ -1,3 +1,5 @@
+import 'order_meta.dart';
+
 class AuthSession {
   const AuthSession({
     required this.accessToken,
@@ -31,6 +33,7 @@ class DeliverySummary {
     this.priceCents,
     this.courierFeeCents,
     this.notes,
+    this.orderMeta,
   });
 
   final String id;
@@ -46,8 +49,11 @@ class DeliverySummary {
   final int? priceCents;
   final int? courierFeeCents;
 
-  /// Observações do pedido — carrega os metadados da encomenda (B2C).
+  /// Observação livre. Em pedidos antigos também pode conter o bloco legado.
   final String? notes;
+
+  /// Dados estruturados da encomenda, com fallback automático para `notes`.
+  final OrderMeta? orderMeta;
 
   factory DeliverySummary.fromJson(Map<String, dynamic> json) =>
       DeliverySummary(
@@ -64,6 +70,7 @@ class DeliverySummary {
         priceCents: json['priceCents'] as int?,
         courierFeeCents: json['courierFeeCents'] as int?,
         notes: json['notes'] as String?,
+        orderMeta: OrderMeta.fromDeliveryJson(json),
       );
 }
 

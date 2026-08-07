@@ -45,6 +45,21 @@ Rotas protegidas: `Authorization: Bearer <accessToken>`
 
 `POST /deliveries` calcula **priceCents** e **courierFeeCents** no servidor (km + base + % plataforma). Campos de preco no body sao ignorados.
 
+### Encomenda estruturada (`B2C-01`)
+
+Pedidos novos podem enviar os campos opcionais abaixo. `notes` passa a ser somente observacao livre; pedidos antigos que guardam a encomenda em `notes` continuam compativeis nos apps.
+
+| Campo JSON | Tipo/regra |
+| --- | --- |
+| `productType` | `DOCUMENT`, `FOOD`, `ELECTRONICS`, `FRAGILE`, `CLOTHING`, `MEDICINE` ou `OTHER` |
+| `packageSize` | `SMALL`, `MEDIUM` ou `LARGE` |
+| `weightKg` | numero maior que zero e menor ou igual a `1000`, com ate 3 casas decimais |
+| `deliveryScope` | `SAME_CITY` ou `OTHER_CITY` |
+| `productPhotoUrls` | array sem repeticoes, com no maximo 3 URLs emitidas pelo storage do Aqui Log |
+| `notes` | texto livre opcional, com no maximo 1000 caracteres |
+
+Para foto de produto, `POST /storage/presign` aceita `purpose: "product"`. Essa finalidade e distinta das provas de coleta e entrega.
+
 Ofertas expiram em `OFFER_TTL_SECONDS` (default 120). Job a cada 10s expira e tenta re-despacho. Entregas com `scheduledAt` vencido sao despachadas pelo mesmo job.
 
 `PICKED_UP` e `DELIVERED` exigem `proofUrl`.

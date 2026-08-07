@@ -46,7 +46,7 @@ class HomeScreen extends StatelessWidget {
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [AquiLogColors.forestDark, AquiLogColors.forest],
+              colors: [AquiLogColors.primaryDark, AquiLogColors.primary],
             ),
             borderRadius: BorderRadius.circular(22),
           ),
@@ -56,7 +56,7 @@ class HomeScreen extends StatelessWidget {
               const Text(
                 'PRECISA ENVIAR ALGO?',
                 style: TextStyle(
-                  color: AquiLogColors.mint,
+                  color: AquiLogColors.primarySoft,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                 ),
@@ -74,8 +74,8 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(height: 18),
               FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: AquiLogColors.mint,
-                  foregroundColor: AquiLogColors.forestDark,
+                  backgroundColor: Colors.white,
+                  foregroundColor: AquiLogColors.primaryDark,
                 ),
                 onPressed: onNewOrder,
                 icon: const Icon(Icons.add_rounded),
@@ -125,34 +125,36 @@ class HomeScreen extends StatelessWidget {
             style: TextStyle(color: AquiLogColors.muted),
           )
         else
-          ...deliveries.take(8).map(
-            (d) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: InkWell(
-                onTap: () => onOpenDelivery(d),
-                child: Card(
-                  child: ListTile(
-                    title: Text(
-                      d.code,
-                      style: const TextStyle(fontWeight: FontWeight.w800),
+          ...deliveries
+              .take(8)
+              .map(
+                (d) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: InkWell(
+                    onTap: () => onOpenDelivery(d),
+                    child: Card(
+                      child: ListTile(
+                        title: Text(
+                          d.code,
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        subtitle: Text(
+                          _subtitle(d),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: StatusPill(d.status),
+                      ),
                     ),
-                    subtitle: Text(
-                      _subtitle(d),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: StatusPill(d.status),
                   ),
                 ),
               ),
-            ),
-          ),
       ],
     );
   }
 
   static String _subtitle(DeliverySummary d) {
-    final meta = OrderMeta.fromNotes(d.notes);
+    final meta = d.orderMeta ?? OrderMeta.fromNotes(d.notes);
     if (meta != null) return '${meta.productType} · ${meta.size} · ${d.status}';
     return d.status;
   }
@@ -191,11 +193,17 @@ class _SummaryCard extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               Text(
                 label,
-                style: const TextStyle(fontSize: 10, color: AquiLogColors.muted),
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: AquiLogColors.muted,
+                ),
               ),
             ],
           ),

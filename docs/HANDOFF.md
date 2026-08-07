@@ -1,11 +1,33 @@
 # HANDOFF — Continuidade para o próximo agente
 
+## Atualização de entrega — 2026-08-07
+
+`B2C-01` foi implementado em schema/API/core/apps: pedidos novos usam campos próprios de encomenda e pedidos antigos continuam legíveis pelo fallback de `notes`. Os dois apps Flutter e o pacote `aqui_log_ui` adotaram a identidade laranja. O próximo pacote é `B2C-01B` (dashboard por cliente/categoria/tamanho/peso), seguido de tema laranja e QA visual do dashboard.
+
+Evidência local desta rodada: build backend/dashboard verde; backend 32/32, core 6/6, UI 2/2, cliente 10/10 e motoboy 7/7. Não declarar migration aplicada, smoke vivo, APK ou QA em dispositivo: não havia `.env` nem Docker disponível, e o AVD ficou offline no ADB. Detalhes em `ENTREGA_MOBILE_B2C_2026-08-07.md`.
+
 > **Repo:** `https://github.com/alvaro209890/aqui-log` · branch **`main`**  
 > **Último trabalho estrutural de deploy:** 2026-07-16  
 > **Owner:** Álvaro · comunicação em **português (BR)**  
 > **Ambiente local:** Linux · API porta **3001** · Postgres **5433** · Redis **6379** · Vite **5173**
 
 Leia isto **antes** de mudar código. Fonte de produto: `docs/ROADMAP.md`.
+
+---
+
+## 0.1. Atualização 2026-08-07 — identidade visual laranja (somente documentação)
+
+O tema geral futuro do Aqui Log deverá seguir uma linguagem visual próxima ao
+[AquiResolve](https://github.com/alvaro209890/AquiResolve), com **laranja como cor
+principal da marca**, bases neutras e cores semânticas preservadas.
+
+- Fonte de verdade visual: **`docs/DIRETRIZES_VISUAIS.md`**.
+- Laranja canônico proposto: **`#F97316`**; hover `#EA580C`; destaque suave `#FFF7ED`.
+- A decisão vale para dashboard, app cliente, app motoboy e `aqui_log_ui`.
+- O código atual permanece verde/menta. **Nenhum CSS, tema Flutter, componente ou
+  asset foi alterado nesta atualização.**
+- Quando houver autorização para implementar, centralizar as cores em tokens e
+  validar contraste, estados, mapas, gráficos e os principais fluxos B2C.
 
 ---
 
@@ -32,9 +54,10 @@ Planos futuros: `docs/PLANO_TRANSPORTADORA.md`, `docs/PLANO_PAGAMENTOS.md`,
   oferta no app do motoboy → accept (ACCEPTED). Smoke B2B segue verde.
 - Testes: backend 27/27 · cliente 10/10 · motoboy 7/7 · analyze limpo.
 
-**Próximo (com pedido do Álvaro):** colunas próprias de encomenda no backend,
-pagamentos (PLANO_PAGAMENTOS), transportadora multi-pedido (PLANO_TRANSPORTADORA),
-confiança/preço (PLANO_CONFIANCA_E_PRECO). Nada de cloud sem pedido.
+**Próximo pacote recomendado pelo roadmap:** `B2C-01`, colunas próprias de
+encomenda com migration aditiva e fallback de leitura em `notes`. Depois: preço
+v2, avaliação mútua e resiliência da oferta. Pagamentos, SMS, cloud e
+transportadora continuam atrás de gates explícitos.
 
 ---
 
@@ -72,14 +95,16 @@ confiança/preço (PLANO_CONFIANCA_E_PRECO). Nada de cloud sem pedido.
 
 | Tema | Decisão |
 | --- | --- |
-| Pagamentos | **Fora de escopo** |
+| Produto principal | **B2C cliente → motoboy**; B2B permanece somente por compatibilidade |
+| Pagamentos | **Não autorizados agora.** Futuro condicionado aos gates `PAY-01/02` do `ROADMAP.md` |
 | Mapas | OSM embutido; provedor pago em aberto |
 | Storage prod | **Firebase Storage** |
 | Push | **Firebase FCM** |
 | Pricing | **Só servidor** |
 | Auth piloto | Refresh + reset senha (sem MFA) |
-| Deploy cloud | Estrutura Render/Vercel/Firebase; **ligar depois** |
+| Deploy cloud | Estrutura Render/Vercel/Firebase; **não ligar sem pedido explícito** |
 | DB runtime **hoje** | **PostgreSQL** (TypeORM). Firebase DB = futuro; não migrar às cegas |
+| Identidade visual | Mobile **laranja** conforme `DIRETRIZES_VISUAIS.md`; dashboard e QA visual em dispositivo pendentes |
 
 ---
 
@@ -131,38 +156,46 @@ cd packages/aqui_log_core && dart test
 
 ---
 
-## 5. Próximos passos recomendados (ordem)
+## 5. Próximos passos recomendados (ordem vigente)
 
-### A) Ligar Firebase de verdade (sem quebrar local)
-1. Criar projeto Firebase; Storage + FCM.
-2. Service account só em secrets Render.
-3. Implementar adapter real substituindo stub; `STORAGE_DRIVER=firebase`.
-4. FCM: ler `device_tokens`, enviar no `NotificationsService` (ou paralelo).
-5. Testes com emulador ou projeto dev separado.
+O `ROADMAP.md` é a única fonte de prioridade. Próximo pacote recomendado:
 
-### B) Deploy Render (API)
-1. Conectar repo ao Render usando `infra/render.yaml` como base.
-2. Provisionar Postgres + Redis (Render ou externos).
-3. Setar `PUBLIC_API_URL`, JWT, admin, `DATABASE_*`, `REDIS_URL`.
-4. `migration:run` no release command.
-5. Health: `GET /api/v1/health` com db+redis ok.
+### A) `B2C-01` — fundação da encomenda
 
-### C) Deploy Vercel (dashboard)
-1. Import monorepo; root `vercel.json` ou app `apps/dashboard`.
-2. Env: `VITE_API_URL=https://<render-api>/api/v1`.
-3. CORS no Nest já `origin: true` — endurecer em prod se necessário.
+1. Fechar contrato aditivo de tipo, tamanho, peso, alcance e fotos.
+2. Criar migration reversível com campos inicialmente opcionais.
+3. Backend grava campos próprios; `notes` passa a ser observação livre.
+4. Core, app cliente e app motoboy leem campos próprios com fallback legado.
+5. Dashboard ganha filtros/relatórios B2C.
+6. Manter foto obrigatória atrás de feature flag até `DEC-01`.
+7. Validar pedido novo e legado, smoke, testes, apps e UI real.
 
-### D) Endurecimento (ainda no ROADMAP Sprint 4)
-- FKs nas migrations Postgres
-- Logs estruturados (pino/winston)
-- Retenção de provas
-- Load test / backup
+### B) Depois de `B2C-01`
+
+1. `B2C-02`: preço v2 com breakdown e versão persistidos.
+2. `B2C-03`: avaliação mútua por papel.
+3. `DISP-01/03`: reoferta limitada por anéis + aviso + telemetria.
+4. `PAY-01`: ledger interno somente se pagamentos forem explicitamente autorizados.
+
+### C) Trilha visual paralela
+
+Quando autorizada, aplicar a identidade laranja de `DIRETRIZES_VISUAIS.md` via
+tokens compartilhados e QA visual, sem misturar mudanças de regra de negócio.
+
+### D) Gates externos — não iniciar por conta própria
+
+- SMS: depende de provedor/sandbox (`DEC-04`).
+- Firebase/Render/Vercel: dependem de pedido explícito e `OPS-01/02/03`.
+- PIX: depende de ledger validado, gateway escolhido e `PAY-02`.
+- Transportadora: começa por medição `TRIP-00`, não por telas/CRUD.
 
 ### E) Explicitamente **não** fazer agora
-- Pagamentos / PIX
-- MFA admin
-- Migrar todo o domínio para Firestore sem plano de dados
-- Commits de `.env` / chaves
+
+- remover o fallback de `notes` na mesma entrega da migration;
+- aumentar preço automaticamente sem consentimento;
+- ligar cloud, gateway ou SMS sem autorização/credenciais;
+- migrar o domínio para Firestore;
+- commitar `.env`, chaves ou dados pessoais.
 
 ---
 
@@ -187,15 +220,18 @@ cd packages/aqui_log_core && dart test
 | `550b194` | Sprint 2 mobile |
 | `e017917` | Scaffold Render/Vercel/Firebase + HANDOFF |
 | `e0dff26` / `bf36b4a` | Sprint 3 dashboard + docs |
+| `e4d2ae3` | App cliente B2C com dados da encomenda |
+| `58079bc` | Fluxo B2C cliente → motoboy ponta a ponta |
+| `921d79b` | Plano B2C alinhado ao estado funcional |
 
 ---
 
 ## 8. Mensagem sugerida ao Álvaro ao retomar
 
 > Ambiente local está estável (smoke verde). Cloud é só estrutura.
-> Posso (1) implementar Firebase Storage/FCM de verdade, (2) preparar
-> deploy Render+Vercel com secrets que você criar, ou (3) FKs/logs.
-> Qual prioridade?
+> O próximo pacote recomendado é `B2C-01`: tirar os dados da encomenda de
+> `notes` com migration aditiva e fallback legado. Antes de ativar foto
+> obrigatória, preciso fechar `DEC-01`; cloud e pagamentos continuam bloqueados.
 
 ---
 

@@ -134,15 +134,12 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
                     MarkerLayer(
                       markers: [
                         Marker(
-                          point: LatLng(
-                            d.pickupLatitude!,
-                            d.pickupLongitude!,
-                          ),
+                          point: LatLng(d.pickupLatitude!, d.pickupLongitude!),
                           width: 40,
                           height: 40,
                           child: const Icon(
                             Icons.storefront,
-                            color: AquiLogColors.forest,
+                            color: AquiLogColors.primary,
                           ),
                         ),
                         Marker(
@@ -229,7 +226,7 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
 
   /// Seção "Encomenda" (B2C): tipo, tamanho, peso, alcance e foto do produto.
   List<Widget> _encomendaSection(DeliverySummary d) {
-    final meta = OrderMeta.fromNotes(d.notes);
+    final meta = d.orderMeta ?? OrderMeta.fromNotes(d.notes);
     if (meta == null) return const [];
     return [
       const SizedBox(height: 14),

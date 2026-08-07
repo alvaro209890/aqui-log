@@ -2,8 +2,9 @@
 
 > **Status geral:** ✅ **MVP B2C funcional** (2026-08-04) — fluxo cliente → motoboy
 > rodando de ponta a ponta, sem empresa no meio. Próximas fases planejadas abaixo.
-> **Data de criação:** 2026-08-03 · **Última atualização:** 2026-08-04
+> **Data de criação:** 2026-08-03 · **Última atualização:** 2026-08-07
 > **Planos derivados:** `PLANO_PAGAMENTOS.md` · `PLANO_TRANSPORTADORA.md` · `PLANO_CONFIANCA_E_PRECO.md`
+> **Prioridade e ordem de execução:** `ROADMAP.md` é a fonte de verdade; este documento descreve o domínio e o estado funcional.
 
 ---
 
@@ -67,7 +68,8 @@ o app nunca envia valor.
 | **DB** | `deliveries.company_id` opcional + `deliveries.customer_id` | ✅ |
 | **DB** | `ratings.company_id` opcional + `ratings.customer_id` | ✅ |
 | **API** | `POST /auth/register/customer` (auto-aprovado, auto-login) | ✅ |
-| **API** | `POST /deliveries` por cliente (encomenda vai no `notes`; preço server-side) | ✅ |
+| **DB/API** | Campos próprios de encomenda + migration aditiva `1785100000000` | ✅ código/testes; aplicação em banco pendente |
+| **API** | `POST /deliveries` por cliente (campos próprios; `notes` livre; preço server-side) | ✅ |
 | **API** | **Auto-dispatch** no create (oferta direta p/ motoboys disponíveis) | ✅ |
 | **API** | Cliente lista/cancela/avalia **só os próprios pedidos** | ✅ |
 | **API** | JWT/WS tracking com `customerId` no payload | ✅ |
@@ -75,14 +77,13 @@ o app nunca envia valor.
 | **App cliente** | Pedido: tipo (7 categorias), tamanho P/M/G, peso kg, alcance, foto, destinatário | ✅ |
 | **App cliente** | Lista/detalhe mostram a encomenda (com foto) | ✅ |
 | **App motoboy** | Card da oferta mostra a encomenda (tipo · tamanho · peso · alcance · foto) | ✅ |
-| **Core** | `OrderMeta` (encode/parse da encomenda no `notes`) em `aqui_log_core` | ✅ |
-| **Qualidade** | Backend 27/27 · cliente 10/10 · motoboy 7/7 · smoke e2e verde · CI verde | ✅ |
+| **Core** | `OrderMeta` lê campos próprios e mantém encode/parse de `notes` legado | ✅ |
+| **UI mobile** | Tokens laranja compartilhados e status com cores semânticas | ✅ |
+| **Qualidade desta entrega** | Backend 32/32 · core 6/6 · UI 2/2 · cliente 10/10 · motoboy 7/7 | ✅ testes locais |
 
-**Detalhe da encomenda no `notes` (workaround atual):** o backend ainda não tem
-colunas próprias (`weight_kg`, `product_type`, `product_photo_urls`). O app cliente
-serializa os metadados num bloco estruturado dentro do campo `notes`
-(→ `OrderMeta.encodeNotes`), e o app motoboy parseia (`OrderMeta.fromNotes`).
-A migração para colunas próprias é transparente para os apps (Fase 1 abaixo).
+**Compatibilidade:** pedidos novos enviam `productType`, `packageSize`, `weightKg`,
+`deliveryScope` e `productPhotoUrls`; `notes` é observação livre. Pedidos antigos
+continuam legíveis por `OrderMeta.fromNotes`, sem backfill textual arriscado.
 
 ---
 
@@ -99,32 +100,35 @@ A migração para colunas próprias é transparente para os apps (Fase 1 abaixo)
 | — | Preço | Sempre calculado no servidor (sem valor vindo do app) |
 | — | Despacho | Publicação automática para motoboys disponíveis (auto-dispatch) |
 
-### 🟠 Pendentes (precisam da palavra do Álvaro)
+### 🟠 Pendentes (gates do roadmap)
 
-| # | Tema | Opções | Recomendação |
+| Gate | Tema | Recomendação | Consequência |
 |---|---|---|---|
-| 1 | Preço | (a) sistema calcula sempre — estilo Uber; (b) cliente sugere valor + contra-proposta — estilo frete | **(a)** — simples, evita briga de preço |
-| 3 | Foto do produto | Obrigatória / opcional / obrigatória acima de X kg | **Obrigatória** — dá confiança pro motoboy aceitar |
-| 5 | Pagamento | (a) carteira interna com recarga (PIX/cartão); (b) PIX na confirmação; (c) dinheiro na entrega | **(a)** carteira com recarga — sem gateway externo na v1 (ver `PLANO_PAGAMENTOS.md`) |
-| 6 | Oferta sem aceite | Re-ofertar / subir valor / avisar cliente | **Avisar o cliente** na v1 |
-| 8 | Validação de telefone | 100% automático / código SMS | **SMS** pra reduzir lixo (ver `PLANO_CONFIANCA_E_PRECO.md`) |
-| 9 | Avaliação | Só cliente avalia / **mútua** | **Mútua** — protege os dois lados |
+| `DEC-01` | Foto do produto | Obrigatória antes de publicar oferta; feature flag desligada durante a migração | Não bloqueia schema aditivo, bloqueia ativação da regra |
+| `DEC-02` | Faixas de peso/tamanho | Configuração server-side versionada; valores definidos com dados do piloto | Estrutura pode avançar, valores finais não |
+| `DEC-03` | Oferta sem aceite | Ampliar raio com limite, avisar cliente e pedir consentimento para aumento | Bloqueia a estratégia de reoferta |
+| `DEC-04` | Validação de telefone | Código SMS com provider adapter, TTL e rate limit | Gate para cadastro público em produção |
+| `DEC-05/06` | Carteira e gateway | Provar ledger interno antes de escolher/ligar PIX | Nenhuma cobrança real antes dos gates |
+| `DEC-07` | Rota compartilhada | Opt-in no primeiro piloto e somente após medir densidade | Bloqueia piloto multi-pedido, não o MVP simples |
 
 ---
 
-## 6. Próximas fases (priorizadas)
+## 6. Próximas fases (ordem subordinada ao roadmap)
 
-| Prio | Fase | Entrega | Esforço | Doc |
+| Ordem | ID | Entrega vertical | Gate/Dependência | Doc |
 |---|---|---|---|---|
-| 1 | **Encomenda no backend** | Colunas `weight_kg`/`product_type`/`product_photo_urls` + foto obrigatória | Médio | `PLANO_CONFIANCA_E_PRECO.md` §2 |
-| 2 | **Preço por faixa** | Peso/tamanho somam R$ no preço; aumento automático se ninguém aceitar | Médio | `PLANO_CONFIANCA_E_PRECO.md` §1 |
-| 3 | **Avaliação mútua** | `ratings.from_role` (cliente ↔ motoboy) | Baixo | `PLANO_CONFIANCA_E_PRECO.md` §4 |
-| 4 | **Validação SMS** | Código no cadastro (provedor a definir) | Médio | `PLANO_CONFIANCA_E_PRECO.md` §3 |
-| 5 | **Carteira do cliente** | Reserva/estorno, depois PIX via gateway | Médio-Alto | `PLANO_PAGAMENTOS.md` |
-| 6 | **Transportadora** | Rota multi-pedido por proximidade (origem/destino próximos) | Alto | `PLANO_TRANSPORTADORA.md` |
-| 7 | **Dashboard** | Gestão de clientes + relatórios por categoria/peso | Baixo | — |
+| 1 | `B2C-01B` | Gestão de clientes e relatórios por categoria/tamanho/peso | `B2C-01` entregue | `ROADMAP.md` |
+| 3 | `B2C-02` | Preço v2 com breakdown/versionamento e prévia | `B2C-01`, `DEC-02` para valores finais | `PLANO_CONFIANCA_E_PRECO.md` §3 |
+| 4 | `B2C-03` | Avaliação mútua por papel | migração de ratings legados | `PLANO_CONFIANCA_E_PRECO.md` §4 |
+| 5 | `DISP-01/03` | Reoferta por anéis, aviso e telemetria | `B2C-02`, `DEC-03` | `PLANO_CONFIANCA_E_PRECO.md` §6 |
+| 6 | `PAY-01` | Ledger interno, reserva e estorno, sem gateway | autorização explícita + preço v2 | `PLANO_PAGAMENTOS.md` |
+| 7 | `B2C-04` | Validação SMS | provedor/sandbox | `PLANO_CONFIANCA_E_PRECO.md` §5 |
+| 8 | `OPS-*` | Endurecimento e eventual publicação | gates operacionais + pedido explícito | `ROADMAP.md` |
+| 9 | `TRIP-00` | Medir viabilidade de rotas compartilhadas | telemetria e operação estável | `PLANO_TRANSPORTADORA.md` |
 
-Regra de ouro: **nada de cloud** (Render/Vercel/Firebase) sem pedido explícito.
+Trilha paralela, quando autorizada: `UX-01/02`, identidade laranja e QA visual conforme `DIRETRIZES_VISUAIS.md`.
+
+Regra de ouro: **nada de cloud, gateway ou transportadora operacional** sem cumprir o gate correspondente no `ROADMAP.md`.
 
 ---
 
@@ -132,11 +136,11 @@ Regra de ouro: **nada de cloud** (Render/Vercel/Firebase) sem pedido explícito.
 
 | Limitação | Impacto | Mitigação |
 |---|---|---|
-| Encomenda no `notes` (sem colunas próprias) | Relatórios/consultas por categoria não existem | Fase 1 (colunas) é a prioridade |
-| Foto opcional no app | Motoboy aceita sem ver o produto | Fase 1 torna obrigatória |
+| Dashboard ainda não usa os campos próprios | Relatórios/consultas por categoria não existem | `B2C-01B` é a prioridade |
+| Foto opcional no app | Motoboy aceita sem ver o produto | Feature flag na Fase 1; ativar obrigatoriedade após `DEC-01` |
 | Sem pagamento | Ninguém paga nada ainda | `PLANO_PAGAMENTOS.md` |
 | Despacho por "motoboy mais próximo" (1 oferta por vez) | Sem concorrência de ofertas visíveis | Aceite/recusa já existe; anéis de raio futuros |
-| Sem validação de telefone | Contas lixo possíveis | `PLANO_CONFIANCA_E_PRECO.md` §3 |
+| Sem validação de telefone | Contas lixo possíveis | `PLANO_CONFIANCA_E_PRECO.md` §5 |
 | Empresas ainda existem no backend | Dois modelos convivendo | B2B fica como legado; produto é B2C |
 
 ---

@@ -101,7 +101,8 @@ class AquiLogApiClient {
   }
 
   Future<DeliverySummary> delivery(String id) async {
-    final data = await _request('GET', '/deliveries/$id') as Map<String, dynamic>;
+    final data =
+        await _request('GET', '/deliveries/$id') as Map<String, dynamic>;
     return DeliverySummary.fromJson(data);
   }
 
@@ -142,11 +143,7 @@ class AquiLogApiClient {
   }) => _request(
     'PATCH',
     '/deliveries/$deliveryId/status',
-    body: {
-      'status': status,
-      if (proofUrl != null) 'proofUrl': proofUrl,
-      if (note != null) 'note': note,
-    },
+    body: {'status': status, 'proofUrl': ?proofUrl, 'note': ?note},
   );
 
   Future<Map<String, dynamic>> rateDelivery(
@@ -157,10 +154,7 @@ class AquiLogApiClient {
       await _request(
             'POST',
             '/deliveries/$deliveryId/rating',
-            body: {
-              'score': score,
-              if (comment != null) 'comment': comment,
-            },
+            body: {'score': score, 'comment': ?comment},
           )
           as Map<String, dynamic>;
 
@@ -192,7 +186,7 @@ class AquiLogApiClient {
               body: {
                 'purpose': purpose,
                 'contentType': contentType,
-                if (deliveryId != null) 'deliveryId': deliveryId,
+                'deliveryId': ?deliveryId,
               },
             )
             as Map<String, dynamic>;

@@ -2,6 +2,10 @@
 
 Legenda: **funcional** = fluxo exercitado pela API/smoke test ou painel/apps; **fundacao** = contrato/cliente ou interface existe, mas falta completar a experiencia; **planejado** = fora desta entrega.
 
+> **Produto principal desde 2026-08-04:** B2C cliente → motoboy. A seção “Empresa”
+> abaixo documenta compatibilidade B2B legada, não a prioridade atual. A fila de
+> execução vigente está em `ROADMAP.md`.
+
 ## Empresa
 
 | Funcionalidade | Estado | Observacao |
@@ -55,6 +59,16 @@ Legenda: **funcional** = fluxo exercitado pela API/smoke test ou painel/apps; **
 - MFA administrativo e gestao avancada de sessoes (refresh + reset **ja no Sprint 1**).
 - Testes de carga, pentest, LGPD formal, backups e infraestrutura cloud.
 
+## B2C-01 + identidade mobile (2026-08-07)
+
+- Migration aditiva com `product_type`, `package_size`, `weight_kg`, `delivery_scope` e `product_photo_urls`.
+- API valida catalogos, peso e ate 3 URLs do storage; foto usa finalidade `product`, separada das provas.
+- App cliente grava campos proprios e mantem `notes` como observacao livre.
+- Core e app motoboy preferem o contrato novo e fazem fallback automatico para pedidos antigos.
+- Pacote `aqui_log_ui` e os dois apps adotam marca laranja `#F97316`, preservando cores semanticas de status.
+- Validacao local: backend 32 testes; core 6; UI 2; cliente 10; motoboy 7. Build web/backend verde.
+- Pendente ao encerrar: migration/smoke em banco real, APK release, QA visual em dispositivo e dashboard B2C/laranja.
+
 ## Sprint 1 (2026-07-16) — entregue
 
 - Redis em runtime (health + lock de aceite).
@@ -87,7 +101,7 @@ Legenda: **funcional** = fluxo exercitado pela API/smoke test ou painel/apps; **
 - Documentacao: `docs/DEPLOY_TARGETS.md`, `docs/HANDOFF.md`, `docs/CHANGELOG_SPRINTS.md`
 - Runtime local continua Postgres + Redis + storage filesystem
 
-## B2C — Fase App Cliente (2026-08-04) — front entregue (backend intocado)
+## B2C — Fase App Cliente (2026-08-04) — marco histórico anterior ao backend B2C
 
 - `apps/company_app` reformulado para **cliente** (label "Aqui Log Cliente", applicationId `br.com.aquilog.aqui_log_cliente`)
 - Novo pedido: tipo de encomenda (7 categorias), tamanho P/M/G, peso kg, alcance (mesma cidade / outra cidade ou municipio), foto (image_picker + upload storage), enderecos com geocode, destinatario

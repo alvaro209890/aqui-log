@@ -1,9 +1,8 @@
-/// Metadados da encomenda (modelo B2C).
+/// Metadados da encomenda do fluxo B2C.
 ///
-/// O backend ainda não tem colunas próprias para tipo/tamanho/peso (Fase 1 do
-/// plano B2C). Enquanto isso, o app cliente serializa esses dados num formato
-/// estruturado dentro do campo `notes` da entrega — o motoboy enxerga tudo no
-/// card da oferta, e a migração para campos próprios será transparente.
+/// Novos pedidos usam campos próprios na API. [fromDeliveryJson] mantém a
+/// leitura do bloco histórico em `notes`, permitindo atualizar os apps sem
+/// invalidar entregas criadas antes da migration B2C-01.
 library;
 
 class OrderMeta {
@@ -12,46 +11,113 @@ class OrderMeta {
     required this.size,
     this.weightKg,
     this.scope = 'Mesma cidade',
-    this.photoUrl,
+    this.photoUrls = const [],
     this.notes,
   });
 
-  /// Categoria da encomenda (ex.: Eletrônico, Frágil, Documento).
+  /// Rótulo pt-BR exibido na interface.
   final String productType;
 
-  /// Tamanho físico: Pequeno | Médio | Grande.
+  /// Rótulo pt-BR: Pequeno | Médio | Grande.
   final String size;
 
-  /// Peso em kg (ex.: 2.5).
   final double? weightKg;
 
-  /// Alcance: "Mesma cidade" | "Outra cidade ou município".
+  /// Rótulo pt-BR do alcance.
   final String scope;
 
-  /// URL da foto do produto (storage local, quando enviada).
-  final String? photoUrl;
+  /// Fotos da encomenda. A UI atual envia uma; a API aceita até três.
+  final List<String> photoUrls;
 
-  /// Observações livres do cliente.
+  /// Observação livre — não contém mais o bloco estruturado nos novos pedidos.
   final String? notes;
 
-  static const List<String> productTypes = [
-    'Documento',
-    'Alimento',
-    'Eletrônico',
-    'Frágil',
-    'Roupas e calçados',
-    'Medicamento',
-    'Outro',
-  ];
+  String? get photoUrl => photoUrls.isEmpty ? null : photoUrls.first;
 
-  static const List<String> sizes = ['Pequeno', 'Médio', 'Grande'];
+  static const Map<String, String> productTypeLabels = {
+    'DOCUMENT': 'Documento',
+    'FOOD': 'Alimento',
+    'ELECTRONICS': 'Eletrônico',
+    'FRAGILE': 'Frágil',
+    'CLOTHING': 'Roupas e calçados',
+    'MEDICINE': 'Medicamento',
+    'OTHER': 'Outro',
+  };
 
-  static const List<String> scopes = [
-    'Mesma cidade',
-    'Outra cidade ou município',
-  ];
+  static const Map<String, String> sizeLabels = {
+    'SMALL': 'Pequeno',
+    'MEDIUM': 'Médio',
+    'LARGE': 'Grande',
+  };
 
-  /// Monta o texto estruturado que vai no campo `notes` da API.
+  static const Map<String, String> scopeLabels = {
+    'SAME_CITY': 'Mesma cidade',
+    'OTHER_CITY': 'Outra cidade ou município',
+  };
+
+  static List<String> get productTypes => productTypeLabels.values.toList();
+  static List<String> get sizes => sizeLabels.values.toList();
+  static List<String> get scopes => scopeLabels.values.toList();
+
+  String get productTypeCode =>
+      _codeForLabel(productTypeLabels, productType, fallback: 'OTHER');
+
+  String get packageSizeCode =>
+      _codeForLabel(sizeLabels, size, fallback: 'MEDIUM');
+
+  String get deliveryScopeCode =>
+      _codeForLabel(scopeLabels, scope, fallback: 'SAME_CITY');
+
+  /// Payload estável enviado por apps novos.
+  Map<String, dynamic> toApiJson() => {
+    'productType': productTypeCode,
+    'packageSize': packageSizeCode,
+    if (weightKg != null) 'weightKg': weightKg,
+    'deliveryScope': deliveryScopeCode,
+    'productPhotoUrls': photoUrls,
+    if (notes != null && notes!.trim().isNotEmpty) 'notes': notes!.trim(),
+  };
+
+  /// Lê campos próprios e recorre ao formato histórico de `notes` quando
+  /// necessário. Campos próprios sempre vencem quando estão presentes.
+  static OrderMeta? fromDeliveryJson(Map<String, dynamic> json) {
+    final rawNotes = json['notes']?.toString();
+    final legacy = fromNotes(rawNotes);
+    final hasStructured =
+        json['productType'] != null ||
+        json['packageSize'] != null ||
+        json['weightKg'] != null ||
+        json['deliveryScope'] != null ||
+        json['productPhotoUrls'] != null;
+    if (!hasStructured) return legacy;
+
+    final photoUrls = _stringList(json['productPhotoUrls']);
+    return OrderMeta(
+      productType: _labelForCode(
+        productTypeLabels,
+        json['productType'],
+        fallback: legacy?.productType ?? 'Outro',
+      ),
+      size: _labelForCode(
+        sizeLabels,
+        json['packageSize'],
+        fallback: legacy?.size ?? 'Médio',
+      ),
+      weightKg: _toDouble(json['weightKg']) ?? legacy?.weightKg,
+      scope: _labelForCode(
+        scopeLabels,
+        json['deliveryScope'],
+        fallback: legacy?.scope ?? 'Mesma cidade',
+      ),
+      photoUrls: photoUrls.isNotEmpty
+          ? photoUrls
+          : (legacy?.photoUrls ?? const []),
+      notes: legacy?.notes ?? _plainNotes(rawNotes),
+    );
+  }
+
+  /// Serialização histórica. Mantida apenas para testes/fallback de pedidos
+  /// antigos; novos formulários devem usar [toApiJson].
   String encodeNotes() {
     final buffer = StringBuffer()
       ..write('ENCOMENDA | Tipo: $productType | Tamanho: $size');
@@ -68,7 +134,6 @@ class OrderMeta {
     return buffer.toString();
   }
 
-  /// Lê o texto estruturado do `notes` e devolve os metadados (ou null).
   static OrderMeta? fromNotes(String? raw) {
     if (raw == null || raw.isEmpty) return null;
     final lines = raw.split('\n');
@@ -110,9 +175,52 @@ class OrderMeta {
       size: size ?? 'Médio',
       weightKg: weight,
       scope: scope,
-      photoUrl: photoUrl,
+      photoUrls: photoUrl == null || photoUrl.isEmpty ? const [] : [photoUrl],
       notes: obs,
     );
+  }
+
+  static String _codeForLabel(
+    Map<String, String> labels,
+    String value, {
+    required String fallback,
+  }) {
+    if (labels.containsKey(value)) return value;
+    for (final entry in labels.entries) {
+      if (entry.value == value) return entry.key;
+    }
+    return fallback;
+  }
+
+  static String _labelForCode(
+    Map<String, String> labels,
+    dynamic value, {
+    required String fallback,
+  }) {
+    if (value == null) return fallback;
+    final text = value.toString();
+    return labels[text] ?? (labels.containsValue(text) ? text : fallback);
+  }
+
+  static List<String> _stringList(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .map((item) => item?.toString().trim() ?? '')
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  static String? _plainNotes(String? raw) {
+    if (raw == null || raw.trim().isEmpty || fromNotes(raw) != null) {
+      return null;
+    }
+    return raw.trim();
+  }
+
+  static double? _toDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString().replaceAll(',', '.'));
   }
 
   static String _formatWeight(double kg) {
