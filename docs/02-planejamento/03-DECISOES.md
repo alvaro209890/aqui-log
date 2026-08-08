@@ -12,10 +12,10 @@ consequência; os planos passam apenas a apontar para este registro.
 | ID | Estado | Decisão |
 | --- | --- | --- |
 | `INV-01` | `DECIDIDA` | Produto B2C direto; empresa/B2B removido |
-| `INV-02` | `DECIDIDA` | PostgreSQL é fonte de verdade; Redis é auxiliar |
+| `INV-02` | `DECIDIDA` (atualizada 2026-08-07) | **Local/dev:** PostgreSQL é fonte de verdade; Redis é auxiliar. **Produção cloud:** banco alvo = **Firebase Firestore** (`DEC-25`); Storage/FCM no mesmo Firebase. Migração = `OPS-DB-01` — não remover Postgres local antes disso. |
 | `INV-03` | `DECIDIDA` | Preço calculado e congelado pelo servidor |
 | `INV-04` | `DECIDIDA` | Mobile usa identidade laranja; dashboard ainda pendente |
-| `INV-05` | `DECIDIDA` | Cloud, SMS e pagamentos exigem autorização explícita |
+| `INV-05` | `DECIDIDA` (atualizada 2026-08-07) | Alvos cloud **decididos** (`DEC-25`: Render + Vercel + Firebase). **Provisionar/ligar** ainda exige pedido explícito + credenciais. SMS e pagamentos/gateway idem. |
 | `INV-06` | `DECIDIDA` | Persistência UTC; regras locais em `America/Sao_Paulo` |
 
 ## 2. Decisões do roadmap
@@ -46,6 +46,7 @@ consequência; os planos passam apenas a apontar para este registro.
 | `DEC-22` | `DECIDIDA` (2026-08-07, Álvaro) | Álvaro | Dentro do cutoff (`DEC-21`) e antes da 1ª coleta: cancelamento debita a **taxa congelada no aceite** do saldo interno. Fora do cutoff: bloqueado. Saldo insuficiente: **recusa** (sem saldo negativo). Revoga “desistência sem penalidade dura”. Pós-coleta: só suporte. | `COUR-02`, `PAY-01A` |
 | `DEC-23` | `DECIDIDA` (2026-08-07, Álvaro) | Álvaro | Pagamento do prestador = **saldo interno** (ledger); dinheiro real só via **saque**. Modelo decidido; implementação atrás de `DEC-05`/`DEC-06`/`PAY-*`. | `PAY-01`, `PAY-02` |
 | `DEC-24` | `DECIDIDA` (2026-08-07, Álvaro) | Álvaro | Coleta exige **foto de prova do prestador** **e** `pickup_code` (distinto de `AQL-*`) para `AT_PICKUP→PICKED_UP`. Foto de prova ≠ foto do cliente na criação. Fallback de código só admin/suporte. | `PICK-01` |
+| `DEC-25` | `DECIDIDA` (2026-08-07, Álvaro) | Álvaro | Hospedagem cloud: **backend → Render**, **frontend (dashboard) → Vercel**, **banco de dados → Firebase (Firestore)**. Storage/FCM no mesmo Firebase. Redis continua auxiliar. Provisionar/ligar ainda exige credenciais + pacotes `OPS-*`. | `OPS-02`, `OPS-03`, `OPS-DB-01` |
 
 ## 3. IDs de decisões específicas dos planos
 
@@ -56,7 +57,8 @@ Questões detalhadas que ainda não têm `DEC-*` usam prefixo global e estável:
 - `ADMIN-DEC-*` — permissões e operação do painel;
 - `SUP-DEC-*` — suporte e reclamações;
 - `PAY-DEC-*` — ledger e pagamentos;
-- `FLOW-DEC-*` — fluxo cliente↔prestador (ver plano dedicado).
+- `FLOW-DEC-*` — fluxo cliente↔prestador (ver plano dedicado);
+- `OPS-DEC-*` — hospedagem e migração cloud.
 
 Quando uma questão específica for promovida ao roadmap, ela recebe novo `DEC-*` e
 o plano registra o alias. Nunca referenciar apenas “decisão 3” ou “item 5”.

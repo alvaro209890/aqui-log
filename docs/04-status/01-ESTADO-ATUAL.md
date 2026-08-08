@@ -19,7 +19,9 @@ O modelo empresa/B2B foi removido do código em 2026-08-07.
 | App motoboy Flutter | Cadastro, disponibilidade, oferta, coleta, prova, entrega e carteira básica | QA recente em dispositivo/emulador pendente |
 | Dashboard React | KPIs, entregas, mapa, motoboys, usuários, auditoria, configurações e relatórios | filtros B2C e identidade laranja pendentes |
 | Postgres/Redis | Arquitetura local definida | não estavam ativos na última rodada registrada |
-| Cloud | Apenas scaffolds Render/Vercel/Firebase | nenhum projeto ou credencial conectado |
+| Cloud | Scaffolds Render/Vercel/Firebase; alvos **decididos** (`DEC-25`) | nenhum projeto ou credencial conectado |
+
+## 3. Evidência herdada da última rodada técnica
 
 ## 3. Evidência herdada da última rodada técnica
 
@@ -55,8 +57,9 @@ Executar somente `BASE-04`, descrito em
 
 ## 6. Bloqueios externos
 
-- Firebase/Render/Vercel: exigem pedido explícito e credenciais.
+- Firebase/Render/Vercel: alvos decididos (`DEC-25`); ligar exige credenciais + `OPS-*`.
 - SMS: exige escolha de provedor e sandbox (`DEC-04`).
 - Pagamentos/PIX: exigem autorização explícita e gates `PAY-01/02` (`DEC-05`/`DEC-06`).
 - Valores finais de preço v2 / km dual: exigem `DEC-02`.
 - Cutoffs/taxa de cancelamento do prestador: `FLOW-DEC-01`.
+- Migração banco cloud Firestore: `OPS-DB-01`.

@@ -23,10 +23,13 @@
 | 13 | `PAY-01` | `BLOCKED` | P2 | Ledger interno (cliente + prestador) sem gateway | autorização explícita + `B2C-02`; `DEC-23` |
 | 14 | `COUR-02` | `BLOCKED` | P2 | Cancelamento prestador + taxa no saldo | `PAY-01`, `COUR-01`; `DEC-22` |
 | 15 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-01B`, `B2C-02B`, `B2C-03A`, `DISP-03` |
-| 16 | `LOT-01` | `BLOCKED` | P3 | Aceite atômico de lote manual | `B2C-01B`, `B2C-02B`, `B2C-03A`, `DISP-03`, `DEC-10`, `DEC-11` |
+| 16 | `OPS-DB-01` | `BLOCKED` | P2 | Modelo + migração Postgres → Firestore | `DEC-25`; credenciais Firebase |
+| 17 | `OPS-02` | `BLOCKED` | P2 | Firebase Firestore/Storage/FCM reais | pedido + credenciais; ver `PLANO_HOSPEDAGEM.md` |
+| 18 | `OPS-03` | `BLOCKED` | P2 | Deploy Render + Vercel + smoke público | `OPS-01`, `OPS-02`, credenciais |
+| 19 | `LOT-01` | `BLOCKED` | P3 | Aceite atômico de lote manual | `B2C-01B`, `B2C-02B`, `B2C-03A`, `DISP-03`, `DEC-10`, `DEC-11` |
 
-Cloud, SMS, PIX, lote automático e produção não entram na fila `READY` sem o gate
-e a autorização definidos no roadmap.
+Cloud: alvos **decididos** (`DEC-25` — Render / Vercel / Firebase). Ligar projetos
+ainda exige credenciais e pacote OPS. SMS, PIX e lote automático idem.
 
 Plano do fluxo novo: `docs/02-planejamento/planos/PLANO_FLUXO_CLIENTE_PRESTADOR.md`.
 

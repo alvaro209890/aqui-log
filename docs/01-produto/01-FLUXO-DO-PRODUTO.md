@@ -405,7 +405,7 @@ O ledger é **imutável**: cada evento financeiro gera lançamentos que somam ze
 | Payout real ao motoboy | Viabilidade regulatória/operacional + janela de contestação definida |
 | Validação de telefone por SMS (`B2C-04`) | `DEC-04` + provedor/sandbox — pré-requisito para cadastro público em produção |
 | Foto obrigatória antes de publicar / criar | `DEC-01` **decidida**; ativação em código = `B2C-05` |
-| Publicação em nuvem | Gates operacionais + pedido explícito do dono |
+| Publicação em nuvem | Alvos `DEC-25` (Render/Vercel/Firebase); execução = `OPS-02/03` + credenciais |
 | Cartão tokenizado | PIX estável e necessidade comprovada |
 | Agrupamento automático operacional | Gate `TRIP-00` (medir densidade real) |
 | Fora de escopo, ponto: | van/caminhão, hubs, rastreamento por hardware, dinheiro na entrega, saldo negativo, negociação livre de preço |

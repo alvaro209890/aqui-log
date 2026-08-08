@@ -24,9 +24,23 @@ Dashboard React ──┘                                      │
 
 ## Persistencia
 
-PostgreSQL e a fonte de verdade. A migration inicial cria usuarios, entregadores, entregas, ofertas, eventos, notificacoes, avaliacoes, carteira e auditoria (a tabela `companies` e as colunas `company_id` foram removidas em 2026-08-07). Redis e usado para locks de aceite de oferta (Sprint 1). Jobs de expiracao de oferta e despacho agendado rodam via `@nestjs/schedule`. Precificacao e server-side (Haversine + env `PRICING_*`). Auth: JWT access + refresh tokens persistidos (hash) e recuperacao de senha.
+**Local/dev:** PostgreSQL e a fonte de verdade (TypeORM + migrations). Redis e
+usado para locks de aceite, jobs e configuracoes.
 
-Valores financeiros sao inteiros em centavos. Identificadores internos sao UUID; cada entrega tambem recebe um codigo publico `AQL-*`.
+**Producao cloud (`DEC-25`):** banco alvo = **Firebase Firestore**; Storage e FCM
+no mesmo projeto Firebase; API no **Render**; dashboard na **Vercel**. A migracao
+Postgres → Firestore e o pacote `OPS-DB-01` — nao remover o stack local antes
+disso. Ver `docs/02-planejamento/planos/PLANO_HOSPEDAGEM.md`.
+
+A migration inicial cria usuarios, entregadores, entregas, ofertas, eventos,
+notificacoes, avaliacoes, carteira e auditoria (a tabela `companies` e as colunas
+`company_id` foram removidas em 2026-08-07). Jobs de expiracao de oferta e
+despacho agendado rodam via `@nestjs/schedule`. Precificacao e server-side
+(Haversine + env `PRICING_*`). Auth: JWT access + refresh tokens persistidos
+(hash) e recuperacao de senha.
+
+Valores financeiros sao inteiros em centavos. Identificadores internos sao UUID;
+cada entrega tambem recebe um codigo publico `AQL-*`.
 
 ## Operacao da entrega
 

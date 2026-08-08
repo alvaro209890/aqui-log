@@ -1,12 +1,15 @@
 # Aqui Log — blueprints de deploy (NÃO vinculados a contas reais)
 #
-# Uso previsto:
-#   - API NestJS  → Render (Web Service)
-#   - Dashboard   → Vercel
-#   - Dados/prod  → Firebase (Storage + FCM; ver docs/03-referencia/04-ALVOS-DE-DEPLOY.md)
+# Alvos travados (DEC-25 / PLANO_HOSPEDAGEM.md):
+#   - API NestJS     → Render (Web Service)
+#   - Dashboard      → Vercel
+#   - Banco cloud    → Firebase Firestore
+#   - Storage / Push → Firebase Storage + FCM
+#   - Locks/jobs     → Redis (Render Redis ou Upstash)
 #
-# Este arquivo é ESTRUTURA. Não contém secrets, IDs de projeto nem
-# integração ativa. O próximo agente deve preencher após criar os projetos.
+# Dev local continua PostgreSQL + Redis (Docker Compose).
+# DATABASE_* abaixo é transição até OPS-DB-01 (Firestore).
+# Este arquivo é ESTRUTURA. Não contém secrets.
 
 services:
   - type: web

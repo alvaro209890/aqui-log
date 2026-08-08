@@ -1,9 +1,11 @@
 # Alvos de deploy (estrutura — sem vínculo ativo)
 
-> **Status:** scaffold apenas. Nenhum projeto Render, Vercel ou Firebase
-> está ligado a este repositório. Credenciais **não** devem ser commitadas.
-
-Atualizado: 2026-07-16
+> **Atualizado:** 2026-08-07
+> **Decisão canônica:** `DEC-25` — API **Render**, dashboard **Vercel**, banco
+> cloud **Firebase** (Firestore) + Storage/FCM.
+> **Status:** scaffold apenas. Nenhum projeto Render, Vercel ou Firebase está
+> ligado a este repositório com credenciais. Secrets **não** devem ser commitados.
+> Plano: [`PLANO_HOSPEDAGEM.md`](../02-planejamento/planos/PLANO_HOSPEDAGEM.md).
 
 ## Decisão de arquitetura cloud (Álvaro)
 
@@ -11,30 +13,36 @@ Atualizado: 2026-07-16
 | --- | --- | --- |
 | API NestJS | **Render** (Web Service) | Blueprint `infra/render.yaml` |
 | Dashboard React | **Vercel** | `vercel.json` + `apps/dashboard/vercel.json` |
-| Storage / Push / (dados cloud) | **Firebase** | `infra/firebase/*` + stub Nest `src/firebase/` |
-| Runtime **local** atual | Docker Compose Postgres+Redis | Continua sendo o caminho de dev |
+| Banco de dados (produção) | **Firebase Firestore** | Alvo travado (`DEC-25`); migração = `OPS-DB-01` |
+| Storage / Push | **Firebase** Storage + FCM | `infra/firebase/*` + stub Nest `src/firebase/` |
+| Locks / jobs | **Redis** (Render Redis ou Upstash) | Auxiliar |
+| Runtime **local** atual | Docker Compose **PostgreSQL** + Redis | Continua no acer até Firestore validado |
 
-### Importante sobre “banco Firebase”
+### Importante sobre banco
 
-- **Hoje a fonte de verdade da API é PostgreSQL** (TypeORM + migrations).
-- Firebase no plano: **Storage** + **FCM** primeiro.
-- **Firestore** como DB principal é decisão futura (migração grande).
-  O scaffold deixa regras e docs, mas **não** remove Postgres do Render
-  blueprint — o serviço API ainda espera `DATABASE_*`.
+- **Local/dev:** PostgreSQL (TypeORM + migrations) permanece a fonte de verdade
+  no PC de desenvolvimento (`INV-02` atualizado).
+- **Produção cloud:** o banco alvo é **Firebase Firestore** — decisão do Álvaro
+  em 2026-08-07 (`DEC-25`). Não é mais “talvez no futuro”.
+- O blueprint Render ainda pode listar `DATABASE_*` como **transição** até
+  `OPS-DB-01` concluir a troca de persistência; o plano de hospedagem manda.
+- Storage e FCM seguem no mesmo projeto Firebase do Aqui Log (não reutilizar o
+  do AquiResolve).
 
-Se o produto migrar 100% para Firestore, o próximo agente deve:
-1. Desenhar modelo de coleções espelhando entidades TypeORM.
-2. Reescrever repositórios ou dual-write.
-3. Atualizar smoke e mobile clients.
+Se o próximo agente executar a migração (`OPS-DB-01`):
+
+1. Desenhar coleções espelhando o domínio atual (entregas, usuários, ledger…).
+2. Regras de segurança + índices; dual-write ou cutover com rollback.
+3. Atualizar smoke, mobile e dashboard; só então desligar Postgres do runtime cloud.
 
 ## Diagrama alvo (não provisionado)
 
 ```text
 [ Flutter apps ] ──HTTPS──► [ Render: Nest API ]
 [ Vercel: Dashboard ] ──►        │
-                                 ├── Postgres (Render DB ou externo)  ← ainda previsto no YAML
-                                 ├── Redis (Render/Upstash)           ← locks/settings
-                                 └── Firebase Storage + FCM           ← quando FIREBASE_ENABLED=true
+                                 ├── Firebase Firestore   ← banco cloud (DEC-25)
+                                 ├── Redis (locks/settings)
+                                 └── Firebase Storage + FCM
 ```
 
 ## Arquivos de estrutura
@@ -47,6 +55,7 @@ Se o produto migrar 100% para Firestore, o próximo agente deve:
 | `infra/firebase/` | Rules/CLI examples |
 | `apps/backend/src/firebase/firebase.scaffold.ts` | Config + stubs Storage/FCM |
 | `.env.example` | Variáveis placeholder |
+| `docs/02-planejamento/planos/PLANO_HOSPEDAGEM.md` | Plano e pacotes OPS |
 
 ## Env (placeholders)
 
@@ -68,7 +77,8 @@ STORAGE_DRIVER=local   # local | firebase (firebase ainda stub)
 
 ## O que NÃO fazer ainda
 
-- Não criar/conectar projetos nas UIs sem o dono (Álvaro).
+- Não criar/conectar projetos nas UIs sem o dono (Álvaro) **e** pacote OPS ativo.
 - Não commitar service account JSON.
 - Não setar `FIREBASE_ENABLED=true` até adapters reais.
-- Não apagar Postgres local/migrations.
+- Não apagar Postgres local/migrations antes de `OPS-DB-01` verde.
+- Não usar o Firebase project do AquiResolve neste produto.

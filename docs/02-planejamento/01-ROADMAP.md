@@ -33,6 +33,7 @@ Plano detalhado do fluxo: [PLANO_FLUXO_CLIENTE_PRESTADOR.md](planos/PLANO_FLUXO_
 | [Plano B2C](planos/PLANO_B2C.md) | Estado funcional e visão do domínio B2C | Não; segue este roadmap |
 | [Confiança e preço](planos/PLANO_CONFIANCA_E_PRECO.md) | Encomenda, preço, avaliações, SMS e oferta | Não; detalha `B2C-01..04` |
 | [Fluxo cliente↔prestador](planos/PLANO_FLUXO_CLIENTE_PRESTADOR.md) | Modos, aceite antecipado, cancelamento, recolhimento, saldo | Não; detalha `B2C-05/06`, `SCHED-01`, `COUR-*`, `PICK-01` |
+| [Hospedagem](planos/PLANO_HOSPEDAGEM.md) | Render + Vercel + Firebase (`DEC-25`) | Não; detalha `OPS-02/03`, `OPS-DB-01` |
 | [Diretrizes visuais](../01-produto/02-DIRETRIZES-VISUAIS.md) | Paleta e identidade laranja | Não; detalha `UX-01` |
 | [Pagamentos](planos/PLANO_PAGAMENTOS.md) | Ledger, reserva, estorno e gateway | Não; detalha `PAY-01/02` |
 | [Lote](planos/PLANO_LOTE_MULTI_PEDIDO.md) | Lote, blocos, anti-atraso e agrupamento | Não; detalha `LOT-*`/`TRIP-*` |
@@ -59,15 +60,15 @@ Plano detalhado do fluxo: [PLANO_FLUXO_CLIENTE_PRESTADOR.md](planos/PLANO_FLUXO_
 | --- | --- |
 | Produto | Produto **B2C**: três perfis — prestador (motoboy), cliente e admin. Modelo empresa/B2B removido em 2026-08-07. |
 | Preço | Calculado e congelado pelo servidor. O cliente nunca define `priceCents` ou `courierFeeCents`. Km imediato > km agendado (`DEC-19`); valores em `DEC-02`. |
-| Persistência | PostgreSQL continua fonte de verdade; Redis continua suporte para locks, jobs e settings. |
+| Persistência | **Local:** PostgreSQL + Redis auxiliar. **Cloud:** banco alvo Firebase Firestore (`DEC-25` / `INV-02` atualizado). |
+| Mapas | OSM/Leaflet/`flutter_map` continuam no piloto; provedor pago permanece em aberto. |
+| Storage e push | Firebase Storage + FCM no mesmo projeto do banco cloud; adapter local até `OPS-02`. |
+| Identidade | Tema laranja inspirado no AquiResolve implementado nos dois apps Flutter; dashboard ainda segue a identidade anterior. |
+| Pagamentos | Nenhuma cobrança real está autorizada. Primeiro desenhar e testar o ledger interno; gateway exige decisão própria. |
+| Cloud | Alvos **travados** (`DEC-25`): API **Render**, dashboard **Vercel**, banco **Firebase**. Scaffold existe; **não provisionar** sem credenciais e pacote OPS. |
 | Encomenda | Campos próprios entregues; **foto obrigatória** em pedidos novos (`DEC-01`). Fallback de `notes` permanece até medir legado. |
 | Modos | `IMMEDIATE` vs `SCHEDULED` (`DEC-18`); aceite antecipado do agendado (`DEC-20`); tela Agenda no app prestador (`DEC-21`). |
 | Prestador / dinheiro | Cancelamento pré-coleta com taxa no saldo (`DEC-22`); pagamento = saldo interno sacável (`DEC-23`); coleta com `pickup_code` (`DEC-24`). |
-| Mapas | OSM/Leaflet/`flutter_map` continuam no piloto; provedor pago permanece em aberto. |
-| Storage e push | Firebase é o alvo futuro, mas o adapter local deve continuar funcionando. |
-| Identidade | Tema laranja inspirado no AquiResolve implementado nos dois apps Flutter; dashboard ainda segue a identidade anterior. |
-| Pagamentos | Nenhuma cobrança real está autorizada. Primeiro desenhar e testar o ledger interno; gateway exige decisão própria. |
-| Cloud | Render/Vercel/Firebase possuem somente estrutura. Não provisionar, conectar nem publicar sem pedido explícito. |
 | Tempo | Persistência em UTC; janelas de negócio em `America/Sao_Paulo`. |
 
 ## 5. Estado atual confirmado
@@ -85,7 +86,7 @@ Plano detalhado do fluxo: [PLANO_FLUXO_CLIENTE_PRESTADOR.md](planos/PLANO_FLUXO_
 | Carteira do motoboy | ✅ básica | Crédito MVP; falta ledger + taxa cancelamento + saque (`DEC-22/23`) |
 | Carteira/pagamento do cliente | Não existe | Exige ledger, política de cancelamento e idempotência antes de gateway |
 | Dashboard | ✅ operacional | Falta gestão B2C por cliente/categoria/peso e futura identidade visual |
-| Cloud | Estrutura apenas | Sem projeto ou credencial conectado segundo a documentação e o Segundo Cérebro |
+| Cloud | Alvos decididos (`DEC-25`); scaffold Render/Vercel/Firebase — sem credencial conectada |
 
 ## 6. Caminho crítico de implementação
 
@@ -169,14 +170,19 @@ Nenhuma integração PIX/cartão entra nesta fase. O objetivo é provar a contab
 
 ### Fase 6 — prontidão operacional e publicação
 
+Alvos cloud travados em `DEC-25` / [PLANO_HOSPEDAGEM.md](planos/PLANO_HOSPEDAGEM.md):
+API **Render**, dashboard **Vercel**, banco **Firebase Firestore**.
+
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
-| OPS-01 | ⏳ | `B2C-01B`, `B2C-02B`, `B2C-03A`, `DISP-03` | FKs, índices, logs, auditoria, retenção, backup e restauração testada |
-| OPS-02 | ⏸️ | Pedido explícito + credenciais | Firebase Storage e FCM reais, mantendo fallback local |
-| OPS-03 | ⏸️ | Pedido explícito, `OPS-01`, `OPS-02` | Deploy Render/Vercel e smoke público |
+| OPS-01 | ⏳ | `B2C-01B`, `B2C-02B`, `B2C-03A`, `DISP-03` | FKs, índices, logs, auditoria, retenção, backup e restauração testada (local) |
+| OPS-DB-01 | ⏸️ | `DEC-25`, modelo de coleções, aceite do dono | Migração/dual-write Postgres local → Firestore cloud |
+| OPS-02 | ⏸️ | Pedido + credenciais Firebase | Projeto Firebase: Firestore, Storage, FCM; adapters reais; fallback local |
+| OPS-03 | ⏸️ | Pedido + credenciais, `OPS-01`, `OPS-02` | Deploy API **Render** + dashboard **Vercel** + smoke público |
 | PAY-02 | ⏸️ | Gateway escolhido + `PAY-01` | PIX por gateway, webhook assinado e reconciliação |
 
-Build verde não comprova deploy. `OPS-03` só fecha com health real, fluxo B2C público, upload privado e push em dispositivo/emulador.
+Build verde não comprova deploy. `OPS-03` só fecha com health real na API Render,
+dashboard Vercel apontando para ela, Firestore/Storage operacionais e smoke B2C público.
 
 ### Fase 7 — lote multi-pedido, agendamento e frota
 

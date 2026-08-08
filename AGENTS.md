@@ -50,10 +50,12 @@ Estados permitidos: `READY`, `BLOCKED`, `IN_PROGRESS`, `DONE` e `CANCELED`.
 
 - Produto B2C: cliente pessoa física → motoboy; não recriar empresa/B2B.
 - Perfis: `CUSTOMER`, `COURIER`, `SUPER_ADMIN`, `ADMIN` e `SUPPORT`.
-- PostgreSQL é a fonte de verdade; Redis auxilia locks, jobs e configurações.
+- PostgreSQL é a fonte de verdade **local**; Redis auxilia locks, jobs e configurações.
+  Alvo de banco **cloud**: Firebase Firestore (`DEC-25`).
 - Preço é calculado no servidor; nunca confiar em preço enviado pelo cliente.
 - Não remover o fallback de `notes` sem tarefa e evidência específicas.
-- Não ligar Firebase, Render, Vercel, SMS ou gateway sem pedido explícito do Álvaro.
+- Alvos cloud travados: API **Render**, dashboard **Vercel**, banco/Storage/FCM
+  **Firebase**. Não provisionar, conectar nem publicar sem credenciais e pacote OPS.
 - Não commitar `.env`, tokens, chaves, dados pessoais ou credenciais.
 - Não declarar deploy, migration, smoke, APK ou QA visual sem executá-los.
 

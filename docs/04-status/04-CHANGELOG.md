@@ -4,6 +4,16 @@ Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
 ## Fluxo cliente↔prestador nos planos — 2026-08-07
 
+## Hospedagem cloud travada — 2026-08-07
+
+- `DEC-25`: API **Render**, dashboard **Vercel**, banco **Firebase Firestore**
+  (+ Storage/FCM). Plano `PLANO_HOSPEDAGEM.md`; `OPS-DB-01`/`OPS-02`/`OPS-03`.
+- `INV-02`/`INV-05` atualizados: Postgres local permanece; cloud não provisionada
+  nesta sessão (só documentação + comentários do blueprint).
+- Sessão docs-only; push em `main`.
+
+## Fluxo cliente↔prestador nos planos — 2026-08-07
+
 - Novo plano `PLANO_FLUXO_CLIENTE_PRESTADOR.md` com modos IMMEDIATE/SCHEDULED,
   km dual, aceite antecipado, Agenda, taxa de cancelamento no saldo do prestador,
   saldo sacável e `pickup_code`.

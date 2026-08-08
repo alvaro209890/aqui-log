@@ -23,7 +23,8 @@ sem reconstruir contexto a partir de commits antigos.
 | [`02-planejamento/`](02-planejamento/) | Roadmap, backlog e planos detalhados | Prioridade, gate ou requisito mudar |
 
 Planos detalhados em [`02-planejamento/planos/`](02-planejamento/planos/), incluindo
-o [fluxo cliente↔prestador](02-planejamento/planos/PLANO_FLUXO_CLIENTE_PRESTADOR.md).
+o [fluxo cliente↔prestador](02-planejamento/planos/PLANO_FLUXO_CLIENTE_PRESTADOR.md)
+e a [hospedagem cloud](02-planejamento/planos/PLANO_HOSPEDAGEM.md) (Render / Vercel / Firebase).
 | [`03-referencia/`](03-referencia/) | Arquitetura, API, ambiente e deploy | O sistema observado mudar |
 | [`04-status/`](04-status/) | Estado atual, handoff, cobertura e changelog | Toda sessão relevante |
 | [`99-arquivo/`](99-arquivo/) | Material histórico não executável | Somente para preservar contexto |
