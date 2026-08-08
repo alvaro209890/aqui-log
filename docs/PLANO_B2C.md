@@ -110,6 +110,8 @@ continuam legíveis por `OrderMeta.fromNotes`, sem backfill textual arriscado.
 | `DEC-04` | Validação de telefone | Código SMS com provider adapter, TTL e rate limit | Gate para cadastro público em produção |
 | `DEC-05/06` | Carteira e gateway | Provar ledger interno antes de escolher/ligar PIX | Nenhuma cobrança real antes dos gates |
 | `DEC-07` | Rota compartilhada | Opt-in no primeiro piloto e somente após medir densidade | Bloqueia piloto multi-pedido, não o MVP simples |
+| `DEC-08/09/10/11` | Lote multi-pedido e blocos agendados intermunicipais | Motoboy aceita vários pedidos juntos com lógica anti-atraso; decisões detalhadas em `PLANO_TRANSPORTADORA.md` §12 | Define `LOT-01/02` |
+| `DEC-12` | Mapa de frota no dashboard | Exposição de posição só em viagem ativa, retenção e LGPD | Define `FROTA-01` |
 
 ---
 
@@ -124,7 +126,9 @@ continuam legíveis por `OrderMeta.fromNotes`, sem backfill textual arriscado.
 | 6 | `PAY-01` | Ledger interno, reserva e estorno, sem gateway | autorização explícita + preço v2 | `PLANO_PAGAMENTOS.md` |
 | 7 | `B2C-04` | Validação SMS | provedor/sandbox | `PLANO_CONFIANCA_E_PRECO.md` §5 |
 | 8 | `OPS-*` | Endurecimento e eventual publicação | gates operacionais + pedido explícito | `ROADMAP.md` |
-| 9 | `TRIP-00` | Medir viabilidade de rotas compartilhadas | telemetria e operação estável | `PLANO_TRANSPORTADORA.md` |
+| 9 | `TRIP-00` | Medir viabilidade do agrupamento automático de pedidos | telemetria e operação estável | `PLANO_TRANSPORTADORA.md` |
+| 10 | `LOT-01/02` | **Lote multi-pedido pelo motoboy** (aceite de vários juntos, blocos agendados intermunicipais) e anti-atraso | decisão do dono 2026-08-07; sem código ainda | `PLANO_TRANSPORTADORA.md` |
+| 11 | `FROTA-01/02` | **Dashboard monitora frota**: localização dos prestadores, coleta recolhida ou não, trajeto em viagem | decisão do dono 2026-08-07; sem código ainda | `PLANO_FROTA_DASHBOARD.md` |
 
 Trilha paralela, quando autorizada: `UX-01/02`, identidade laranja e QA visual conforme `DIRETRIZES_VISUAIS.md`.
 
@@ -187,5 +191,5 @@ curl -X POST localhost:3001/api/v1/auth/register/customer -H 'Content-Type: appl
 ## 10. Fora de escopo (por enquanto)
 
 - Gateway de pagamento externo real (PIX/cartão processado)
-- Agendamento avançado, rotas multi-parada, IA
+- Agendamento avançado, rotas multi-parada, IA — em design: lote multi-pedido e blocos agendados em `PLANO_TRANSPORTADORA.md`; monitoramento de frota em `PLANO_FROTA_DASHBOARD.md` (sem código nesta rodada)
 - Entregas para empresas (se voltar, entra como "cliente tipo empresa")

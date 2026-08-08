@@ -1,5 +1,23 @@
 # HANDOFF — Continuidade para o próximo agente
 
+## Atualização de produto — 2026-08-07 (somente documentação)
+
+O Álvaro decidiu duas capacidades novas, **apenas em plano (nenhum código nesta rodada)**:
+
+1. **Motoboy aceita vários pedidos juntos** — inclusive **lotes agendados de um município
+   para outro**, com **lógica anti-atraso** (folgas, janelas, ETAs, alertas, redespacho,
+   índice de pontualidade). Plano expandido: **`docs/PLANO_TRANSPORTADORA.md`** (fases
+   `LOT-01`/`LOT-02` no roadmap). O agrupamento **automático** da plataforma continua
+   atrás do gate `TRIP-00`.
+2. **Dashboard monitora a frota** — localização dos prestadores em tempo real, se cada
+   pedido foi **recolhido ou não**, e o **trajeto durante a viagem**. Novo plano:
+   **`docs/PLANO_FROTA_DASHBOARD.md`** (fases `FROTA-01`/`FROTA-02`).
+
+Pré-requisito técnico já identificado: desacoplar o heartbeat `courier:location` de
+`deliveryId` e criar histórico de posição (`courier_positions`). Decisões pendentes
+listadas em `PLANO_TRANSPORTADORA.md` §12 e `PLANO_FROTA_DASHBOARD.md` §8 (`DEC-08..12`
+no roadmap).
+
 ## Atualização de entrega — 2026-08-07
 
 `B2C-01` foi implementado em schema/API/core/apps: pedidos novos usam campos próprios de encomenda e pedidos antigos continuam legíveis pelo fallback de `notes`. Os dois apps Flutter e o pacote `aqui_log_ui` adotaram a identidade laranja. O próximo pacote é `B2C-01B` (dashboard por cliente/categoria/tamanho/peso), seguido de tema laranja e QA visual do dashboard.

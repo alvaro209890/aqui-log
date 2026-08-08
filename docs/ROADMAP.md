@@ -2,6 +2,9 @@
 
 > **Atualizado:** 2026-08-07
 > **Status:** fonte de verdade para prioridade, dependências e ordem de execução
+> **Rodada atual:** decisão de produto — motoboy aceita lote multi-pedido (inclusive
+> agendado intermunicipal) e dashboard monitora a frota. **Somente documentação**:
+> `PLANO_TRANSPORTADORA.md` e `PLANO_FROTA_DASHBOARD.md` atualizados/novos; nada de código.
 > **Produto principal:** cliente pessoa física → motoboy, sem empresa no fluxo
 > **Regra operacional:** desenvolvimento e validação local primeiro; nenhuma cloud é ligada sem pedido explícito do Álvaro
 
@@ -26,7 +29,8 @@ cliente cadastra → descreve encomenda → recebe preço do servidor → cria p
 | `PLANO_CONFIANCA_E_PRECO.md` | Especificação de encomenda, preço, avaliações, SMS e oferta | Não; detalha `B2C-01` a `B2C-04` |
 | `DIRETRIZES_VISUAIS.md` | Paleta e regras da futura identidade laranja | Não; detalha `UX-01` |
 | `PLANO_PAGAMENTOS.md` | Ledger, reserva, estorno e gateway | Não; detalha `PAY-01` e `PAY-02` |
-| `PLANO_TRANSPORTADORA.md` | Descoberta e execução de rotas multi-pedido | Não; só depois do gate `TRIP-00` |
+| `PLANO_TRANSPORTADORA.md` | Lote multi-pedido (motoboy), blocos agendados intermunicipais, anti-atraso, agrupamento automático | Não; detalha `LOT-01/02` e `TRIP-00/01/02` |
+| `PLANO_FROTA_DASHBOARD.md` | Monitoramento de frota em tempo real no dashboard web | Não; detalha `FROTA-01/02` |
 | `MVP_COVERAGE.md` | Evidência do que existe e limitações atuais | Não |
 | `CHANGELOG_SPRINTS.md` / `SESSAO_IMPLEMENTACAO.md` | Histórico das entregas anteriores | Não |
 | `PLANO_IMPLEMENTACOES.md` | Plano histórico de julho de 2026 | **Não executar** |
@@ -148,15 +152,27 @@ Nenhuma integração PIX/cartão entra nesta fase. O objetivo é provar a contab
 
 Build verde não comprova deploy. `OPS-03` só fecha com health real, fluxo B2C público, upload privado e push em dispositivo/emulador.
 
-### Fase 7 — transportadora multi-pedido
+### Fase 7 — lote multi-pedido, agendamento e frota
+
+O dono decidiu (2026-08-07) que o **motoboy pode aceitar vários pedidos juntos**,
+inclusive **lotes agendados de um município para outro**, com **lógica anti-atraso**;
+e que o **dashboard deve monitorar localização dos prestadores, coleta de cada pedido
+e trajeto durante a viagem**. O aceite de lote manual **não** depende do gate de
+densidade (é o motoboy quem busca o lote); o agrupamento automático da plataforma
+continua atrás de `TRIP-00`.
 
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
-| TRIP-00 | 🔬 | Telemetria `DISP-03` + operação estável | Medir densidade de pedidos compatíveis, desvio e economia potencial |
+| LOT-01 | ⏳ | Fases 1–4 | Aceite de lote manual: schema `trips/trip_stops/trip_quotes`, pré-vet, aceite atômico all-or-nothing, reserva por delivery, regras anti-atraso D-R1..D-R13 |
+| LOT-02 | ⏳ | `LOT-01` | Blocos agendados intermunicipais (`scheduled_lots`, candidatura, reserva de capacidade) |
+| FROTA-01 | ⏳ | Heartbeat desacoplado de `deliveryId` | Mapa de frota no dashboard: pinos por estado, coleta recolhida ou não, trilha real, lista, alertas A-1..A-7 |
+| FROTA-02 | ⏳ | `FROTA-01`, `TRIP-01` (flag) | Progresso de viagem multi-parada no dashboard (`/trips/:id/stops`) |
+| TRIP-00 | 🔬 | Telemetria `DISP-03` + operação estável | Medir densidade de pedidos compatíveis, desvio e economia potencial — gate do **agrupamento automático** |
 | TRIP-01 | ⏳ | Gate econômico aprovado | Modelo de viagens e agrupador em shadow mode, sem afetar ofertas reais |
 | TRIP-02 | ⏳ | `TRIP-01` validado | Piloto com no máximo 3 pedidos, capacidade e prova por pacote |
 
-Não implementar CRUD/telas de rota antes de `TRIP-00` demonstrar demanda suficiente.
+Não implementar CRUD/telas de rota do agrupamento automático antes de `TRIP-00`
+demonstrar demanda suficiente; o lote manual (`LOT-01/02`) não espera esse gate.
 
 ## 7. Trilha paralela de experiência
 
@@ -181,6 +197,11 @@ Esta trilha pode ocorrer em paralelo às Fases 1–4 quando houver autorização
 | DEC-05 | Iniciar carteira interna sem gateway? | Sim, mas somente após autorização explícita de pagamentos | `PAY-01` |
 | DEC-06 | Gateway PIX | Avaliar Pagar.me, Asaas e Mercado Pago com sandbox/webhooks | `PAY-02` |
 | DEC-07 | Rota compartilhada automática ou opt-in? | Opt-in no primeiro piloto | `TRIP-02` |
+| DEC-08 | Lote multi-pedido manual: despacho convive com auto-dispatch individual? | Convivem; o mesmo pedido nunca está nas duas filas ao mesmo tempo (reserva por delivery) | `LOT-01` |
+| DEC-09 | Bloco agendado intermunicipal: candidatura livre ou pré-alocação? | Publicar + candidatura com ranking por pontualidade | `LOT-02` |
+| DEC-10 | Janela de espera para agrupar antes de virar corrida individual | 5–15 min, cliente avisado no pedido | `LOT-01` |
+| DEC-11 | Tolerâncias anti-atraso (folgas 10/15/45 min, timeout 120 s, atraso 15 min, cancelamento grátis 45 min) | Valores v1 propostos; confirmar | `LOT-01` |
+| DEC-12 | Mapa de frota: retenção da trilha e exposição só em viagens ativas | crua 7 d / agregada 30 d / diária 90 d; LGPD | `FROTA-01` |
 
 Toda decisão fechada deve registrar data, autor e consequência nos planos afetados.
 
@@ -210,6 +231,10 @@ Uma fase só pode mudar para ✅ quando cumprir o que for aplicável:
 | Misturar cor de marca com status | Tokens semânticos e QA conforme `DIRETRIZES_VISUAIS.md` |
 | Ligar cloud cedo demais | Gates `OPS-02/03` dependem de pedido explícito e credenciais |
 | Construir transportadora sem densidade | Gate de descoberta `TRIP-00` antes de código operacional |
+| Dupla oferta do mesmo pedido (individual × lote) | Reserva global por `delivery_id` + aceite atômico com locks |
+| Atraso em lote multi-pedido | Regras D-R1..D-R13, ETAs recalculados, redespacho e índice de pontualidade |
+| Expor localização em tempo real sem controle | Permissão "ver frota" distinta, exposição só em viagem ativa, audit log e ciência do motoboy |
+| Heartbeat sem histórico/desacoplamento | `courier:position` sem `deliveryId` + `courier_positions` + Redis pub/sub |
 
 ## 11. Próximo pacote recomendado
 
