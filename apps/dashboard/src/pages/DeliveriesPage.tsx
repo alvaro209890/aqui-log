@@ -43,6 +43,8 @@ export function DeliveriesPage({ token }: { token: string }) {
   const [date, setDate] = useState('');
   const [productType, setProductType] = useState('');
   const [packageSize, setPackageSize] = useState('');
+  const [weightMin, setWeightMin] = useState('');
+  const [weightMax, setWeightMax] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -58,6 +60,8 @@ export function DeliveriesPage({ token }: { token: string }) {
         date: date || undefined,
         productType: productType || undefined,
         packageSize: packageSize || undefined,
+        weightMin: weightMin || undefined,
+        weightMax: weightMax || undefined,
         page: p,
         limit: 20,
       })
@@ -134,6 +138,28 @@ export function DeliveriesPage({ token }: { token: string }) {
           </select>
         </label>
         <label>
+          Peso min (kg)
+          <input
+            type="number"
+            min={0}
+            step="0.001"
+            value={weightMin}
+            onChange={(e) => setWeightMin(e.target.value)}
+            placeholder="ex: 0.5"
+          />
+        </label>
+        <label>
+          Peso max (kg)
+          <input
+            type="number"
+            min={0}
+            step="0.001"
+            value={weightMax}
+            onChange={(e) => setWeightMax(e.target.value)}
+            placeholder="ex: 5"
+          />
+        </label>
+        <label>
           Entregador (ID)
           <input
             value={courier}
@@ -173,6 +199,7 @@ export function DeliveriesPage({ token }: { token: string }) {
                   <th>CODIGO</th>
                   <th>CATEGORIA</th>
                   <th>TAMANHO</th>
+                  <th>PESO</th>
                   <th>COLETA</th>
                   <th>ENTREGA</th>
                   <th>ENTREGADOR</th>
@@ -189,6 +216,11 @@ export function DeliveriesPage({ token }: { token: string }) {
                     </td>
                     <td>{productTypeLabel(item.productType)}</td>
                     <td>{packageSizeLabel(item.packageSize)}</td>
+                    <td>
+                      {item.weightKg != null
+                        ? `${Number(item.weightKg)} kg`
+                        : '—'}
+                    </td>
                     <td>{item.pickupAddress}</td>
                     <td>{item.deliveryAddress}</td>
                     <td>{item.courierId?.slice(0, 8) ?? '—'}</td>

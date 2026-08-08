@@ -85,7 +85,7 @@ Plano do fluxo novo: `docs/02-planejamento/planos/PLANO_FLUXO_CLIENTE_PRESTADOR.
 | --- | --- | --- |
 | `productType` (API + predicado + select/coluna dashboard) | ✅ | testes + build |
 | `packageSize` | ✅ | testes + build |
-| faixa de peso | ⏳ | — |
+| faixa de peso (`weightMin`/`weightMax`) | ✅ | testes + build |
 | filtro por cliente | ⏳ | — |
 | QA navegador | ⏳ | API local / browser não exercitados nesta fatia |
 
@@ -93,10 +93,11 @@ Plano do fluxo novo: `docs/02-planejamento/planos/PLANO_FLUXO_CLIENTE_PRESTADOR.
 
 - [x] Filtro isolado `productType` (e combo com `status` nos predicados puros)
 - [x] Filtro isolado `packageSize` (e combo com `productType`)
-- [ ] Cada filtro restante (cliente, peso) isolado e combinação relevante
+- [x] Faixa de peso `weightMin`/`weightMax` (inclusiva; legado sem peso fora)
+- [ ] Filtro por cliente
 - [x] Paginação continua com os filtros B2C (mesma `findAll` + page/limit)
 - [ ] Apenas papéis administrativos autorizados acessam os dados (inalterado; não revalidado em HTTP vivo)
-- [x] Pedido legado sem categoria/tamanho não entra nos filtros B2C (documentado + teste)
+- [x] Pedido legado sem categoria/tamanho/peso não entra nos filtros B2C (documentado + teste)
 - [x] Dashboard trata zero resultados / loading / erro (já existente; mantido)
 - [ ] QA do navegador com evidência
 

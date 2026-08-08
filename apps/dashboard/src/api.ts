@@ -161,6 +161,10 @@ export type DeliveryFilters = {
   productType?: string;
   /** Filtro B2C-01B: tamanho P/M/G. */
   packageSize?: string;
+  /** Peso mínimo inclusivo (kg). */
+  weightMin?: number | string;
+  /** Peso máximo inclusivo (kg). */
+  weightMax?: number | string;
   page?: number;
   limit?: number;
 };

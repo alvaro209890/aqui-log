@@ -43,6 +43,18 @@ import {
   UpdateDeliveryStatusDto,
 } from './dto/delivery.dto';
 
+function parseOptionalWeightBound(
+  raw: string | undefined,
+  field: 'weightMin' | 'weightMax',
+): number | undefined {
+  if (raw == null || raw === '') return undefined;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) {
+    throw new BadRequestException(`${field} deve ser um numero >= 0 (kg)`);
+  }
+  return value;
+}
+
 @Injectable()
 export class DeliveriesService {
   constructor(
@@ -144,6 +156,8 @@ export class DeliveriesService {
       date?: string;
       productType?: string;
       packageSize?: string;
+      weightMin?: string;
+      weightMax?: string;
       page?: string;
       limit?: string;
     } = {},
@@ -200,6 +214,20 @@ export class DeliveriesService {
       qb.andWhere('delivery.packageSize = :packageSize', {
         packageSize: filters.packageSize,
       });
+    }
+
+    const weightMin = parseOptionalWeightBound(filters.weightMin, 'weightMin');
+    const weightMax = parseOptionalWeightBound(filters.weightMax, 'weightMax');
+    if (weightMin != null && weightMax != null && weightMin > weightMax) {
+      throw new BadRequestException(
+        'weightMin nao pode ser maior que weightMax',
+      );
+    }
+    if (weightMin != null) {
+      qb.andWhere('delivery.weightKg >= :weightMin', { weightMin });
+    }
+    if (weightMax != null) {
+      qb.andWhere('delivery.weightKg <= :weightMax', { weightMax });
     }
 
     if (filters.page != null || filters.limit != null) {

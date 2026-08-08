@@ -185,6 +185,7 @@ describe('dashboard-metrics', () => {
         createdAt: '2026-07-15T10:00:00.000Z',
         productType: 'FOOD',
         packageSize: 'SMALL',
+        weightKg: 1.5,
       },
       {
         status: 'REQUESTED',
@@ -192,6 +193,7 @@ describe('dashboard-metrics', () => {
         createdAt: '2026-07-14T10:00:00.000Z',
         productType: null,
         packageSize: null,
+        weightKg: null,
       },
       {
         status: 'DELIVERED',
@@ -199,6 +201,7 @@ describe('dashboard-metrics', () => {
         createdAt: new Date('2026-07-15T18:00:00.000Z'),
         productType: 'DOCUMENT',
         packageSize: 'LARGE',
+        weightKg: 8,
       },
       {
         status: 'OFFERED',
@@ -206,6 +209,7 @@ describe('dashboard-metrics', () => {
         createdAt: '2026-07-15T12:00:00.000Z',
         productType: 'FOOD',
         packageSize: 'MEDIUM',
+        weightKg: '3.250',
       },
       {
         status: 'ACCEPTED',
@@ -213,6 +217,7 @@ describe('dashboard-metrics', () => {
         createdAt: '2026-07-15T13:00:00.000Z',
         productType: 'FOOD',
         packageSize: 'SMALL',
+        weightKg: 0.5,
       },
     ];
 
@@ -263,6 +268,22 @@ describe('dashboard-metrics', () => {
       expect(matchesDeliveryFilters(items[1], { packageSize: 'SMALL' })).toBe(
         false,
       );
+    });
+
+    it('filters by weightMin/weightMax inclusive and excludes legacy null', () => {
+      expect(filterDeliveries(items, { weightMin: 1 })).toHaveLength(3);
+      expect(filterDeliveries(items, { weightMax: 1 })).toHaveLength(1);
+      expect(
+        filterDeliveries(items, { weightMin: 1, weightMax: 4 }),
+      ).toHaveLength(2);
+      expect(
+        filterDeliveries(items, {
+          productType: 'FOOD',
+          weightMin: 1,
+          weightMax: 2,
+        }),
+      ).toHaveLength(1);
+      expect(matchesDeliveryFilters(items[1], { weightMin: 0.1 })).toBe(false);
     });
 
     it('matchesDeliveryFilters rejects non-matching rows', () => {

@@ -248,6 +248,10 @@ export type DeliveryFilterInput = {
   productType?: string;
   /** Tamanho da encomenda B2C (`package_size`). */
   packageSize?: string;
+  /** Peso mínimo inclusivo em kg. */
+  weightMin?: number;
+  /** Peso máximo inclusivo em kg. */
+  weightMax?: number;
 };
 
 export type FilterableDelivery = {
@@ -256,6 +260,7 @@ export type FilterableDelivery = {
   createdAt: Date | string;
   productType?: string | null;
   packageSize?: string | null;
+  weightKg?: number | string | null;
 };
 
 /** Pure filter predicates for unit testing without HTTP/DB. */
@@ -280,6 +285,13 @@ export function matchesDeliveryFilters(
   }
   if (filters.packageSize) {
     if (delivery.packageSize !== filters.packageSize) return false;
+  }
+  if (filters.weightMin != null || filters.weightMax != null) {
+    if (delivery.weightKg == null || delivery.weightKg === '') return false;
+    const kg = Number(delivery.weightKg);
+    if (!Number.isFinite(kg)) return false;
+    if (filters.weightMin != null && kg < filters.weightMin) return false;
+    if (filters.weightMax != null && kg > filters.weightMax) return false;
   }
   return true;
 }
