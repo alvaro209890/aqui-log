@@ -2,7 +2,7 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { CreateDeliveryDto } from './dto/delivery.dto';
 
-const basePayload = {
+const addressPayload = {
   pickupAddress: 'Rua A, 10',
   pickupLatitude: -15.601,
   pickupLongitude: -56.097,
@@ -13,30 +13,36 @@ const basePayload = {
   recipientPhone: '+5565999999999',
 };
 
+const packagePayload = {
+  productType: 'ELECTRONICS',
+  packageSize: 'MEDIUM',
+  weightKg: 2.75,
+  productPhotoUrls: ['http://localhost:3001/api/v1/storage/files/a.jpg'],
+};
+
+/** Payload completo de um pedido novo, conforme `DEC-01`. */
+const basePayload = { ...addressPayload, ...packagePayload };
+
+async function failedProperties(payload: Record<string, unknown>) {
+  const dto = plainToInstance(CreateDeliveryDto, payload);
+  const errors = await validate(dto);
+  return errors.map((error) => error.property);
+}
+
 describe('CreateDeliveryDto package fields', () => {
-  it('accepts the additive structured package contract', async () => {
+  it('accepts the complete structured package contract', async () => {
     const dto = plainToInstance(CreateDeliveryDto, {
       ...basePayload,
-      productType: 'ELECTRONICS',
-      packageSize: 'MEDIUM',
-      weightKg: 2.75,
       deliveryScope: 'SAME_CITY',
-      productPhotoUrls: ['http://localhost:3001/api/v1/storage/files/a.jpg'],
       notes: 'Manusear com cuidado',
     });
 
     await expect(validate(dto)).resolves.toEqual([]);
   });
 
-  it('keeps the legacy/B2B payload valid without package fields', async () => {
-    const dto = plainToInstance(CreateDeliveryDto, basePayload);
-
-    await expect(validate(dto)).resolves.toEqual([]);
-  });
-
   it('rejects invalid codes, weight and excessive photos', async () => {
-    const dto = plainToInstance(CreateDeliveryDto, {
-      ...basePayload,
+    const properties = await failedProperties({
+      ...addressPayload,
       productType: 'Eletrônico',
       packageSize: 'HUGE',
       weightKg: 0,
@@ -49,8 +55,7 @@ describe('CreateDeliveryDto package fields', () => {
       ],
     });
 
-    const errors = await validate(dto);
-    expect(errors.map((error) => error.property)).toEqual(
+    expect(properties).toEqual(
       expect.arrayContaining([
         'productType',
         'packageSize',
@@ -58,6 +63,71 @@ describe('CreateDeliveryDto package fields', () => {
         'deliveryScope',
         'productPhotoUrls',
       ]),
+    );
+  });
+});
+
+// B2C-05 / DEC-01: a obrigatoriedade vale para a CRIAÇÃO. Leitura de pedido
+// legado (sem esses campos) não passa por este DTO e segue funcionando.
+describe('CreateDeliveryDto obrigatoriedade da criação (B2C-05)', () => {
+  it('rejeita o payload legado, sem nenhum campo de encomenda', async () => {
+    const properties = await failedProperties(addressPayload);
+
+    expect(properties).toEqual(
+      expect.arrayContaining([
+        'productType',
+        'packageSize',
+        'weightKg',
+        'productPhotoUrls',
+      ]),
+    );
+  });
+
+  it.each([
+    ['productType', 'Informe o tipo da encomenda'],
+    ['packageSize', 'Informe o tamanho da encomenda (SMALL, MEDIUM ou LARGE)'],
+    ['weightKg', 'Informe o peso da encomenda em kg'],
+    ['productPhotoUrls', 'Envie ao menos uma foto da encomenda'],
+  ])('rejeita pedido sem %s com mensagem útil', async (field, message) => {
+    const payload = { ...basePayload };
+    delete (payload as Record<string, unknown>)[field];
+
+    const dto = plainToInstance(CreateDeliveryDto, payload);
+    const errors = await validate(dto);
+    const target = errors.find((error) => error.property === field);
+
+    expect(target).toBeDefined();
+    expect(Object.values(target!.constraints ?? {})).toContain(message);
+  });
+
+  it('rejeita lista de fotos vazia', async () => {
+    const properties = await failedProperties({
+      ...basePayload,
+      productPhotoUrls: [],
+    });
+
+    expect(properties).toContain('productPhotoUrls');
+  });
+
+  it.each(['pickupAddress', 'deliveryAddress'])(
+    'rejeita %s ausente ou em branco',
+    async (field) => {
+      const missing = { ...basePayload };
+      delete (missing as Record<string, unknown>)[field];
+      await expect(failedProperties(missing)).resolves.toContain(field);
+
+      await expect(
+        failedProperties({ ...basePayload, [field]: '   ' }),
+      ).resolves.toContain(field);
+    },
+  );
+
+  it('rejeita coordenada ausente', async () => {
+    const missing = { ...basePayload };
+    delete (missing as Record<string, unknown>).pickupLatitude;
+
+    await expect(failedProperties(missing)).resolves.toContain(
+      'pickupLatitude',
     );
   });
 });

@@ -1,5 +1,6 @@
 import {
   ArrayMaxSize,
+  ArrayMinSize,
   ArrayUnique,
   IsArray,
   IsDateString,
@@ -8,6 +9,7 @@ import {
   IsInt,
   IsLatitude,
   IsLongitude,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsPhoneNumber,
@@ -17,6 +19,7 @@ import {
   Min,
   Max,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { DeliveryStatus } from '../../database/enums';
 
 export const PRODUCT_TYPES = [
@@ -32,8 +35,22 @@ export const PRODUCT_TYPES = [
 export const PACKAGE_SIZES = ['SMALL', 'MEDIUM', 'LARGE'] as const;
 export const DELIVERY_SCOPES = ['SAME_CITY', 'OTHER_CITY'] as const;
 
+/**
+ * `@IsNotEmpty` considera `'   '` preenchido. Sem aparar antes de validar, um
+ * endereço só de espaços passaria pela obrigatoriedade do `B2C-05`.
+ */
+const TrimmedString = () =>
+  Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  );
+
 export class CreateDeliveryDto {
-  @IsString()
+  // B2C-05 / DEC-01: endereço em branco não é endereço. `@IsString` sozinho
+  // aceita `''`, então a obrigatoriedade real vem do `@IsNotEmpty`.
+  @TrimmedString()
+  @IsString({ message: 'Informe o endereço de coleta' })
+  @IsNotEmpty({ message: 'Informe o endereço de coleta' })
+  @MaxLength(500, { message: 'O endereço de coleta é longo demais' })
   pickupAddress!: string;
 
   @IsLatitude()
@@ -42,7 +59,10 @@ export class CreateDeliveryDto {
   @IsLongitude()
   pickupLongitude!: number;
 
-  @IsString()
+  @TrimmedString()
+  @IsString({ message: 'Informe o endereço de entrega' })
+  @IsNotEmpty({ message: 'Informe o endereço de entrega' })
+  @MaxLength(500, { message: 'O endereço de entrega é longo demais' })
   deliveryAddress!: string;
 
   @IsLatitude()
@@ -51,7 +71,10 @@ export class CreateDeliveryDto {
   @IsLongitude()
   deliveryLongitude!: number;
 
-  @IsString()
+  @TrimmedString()
+  @IsString({ message: 'Informe quem recebe a encomenda' })
+  @IsNotEmpty({ message: 'Informe quem recebe a encomenda' })
+  @MaxLength(200, { message: 'O nome de quem recebe é longo demais' })
   recipientName!: string;
 
   @IsPhoneNumber('BR')
@@ -62,30 +85,42 @@ export class CreateDeliveryDto {
   @MaxLength(1000)
   notes?: string;
 
-  @IsOptional()
-  @IsIn([...PRODUCT_TYPES])
-  productType?: (typeof PRODUCT_TYPES)[number];
+  // B2C-05 / DEC-01: tipo, tamanho, peso e ao menos uma foto são obrigatórios
+  // na CRIAÇÃO. Pedidos legados que não têm esses campos continuam legíveis;
+  // a obrigatoriedade vale só para o que entra a partir de agora.
+  @IsIn([...PRODUCT_TYPES], {
+    message: 'Informe o tipo da encomenda',
+  })
+  productType!: (typeof PRODUCT_TYPES)[number];
 
-  @IsOptional()
-  @IsIn([...PACKAGE_SIZES])
-  packageSize?: (typeof PACKAGE_SIZES)[number];
+  @IsIn([...PACKAGE_SIZES], {
+    message: 'Informe o tamanho da encomenda (SMALL, MEDIUM ou LARGE)',
+  })
+  packageSize!: (typeof PACKAGE_SIZES)[number];
 
-  @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 3 })
-  @Min(0.001)
-  @Max(1000)
-  weightKg?: number;
+  @IsNumber(
+    { maxDecimalPlaces: 3 },
+    { message: 'Informe o peso da encomenda em kg' },
+  )
+  @Min(0.001, { message: 'O peso deve ser maior que zero' })
+  @Max(1000, { message: 'O peso não pode passar de 1000 kg' })
+  weightKg!: number;
 
   @IsOptional()
   @IsIn([...DELIVERY_SCOPES])
   deliveryScope?: (typeof DELIVERY_SCOPES)[number];
 
-  @IsOptional()
-  @IsArray()
-  @ArrayMaxSize(3)
-  @ArrayUnique()
-  @IsUrl({ require_tld: false }, { each: true })
-  productPhotoUrls?: string[];
+  @IsArray({ message: 'Envie ao menos uma foto da encomenda' })
+  @ArrayMinSize(1, {
+    message: 'Envie ao menos uma foto da encomenda',
+  })
+  @ArrayMaxSize(3, { message: 'Envie no máximo 3 fotos da encomenda' })
+  @ArrayUnique({ message: 'Não repita a mesma foto da encomenda' })
+  @IsUrl(
+    { require_tld: false },
+    { each: true, message: 'Cada foto deve ser uma URL válida do storage' },
+  )
+  productPhotoUrls!: string[];
 
   @IsOptional()
   @IsDateString()

@@ -98,6 +98,61 @@ void main() {
     expect(find.text('Tipo de encomenda'), findsOneWidget);
     expect(find.text('Peso aproximado (kg)'), findsOneWidget);
     expect(find.text('Alcance'), findsOneWidget);
+    // B2C-05 / DEC-01: a foto deixou de ser opcional.
+    expect(find.text('Foto da encomenda (obrigatória)'), findsOneWidget);
+  });
+
+  // B2C-05 / DEC-01: o app não deve gastar uma chamada de API em um pedido que
+  // o backend rejeitaria com 400.
+  testWidgets('NewOrderScreen barra o envio sem foto', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    var submitted = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NewOrderScreen(
+          onSubmit: (_) async => submitted = true,
+          geocode: (address) async => GeocodeResult(
+            latitude: -15.6,
+            longitude: -56.1,
+            formattedAddress: address,
+          ),
+          uploadPhoto: (_) async => 'http://storage/foto.jpg',
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Peso aproximado (kg)'),
+      '2',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Endereço de retirada'),
+      'Rua A, 10',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Endereço de entrega'),
+      'Rua B, 20',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Nome de quem recebe'),
+      'Maria',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Telefone do destinatário'),
+      '65999999999',
+    );
+
+    await tester.tap(find.text('Publicar pedido'));
+    await tester.pumpAndSettle();
+
+    expect(submitted, isFalse);
+    expect(
+      find.text('Anexe uma foto da encomenda para continuar.'),
+      findsWidgets,
+    );
   });
 
   testWidgets('SettingsScreen renders profile', (tester) async {

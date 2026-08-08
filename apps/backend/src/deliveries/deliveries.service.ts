@@ -95,7 +95,9 @@ export class DeliveriesService {
       throw new ForbiddenException('Somente clientes podem criar pedidos');
     if (isCustomer && !user.customerId)
       throw new ForbiddenException('Cliente sem cadastro completo');
-    const productPhotoUrls = dto.productPhotoUrls ?? [];
+    // B2C-05 / DEC-01: o DTO já garante ao menos uma foto na criação; aqui só
+    // resta provar que cada URL veio do storage desta instalação.
+    const productPhotoUrls = dto.productPhotoUrls;
     for (const url of productPhotoUrls) {
       this.storage.assertAllowedProductPhotoUrl(url);
     }
@@ -113,9 +115,9 @@ export class DeliveriesService {
         createdById: user.id,
         courierId: null,
         notes: dto.notes ?? null,
-        productType: dto.productType ?? null,
-        packageSize: dto.packageSize ?? null,
-        weightKg: dto.weightKg ?? null,
+        productType: dto.productType,
+        packageSize: dto.packageSize,
+        weightKg: dto.weightKg,
         deliveryScope: dto.deliveryScope ?? null,
         productPhotoUrls,
         scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : null,

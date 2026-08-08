@@ -43,6 +43,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   String scope = OrderMeta.scopes.first;
 
   bool loading = false;
+  bool photoMissing = false;
   String? error;
 
   @override
@@ -64,7 +65,13 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
         maxHeight: 1600,
         imageQuality: 82,
       );
-      if (file != null && mounted) setState(() => photo = file);
+      if (file != null && mounted) {
+        setState(() {
+          photo = file;
+          photoMissing = false;
+          error = null;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() => error = 'Falha ao abrir $source: $e');
@@ -102,7 +109,17 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   }
 
   Future<void> _submit() async {
-    if (!formKey.currentState!.validate()) return;
+    final formOk = formKey.currentState!.validate();
+    // B2C-05 / DEC-01: a foto não é um campo de formulário, então o
+    // `validate()` não a alcança. Sem esta checagem o app mandaria um pedido
+    // que a API rejeita com 400.
+    setState(() => photoMissing = photo == null);
+    if (!formOk || photo == null) {
+      if (photo == null) {
+        setState(() => error = 'Anexe uma foto da encomenda para continuar.');
+      }
+      return;
+    }
     setState(() {
       loading = true;
       error = null;
@@ -111,17 +128,14 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       final pickupGeo = await widget.geocode(pickup.text.trim());
       final deliveryGeo = await widget.geocode(delivery.text.trim());
 
-      String? photoUrl;
-      if (photo != null) {
-        photoUrl = await widget.uploadPhoto(photo!);
-      }
+      final photoUrl = await widget.uploadPhoto(photo!);
 
       final meta = OrderMeta(
         productType: productType,
         size: size,
         weightKg: double.tryParse(weight.text.trim().replaceAll(',', '.')),
         scope: scope,
-        photoUrls: photoUrl == null ? const [] : [photoUrl],
+        photoUrls: [photoUrl],
         notes: obs.text.trim().isEmpty ? null : obs.text.trim(),
       );
 
@@ -339,11 +353,32 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
 
   Widget _photoSection() {
     if (photo == null) {
-      return OutlinedButton.icon(
-        onPressed: _showPhotoSource,
-        icon: const Icon(Icons.add_a_photo_outlined),
-        label: const Text('Foto do produto (opcional)'),
-        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          OutlinedButton.icon(
+            onPressed: _showPhotoSource,
+            icon: const Icon(Icons.add_a_photo_outlined),
+            label: const Text('Foto da encomenda (obrigatória)'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(50),
+              foregroundColor: photoMissing ? Colors.red : null,
+              side: photoMissing
+                  ? const BorderSide(color: Colors.red)
+                  : null,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            photoMissing
+                ? 'Anexe uma foto da encomenda para continuar.'
+                : 'A foto ajuda o motoboy a decidir e protege os dois lados.',
+            style: TextStyle(
+              color: photoMissing ? Colors.red : AquiLogColors.muted,
+              fontSize: 12,
+            ),
+          ),
+        ],
       );
     }
     return Card(

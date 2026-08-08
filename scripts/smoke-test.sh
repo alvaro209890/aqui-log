@@ -25,6 +25,36 @@ api() {
   curl "${args[@]}"
 }
 
+# Igual a `api`, mas devolve "<corpo>\n<status>" em vez de falhar no 4xx.
+# Usado para provar que uma requisição inválida é mesmo recusada.
+api_status() {
+  local method="$1" path="$2" token="${3:-}" body="${4:-}"
+  local args=(-sS -o - -w '\n%{http_code}' -X "$method" "$API_URL$path" -H "Content-Type: application/json")
+  [[ -n "$token" ]] && args+=(-H "Authorization: Bearer $token")
+  [[ -n "$body" ]] && args+=(-d "$body")
+  curl "${args[@]}"
+}
+
+# Sobe um arquivo pelo presign e devolve a URL pública. `purpose` é
+# "proof" (prova do motoboy) ou "product" (foto da encomenda do cliente).
+upload_file() {
+  local purpose="$1" token="$2" label="$3"
+  local presign
+  presign="$(api POST /storage/presign "$token" "$(jq -nc --arg purpose "$purpose" '{purpose:$purpose,contentType:"image/jpeg"}')")"
+  local upload_url file_url
+  upload_url="$(jq -er '.uploadUrl' <<<"$presign")"
+  file_url="$(jq -er '.fileUrl' <<<"$presign")"
+  if ! curl -fsS -X PUT "$upload_url" \
+    -H "Authorization: Bearer $token" \
+    -H "Content-Type: image/jpeg" \
+    --data-binary "fake-jpeg-$label-$RUN_ID" >/dev/null; then
+    printf 'Falha ao enviar "%s" em %s.\n' "$label" "$upload_url" >&2
+    printf 'A URL de upload vem de PUBLIC_API_URL no servidor; ela precisa apontar para a mesma API de %s.\n' "$API_URL" >&2
+    return 1
+  fi
+  printf '%s' "$file_url"
+}
+
 api GET /health | jq -e '.status == "ok"' >/dev/null
 api GET /health | jq -e '.checks.redis == "ok" and .checks.db == "ok"' >/dev/null
 
@@ -49,12 +79,40 @@ courier_token="$(api POST /auth/login "" "$(jq -nc --arg email "$COURIER_EMAIL" 
 api PATCH /couriers/me/location "$courier_token" "$(jq -nc --argjson latitude "$PICKUP_LATITUDE" --argjson longitude "$PICKUP_LONGITUDE" '{latitude:$latitude,longitude:$longitude}')" >/dev/null
 api PATCH /couriers/me/availability "$courier_token" '{"available":true}' >/dev/null
 
-delivery="$(api POST /deliveries "$customer_token" "$(jq -nc --argjson pickupLatitude "$PICKUP_LATITUDE" --argjson pickupLongitude "$PICKUP_LONGITUDE" --argjson deliveryLatitude "$DELIVERY_LATITUDE" --argjson deliveryLongitude "$DELIVERY_LONGITUDE" '{pickupAddress:"Av. Afonso Pena, 1000 - Centro",pickupLatitude:$pickupLatitude,pickupLongitude:$pickupLongitude,deliveryAddress:"Praca da Liberdade - Savassi",deliveryLatitude:$deliveryLatitude,deliveryLongitude:$deliveryLongitude,recipientName:"Cliente Teste",recipientPhone:"+5531999999999"}')")"
+# B2C-05 / DEC-01: a foto da encomenda é obrigatória na criação, então o
+# cliente sobe a foto antes de publicar o pedido.
+product_photo="$(upload_file product "$customer_token" produto)" || exit 1
+
+new_order_payload() {
+  jq -nc \
+    --argjson pickupLatitude "$PICKUP_LATITUDE" \
+    --argjson pickupLongitude "$PICKUP_LONGITUDE" \
+    --argjson deliveryLatitude "$DELIVERY_LATITUDE" \
+    --argjson deliveryLongitude "$DELIVERY_LONGITUDE" \
+    --arg productPhotoUrl "$product_photo" \
+    '{pickupAddress:"Av. Afonso Pena, 1000 - Centro",pickupLatitude:$pickupLatitude,pickupLongitude:$pickupLongitude,deliveryAddress:"Praca da Liberdade - Savassi",deliveryLatitude:$deliveryLatitude,deliveryLongitude:$deliveryLongitude,recipientName:"Cliente Teste",recipientPhone:"+5531999999999",productType:"OTHER",packageSize:"SMALL",weightKg:1.5,deliveryScope:"SAME_CITY",productPhotoUrls:[$productPhotoUrl]}'
+}
+
+# Pedido incompleto (o payload legado, sem foto/tipo/tamanho/peso) tem de ser
+# recusado com 400 e mensagem útil — este é o critério central do B2C-05.
+incomplete_payload="$(new_order_payload | jq -c 'del(.productType,.packageSize,.weightKg,.productPhotoUrls,.deliveryScope)')"
+rejected="$(api_status POST /deliveries "$customer_token" "$incomplete_payload")"
+rejected_status="$(tail -n1 <<<"$rejected")"
+rejected_body="$(sed '$d' <<<"$rejected")"
+if [[ "$rejected_status" != "400" ]]; then
+  printf 'Pedido sem foto/peso/tipo/tamanho deveria ser recusado com 400, veio %s.\n' "$rejected_status" >&2
+  printf '%s\n' "$rejected_body" >&2
+  exit 1
+fi
+jq -e '[.message[]] | any(. == "Envie ao menos uma foto da encomenda")' <<<"$rejected_body" >/dev/null
+
+delivery="$(api POST /deliveries "$customer_token" "$(new_order_payload)")"
 delivery_id="$(jq -er '.id' <<<"$delivery")"
 delivery_code="$(jq -er '.code' <<<"$delivery")"
 courier_fee="$(jq -er '.courierFeeCents' <<<"$delivery")"
 price_cents="$(jq -er '.priceCents' <<<"$delivery")"
 jq -en --argjson fee "$courier_fee" --argjson price "$price_cents" '$fee > 0 and $price >= $fee' >/dev/null
+jq -e --arg photo "$product_photo" '.productType == "OTHER" and .packageSize == "SMALL" and (.weightKg | tonumber) == 1.5 and (.productPhotoUrls | index($photo) != null)' <<<"$delivery" >/dev/null
 
 # B2C: o pedido do cliente é publicado automaticamente para os motoboys
 # disponíveis (auto-dispatch no create). Se ninguém estava online no
@@ -69,28 +127,10 @@ api GET /deliveries/offers/mine "$courier_token" | jq -e --arg offer "$offer_id"
 api PATCH "/deliveries/offers/$offer_id/accept" "$courier_token" >/dev/null
 api PATCH "/deliveries/$delivery_id/status" "$courier_token" '{"status":"AT_PICKUP"}' >/dev/null
 
-upload_proof() {
-  local label="$1"
-  local presign
-  presign="$(api POST /storage/presign "$courier_token" "$(jq -nc '{purpose:"proof",contentType:"image/jpeg"}')")"
-  local upload_url file_url
-  upload_url="$(jq -er '.uploadUrl' <<<"$presign")"
-  file_url="$(jq -er '.fileUrl' <<<"$presign")"
-  if ! curl -fsS -X PUT "$upload_url" \
-    -H "Authorization: Bearer $courier_token" \
-    -H "Content-Type: image/jpeg" \
-    --data-binary "fake-jpeg-$label-$RUN_ID" >/dev/null; then
-    printf 'Falha ao enviar a prova "%s" em %s.\n' "$label" "$upload_url" >&2
-    printf 'A URL de upload vem de PUBLIC_API_URL no servidor; ela precisa apontar para a mesma API de %s.\n' "$API_URL" >&2
-    return 1
-  fi
-  printf '%s' "$file_url"
-}
-
-proof_pickup="$(upload_proof pickup)" || exit 1
+proof_pickup="$(upload_file proof "$courier_token" pickup)" || exit 1
 api PATCH "/deliveries/$delivery_id/status" "$courier_token" "$(jq -nc --arg proofUrl "$proof_pickup" '{status:"PICKED_UP",proofUrl:$proofUrl}')" >/dev/null
 api PATCH "/deliveries/$delivery_id/status" "$courier_token" '{"status":"IN_TRANSIT"}' >/dev/null
-proof_delivery="$(upload_proof delivery)" || exit 1
+proof_delivery="$(upload_file proof "$courier_token" delivery)" || exit 1
 api PATCH "/deliveries/$delivery_id/status" "$courier_token" "$(jq -nc --arg proofUrl "$proof_delivery" '{status:"DELIVERED",proofUrl:$proofUrl}')" >/dev/null
 
 api GET "/deliveries/$delivery_id/history" "$customer_token" | jq -e 'length >= 7' >/dev/null
