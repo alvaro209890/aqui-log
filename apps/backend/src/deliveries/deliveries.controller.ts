@@ -50,6 +50,7 @@ export class DeliveriesController {
     @Query('packageSize') packageSize?: string,
     @Query('weightMin') weightMin?: string,
     @Query('weightMax') weightMax?: string,
+    @Query('customerId') customerId?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
@@ -61,6 +62,7 @@ export class DeliveriesController {
       packageSize,
       weightMin,
       weightMax,
+      customerId,
       page,
       limit,
     });

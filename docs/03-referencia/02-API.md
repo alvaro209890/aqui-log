@@ -42,6 +42,7 @@ Rotas protegidas: `Authorization: Bearer <accessToken>`
 | `productType` | Categoria B2C (`DOCUMENT`, `FOOD`, …). Valor inválido → `400`. Pedidos legados sem categoria **não** entram no filtro. |
 | `packageSize` | Tamanho B2C (`SMALL`, `MEDIUM`, `LARGE`). Valor inválido → `400`. Legado sem tamanho **não** entra. |
 | `weightMin`, `weightMax` | Faixa de peso inclusiva em kg (`>= 0`). Inválido ou min>max → `400`. Legado sem peso **não** entra. Fatias `B2C-01B`. |
+| `customerId` | UUID do cliente. Formato inválido → `400`. Aplicado só a `SUPER_ADMIN`/`ADMIN`/`SUPPORT` (outros papéis ignoram o param e seguem o escopo do token). Pedido sem `customer_id` **não** entra. Fatia `B2C-01B`. |
 | `page`, `limit` | Paginação |
 
 | Metodo | Rota | Uso |

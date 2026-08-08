@@ -186,6 +186,7 @@ describe('dashboard-metrics', () => {
         productType: 'FOOD',
         packageSize: 'SMALL',
         weightKg: 1.5,
+        customerId: 'cust-a',
       },
       {
         status: 'REQUESTED',
@@ -194,6 +195,7 @@ describe('dashboard-metrics', () => {
         productType: null,
         packageSize: null,
         weightKg: null,
+        customerId: null,
       },
       {
         status: 'DELIVERED',
@@ -202,6 +204,7 @@ describe('dashboard-metrics', () => {
         productType: 'DOCUMENT',
         packageSize: 'LARGE',
         weightKg: 8,
+        customerId: 'cust-b',
       },
       {
         status: 'OFFERED',
@@ -210,6 +213,7 @@ describe('dashboard-metrics', () => {
         productType: 'FOOD',
         packageSize: 'MEDIUM',
         weightKg: '3.250',
+        customerId: 'cust-a',
       },
       {
         status: 'ACCEPTED',
@@ -218,6 +222,7 @@ describe('dashboard-metrics', () => {
         productType: 'FOOD',
         packageSize: 'SMALL',
         weightKg: 0.5,
+        customerId: 'cust-a',
       },
     ];
 
@@ -284,6 +289,24 @@ describe('dashboard-metrics', () => {
         }),
       ).toHaveLength(1);
       expect(matchesDeliveryFilters(items[1], { weightMin: 0.1 })).toBe(false);
+    });
+
+    it('filters by customerId and excludes legacy null', () => {
+      expect(filterDeliveries(items, { customerId: 'cust-a' })).toHaveLength(3);
+      expect(filterDeliveries(items, { customerId: 'cust-b' })).toHaveLength(1);
+      expect(filterDeliveries(items, { customerId: 'missing' })).toHaveLength(
+        0,
+      );
+      expect(
+        filterDeliveries(items, {
+          customerId: 'cust-a',
+          productType: 'FOOD',
+          status: 'DELIVERED',
+        }),
+      ).toHaveLength(1);
+      expect(matchesDeliveryFilters(items[1], { customerId: 'cust-a' })).toBe(
+        false,
+      );
     });
 
     it('matchesDeliveryFilters rejects non-matching rows', () => {

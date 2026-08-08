@@ -9,7 +9,7 @@
 | Ordem | ID | Estado | Prioridade | Resultado | Dependências/gates |
 | ---: | --- | --- | --- | --- | --- |
 | 1 | `BASE-04` | `READY` | P0 | Banco de teste migrado e smoke B2C vivo documentado | Docker/Postgres/Redis locais |
-| 2 | `B2C-01B` | `IN_PROGRESS` | P0 | Dashboard filtra e relata encomendas B2C | Fatia 1 (`productType`) entregue; resto pendente. Autorizado pelo Álvaro sem esperar `BASE-04` DONE |
+| 2 | `B2C-01B` | `IN_PROGRESS` | P0 | Dashboard filtra e relata encomendas B2C | Fatias 1–4 ok (categoria/tamanho/peso/cliente). Falta QA browser. Autorizado sem `BASE-04` DONE |
 | 3 | `UX-01C` | `BLOCKED` | P1 | Dashboard usa tokens laranja equivalentes | concluir `BASE-04`; não misturar com `B2C-01B` |
 | 4 | `UX-02` | `BLOCKED` | P1 | Fluxos principais passam por QA visual/acessibilidade | `UX-01C`, navegador e dispositivo/emulador |
 | 5 | `B2C-05` | `BLOCKED` | P0 | Foto + campos obrigatórios na criação | `B2C-01B`; `DEC-01` decidida |
@@ -86,7 +86,7 @@ Plano do fluxo novo: `docs/02-planejamento/planos/PLANO_FLUXO_CLIENTE_PRESTADOR.
 | `productType` (API + predicado + select/coluna dashboard) | ✅ | testes + build |
 | `packageSize` | ✅ | testes + build |
 | faixa de peso (`weightMin`/`weightMax`) | ✅ | testes + build |
-| filtro por cliente | ⏳ | — |
+| filtro por cliente (`customerId`) | ✅ | testes + build |
 | QA navegador | ⏳ | API local / browser não exercitados nesta fatia |
 
 ### Critérios de aceite
@@ -94,7 +94,7 @@ Plano do fluxo novo: `docs/02-planejamento/planos/PLANO_FLUXO_CLIENTE_PRESTADOR.
 - [x] Filtro isolado `productType` (e combo com `status` nos predicados puros)
 - [x] Filtro isolado `packageSize` (e combo com `productType`)
 - [x] Faixa de peso `weightMin`/`weightMax` (inclusiva; legado sem peso fora)
-- [ ] Filtro por cliente
+- [x] Filtro por cliente (`customerId`; UUID; só admin aplica o param)
 - [x] Paginação continua com os filtros B2C (mesma `findAll` + page/limit)
 - [ ] Apenas papéis administrativos autorizados acessam os dados (inalterado; não revalidado em HTTP vivo)
 - [x] Pedido legado sem categoria/tamanho/peso não entra nos filtros B2C (documentado + teste)

@@ -252,6 +252,8 @@ export type DeliveryFilterInput = {
   weightMin?: number;
   /** Peso máximo inclusivo em kg. */
   weightMax?: number;
+  /** UUID do cliente (`customer_id`). */
+  customerId?: string;
 };
 
 export type FilterableDelivery = {
@@ -261,6 +263,7 @@ export type FilterableDelivery = {
   productType?: string | null;
   packageSize?: string | null;
   weightKg?: number | string | null;
+  customerId?: string | null;
 };
 
 /** Pure filter predicates for unit testing without HTTP/DB. */
@@ -292,6 +295,9 @@ export function matchesDeliveryFilters(
     if (!Number.isFinite(kg)) return false;
     if (filters.weightMin != null && kg < filters.weightMin) return false;
     if (filters.weightMax != null && kg > filters.weightMax) return false;
+  }
+  if (filters.customerId) {
+    if (delivery.customerId !== filters.customerId) return false;
   }
   return true;
 }

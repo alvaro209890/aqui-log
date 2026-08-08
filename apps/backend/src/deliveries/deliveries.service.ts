@@ -43,6 +43,19 @@ import {
   UpdateDeliveryStatusDto,
 } from './dto/delivery.dto';
 
+/** UUID canônico (qualquer versão), case-insensitive. */
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function parseOptionalCustomerId(raw: string | undefined): string | undefined {
+  if (raw == null || raw === '') return undefined;
+  const value = raw.trim();
+  if (!UUID_RE.test(value)) {
+    throw new BadRequestException('customerId invalido. Use um UUID.');
+  }
+  return value;
+}
+
 function parseOptionalWeightBound(
   raw: string | undefined,
   field: 'weightMin' | 'weightMax',
@@ -158,6 +171,7 @@ export class DeliveriesService {
       packageSize?: string;
       weightMin?: string;
       weightMax?: string;
+      customerId?: string;
       page?: string;
       limit?: string;
     } = {},
@@ -228,6 +242,20 @@ export class DeliveriesService {
     }
     if (weightMax != null) {
       qb.andWhere('delivery.weightKg <= :weightMax', { weightMax });
+    }
+
+    const isAdmin = [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SUPPORT,
+    ].includes(user.role);
+    if (isAdmin) {
+      const filterCustomerId = parseOptionalCustomerId(filters.customerId);
+      if (filterCustomerId) {
+        qb.andWhere('delivery.customerId = :filterCustomerId', {
+          filterCustomerId,
+        });
+      }
     }
 
     if (filters.page != null || filters.limit != null) {

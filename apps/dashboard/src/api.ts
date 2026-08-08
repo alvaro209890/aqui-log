@@ -64,6 +64,8 @@ export interface DeliveryRecord {
   status: string;
   priceCents?: number;
   createdAt: string;
+  /** UUID do cliente; presente nos pedidos atuais. */
+  customerId?: string | null;
   /** Categoria B2C; ausente/null em pedidos legados. */
   productType?: string | null;
   packageSize?: string | null;
@@ -165,6 +167,8 @@ export type DeliveryFilters = {
   weightMin?: number | string;
   /** Peso máximo inclusivo (kg). */
   weightMax?: number | string;
+  /** UUID do cliente. */
+  customerId?: string;
   page?: number;
   limit?: number;
 };

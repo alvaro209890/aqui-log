@@ -26,8 +26,8 @@ própria registrada; build/lint não substituem QA real no navegador.
 
 ## Limites
 
-- `B2C-01B` em progresso: filtros `productType`, `packageSize` e faixa de peso.
-  Ainda falta filtro por cliente.
+- `B2C-01B` em progresso: filtros `productType`, `packageSize`, faixa de peso e
+  `customerId`. Falta QA no navegador.
 - Não misturar `B2C-01B` com o pacote visual `UX-01C`.
 - Ações administrativas usam comandos de domínio; não fazem update genérico.
 - `SUPPORT` não executa ação financeira, de pedido, frota ou lote.

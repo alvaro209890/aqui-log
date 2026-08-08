@@ -4,6 +4,13 @@ Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
 ## Fluxo cliente↔prestador nos planos — 2026-08-07
 
+## B2C-01B fatia 4 (`customerId`) — 2026-08-08
+
+- `GET /deliveries?customerId=` com validação UUID (`400` se inválido).
+- Filtro aplicado só a papéis admin; outros ignoram o param.
+- Dashboard: input Cliente + coluna (prefixo UUID); predicados + testes.
+- Backend 36 testes; builds/lints verdes. Falta QA browser.
+
 ## B2C-01B fatia 3 (faixa de peso) — 2026-08-08
 
 - `GET /deliveries?weightMin=&weightMax=` com validação (>=0, min≤max).

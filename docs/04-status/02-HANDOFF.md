@@ -1,28 +1,29 @@
 # Handoff vigente
 
-- **Data/hora:** 2026-08-08 (~00:20 BRT)
+- **Data/hora:** 2026-08-08 (~00:25 BRT)
 - **Agente:** Cursor Grok
-- **Tarefa:** `B2C-01B` fatia 3 — faixa de peso
+- **Tarefa:** `B2C-01B` fatia 4 — filtro por cliente
 - **Branch/commit:** `main` (a registrar)
 
 ## Resultado
 
-Filtros `weightMin`/`weightMax` (kg, inclusivos) na API e no dashboard.
-`B2C-01B` ainda `IN_PROGRESS` (falta filtro por cliente + QA browser).
+Filtro `customerId` (UUID) em `GET /deliveries` + input/coluna no dashboard.
+Param só aplica a admin/support; CUSTOMER/COURIER ignoram e seguem escopo do token.
+`B2C-01B` ainda `IN_PROGRESS` (falta QA browser).
 
 ## Evidências
 
 | Verificação | Resultado |
 | --- | --- |
-| jest backend | PASS 35/35 |
+| jest backend | PASS 36/36 |
 | build/lint backend + dashboard | PASS |
 | QA browser / BASE-04 | NÃO EXECUTADO |
 
 ## Próximo
 
-1. Fatia 4: filtro por `customerId` (cliente)
-2. Ou `BASE-04`
+1. QA browser de `B2C-01B` (fechar pacote) **ou**
+2. `BASE-04`
 
 ## Mensagem de retomada
 
-> `B2C-01B`: categoria + tamanho + peso ok. Falta cliente e QA browser.
+> `B2C-01B`: quatro filtros de código ok. Falta QA browser para DONE.

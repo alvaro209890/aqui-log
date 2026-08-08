@@ -45,6 +45,7 @@ export function DeliveriesPage({ token }: { token: string }) {
   const [packageSize, setPackageSize] = useState('');
   const [weightMin, setWeightMin] = useState('');
   const [weightMax, setWeightMax] = useState('');
+  const [customerId, setCustomerId] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -62,6 +63,7 @@ export function DeliveriesPage({ token }: { token: string }) {
         packageSize: packageSize || undefined,
         weightMin: weightMin || undefined,
         weightMax: weightMax || undefined,
+        customerId: customerId || undefined,
         page: p,
         limit: 20,
       })
@@ -160,6 +162,14 @@ export function DeliveriesPage({ token }: { token: string }) {
           />
         </label>
         <label>
+          Cliente (ID)
+          <input
+            value={customerId}
+            onChange={(e) => setCustomerId(e.target.value)}
+            placeholder="UUID do cliente"
+          />
+        </label>
+        <label>
           Entregador (ID)
           <input
             value={courier}
@@ -200,6 +210,7 @@ export function DeliveriesPage({ token }: { token: string }) {
                   <th>CATEGORIA</th>
                   <th>TAMANHO</th>
                   <th>PESO</th>
+                  <th>CLIENTE</th>
                   <th>COLETA</th>
                   <th>ENTREGA</th>
                   <th>ENTREGADOR</th>
@@ -221,6 +232,7 @@ export function DeliveriesPage({ token }: { token: string }) {
                         ? `${Number(item.weightKg)} kg`
                         : '—'}
                     </td>
+                    <td>{item.customerId?.slice(0, 8) ?? '—'}</td>
                     <td>{item.pickupAddress}</td>
                     <td>{item.deliveryAddress}</td>
                     <td>{item.courierId?.slice(0, 8) ?? '—'}</td>
