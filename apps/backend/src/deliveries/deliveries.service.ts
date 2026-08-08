@@ -101,11 +101,17 @@ export class DeliveriesService {
     for (const url of productPhotoUrls) {
       this.storage.assertAllowedProductPhotoUrl(url);
     }
+    // B2C-02: o preço agora considera peso e tamanho da encomenda, que o
+    // B2C-05 tornou obrigatórios. O modo default é IMMEDIATE; o agendado
+    // (SCHED-01) ainda não é escolhido pelo cliente.
     const quote = await this.pricing.quoteAsync({
       pickupLatitude: dto.pickupLatitude,
       pickupLongitude: dto.pickupLongitude,
       deliveryLatitude: dto.deliveryLatitude,
       deliveryLongitude: dto.deliveryLongitude,
+      fulfillmentMode: 'IMMEDIATE',
+      weightKg: dto.weightKg,
+      packageSize: dto.packageSize,
     });
     const delivery = await this.deliveries.save(
       this.deliveries.create({
@@ -124,6 +130,10 @@ export class DeliveriesService {
         // Server-side pricing always wins (client price fields ignored)
         priceCents: quote.priceCents,
         courierFeeCents: quote.courierFeeCents,
+        // B2C-02A: congela regra e valores usados (DEC-19).
+        pricingVersion: quote.pricingVersion,
+        pricingBreakdown: quote.breakdown,
+        fulfillmentMode: quote.breakdown.fulfillmentMode,
         collectionProofUrl: null,
         deliveryProofUrl: null,
         canceledAt: null,

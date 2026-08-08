@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { DeliveryStatus } from '../enums';
+import type { PricingBreakdown } from '../../pricing/pricing.types';
 
 @Entity('deliveries')
 export class Delivery {
@@ -114,6 +115,22 @@ export class Delivery {
 
   @Column({ name: 'courier_fee_cents', type: 'integer', default: 0 })
   courierFeeCents!: number;
+
+  // B2C-02A: regra e valores congelados na criação. Pedido anterior ao preço
+  // v2 fica com versão/breakdown nulos e continua legível.
+  @Column({ name: 'pricing_version', type: 'integer', nullable: true })
+  pricingVersion!: number | null;
+
+  @Column({ name: 'pricing_breakdown', type: 'jsonb', nullable: true })
+  pricingBreakdown!: PricingBreakdown | null;
+
+  @Column({
+    name: 'fulfillment_mode',
+    type: 'varchar',
+    length: 16,
+    default: 'IMMEDIATE',
+  })
+  fulfillmentMode!: string;
 
   @Column({ name: 'collection_proof_url', type: 'varchar', nullable: true })
   collectionProofUrl!: string | null;

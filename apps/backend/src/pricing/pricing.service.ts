@@ -2,7 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SettingsService } from '../settings/settings.module';
 import { calculatePricingBetweenPoints } from './pricing.calc';
-import type { PricingConfig, PricingResult } from './pricing.types';
+import type {
+  FulfillmentMode,
+  PricingConfig,
+  PricingResult,
+  SizeSurcharges,
+} from './pricing.types';
 
 @Injectable()
 export class PricingService {
@@ -30,6 +35,11 @@ export class PricingService {
       perKmCents: s.pricingPerKmCents,
       platformFeePercent: s.pricingPlatformFeePercent,
       minFeeCents: s.pricingMinFeeCents,
+      perKmImmediateCents: s.pricingPerKmImmediateCents,
+      perKmScheduledCents: s.pricingPerKmScheduledCents,
+      weightBands: s.pricingWeightBands,
+      aboveTopBandCents: s.pricingAboveTopBandCents,
+      sizeSurchargeCents: s.pricingSizeSurchargeCents,
     };
   }
 
@@ -53,6 +63,9 @@ export class PricingService {
     pickupLongitude: number;
     deliveryLatitude: number;
     deliveryLongitude: number;
+    fulfillmentMode?: FulfillmentMode;
+    weightKg?: number | null;
+    packageSize?: keyof SizeSurcharges | null;
   }): Promise<PricingResult> {
     return calculatePricingBetweenPoints(
       Number(params.pickupLatitude),
@@ -60,6 +73,11 @@ export class PricingService {
       Number(params.deliveryLatitude),
       Number(params.deliveryLongitude),
       await this.getConfigAsync(),
+      {
+        fulfillmentMode: params.fulfillmentMode,
+        weightKg: params.weightKg,
+        packageSize: params.packageSize,
+      },
     );
   }
 }
