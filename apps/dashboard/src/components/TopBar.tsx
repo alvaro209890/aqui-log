@@ -18,7 +18,7 @@ export function TopBar({
       </button>
       <label className="search">
         <Search size={18} />
-        <input placeholder="Buscar entrega, empresa ou entregador" />
+        <input placeholder="Buscar entrega, cliente ou entregador" />
       </label>
       <div className="top-actions">
         <button className="icon-button notification" aria-label="Notificacoes">

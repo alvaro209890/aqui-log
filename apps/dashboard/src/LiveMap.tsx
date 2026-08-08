@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import L from 'leaflet';
 import { io, type Socket } from 'socket.io-client';
 import type { DeliveryRecord } from './api';
+import { themeColors } from './theme';
 
 interface CourierPin {
   id: string;
@@ -29,15 +30,15 @@ function createDivIcon(svg: string, color: string) {
 
 const pickupIcon = createDivIcon(
   '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 2-6-2-6"/><path d="M22 10H14"/><path d="M8 21V13"/><path d="M3 21h18"/></svg>',
-  '#f97316',
+  themeColors.primaryStrong,
 );
 const deliveryIcon = createDivIcon(
   '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="10" x2="14" y1="6" y2="6"/></svg>',
-  '#6366f1',
+  themeColors.info,
 );
 const courierIcon = createDivIcon(
   '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4" r="1"/><path d="M5 14h.01"/><path d="M18 14h.01"/><circle cx="10" cy="17" r="4"/><path d="M14 21v-4"/></svg>',
-  '#22c55e',
+  themeColors.success,
 );
 
 export function LiveMap({ deliveries, token }: LiveMapProps) {
@@ -124,7 +125,11 @@ export function LiveMap({ deliveries, token }: LiveMapProps) {
         <Polyline
           key={r.id}
           positions={r.positions}
-          color={r.status === 'DELIVERED' ? '#9ca3af' : '#f97316'}
+          color={
+            r.status === 'DELIVERED'
+              ? themeColors.textTertiary
+              : themeColors.primary
+          }
           weight={2}
           dashArray={r.status === 'DELIVERED' ? '8 4' : undefined}
         />

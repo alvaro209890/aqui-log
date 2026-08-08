@@ -1,4 +1,5 @@
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
+import { themeColors } from '../theme';
 
 export function PerformanceGauge({
   score,
@@ -32,8 +33,8 @@ export function PerformanceGauge({
             cy="90%"
             stroke="none"
           >
-            <Cell fill="#24956e" />
-            <Cell fill="#e8ece9" />
+            <Cell fill={themeColors.primary} />
+            <Cell fill={themeColors.chartTrack} />
           </Pie>
         </PieChart>
       </ResponsiveContainer>

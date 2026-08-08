@@ -1,15 +1,7 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { chartSeriesColors } from '../theme';
 
-const COLORS = [
-  '#24956e',
-  '#4E83A1',
-  '#b0823d',
-  '#806b9e',
-  '#ea7856',
-  '#65d6ad',
-  '#9aa8a2',
-  '#e17b59',
-];
+const COLORS = chartSeriesColors;
 
 export function DeliveriesByStatus({
   data,

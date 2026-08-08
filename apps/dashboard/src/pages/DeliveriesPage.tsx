@@ -267,7 +267,7 @@ export function DeliveriesPage({ token }: { token: string }) {
                             setCourierId('');
                           }}
                         >
-                          Assign
+                          Atribuir
                         </button>
                       )}
                       {!['DELIVERED', 'CANCELED'].includes(item.status) && (

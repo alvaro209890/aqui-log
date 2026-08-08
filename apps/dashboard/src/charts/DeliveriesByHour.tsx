@@ -7,6 +7,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { themeColors } from '../theme';
 
 export function DeliveriesByHour({
   data,
@@ -22,17 +23,17 @@ export function DeliveriesByHour({
     <div className="chart-wrap" data-testid="chart-deliveries-by-hour">
       <ResponsiveContainer width="100%" height={240}>
         <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e8ece9" />
-          <XAxis dataKey="hour" tick={{ fontSize: 10 }} stroke="#9aa8a2" />
-          <YAxis allowDecimals={false} tick={{ fontSize: 10 }} stroke="#9aa8a2" />
+          <CartesianGrid strokeDasharray="3 3" stroke={themeColors.chartGrid} />
+          <XAxis dataKey="hour" tick={{ fontSize: 10 }} stroke={themeColors.chartAxis} />
+          <YAxis allowDecimals={false} tick={{ fontSize: 10 }} stroke={themeColors.chartAxis} />
           <Tooltip />
           <Line
             type="monotone"
             dataKey="count"
             name="Entregas"
-            stroke="#24956e"
+            stroke={themeColors.primary}
             strokeWidth={2.5}
-            dot={{ r: 3, fill: '#65d6ad' }}
+            dot={{ r: 3, fill: themeColors.primary }}
           />
         </LineChart>
       </ResponsiveContainer>
