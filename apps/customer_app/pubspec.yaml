@@ -1,4 +1,4 @@
-name: aqui_log_empresa
+name: aqui_log_cliente
 description: Aplicativo do cliente para pedir entregas e acompanhar em tempo real (Aqui Log B2C).
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.

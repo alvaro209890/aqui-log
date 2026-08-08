@@ -4,8 +4,8 @@
 > **Status:** fonte de verdade para prioridade, dependências e ordem de execução
 > **Rodada atual:** decisão de produto — motoboy aceita lote multi-pedido (inclusive
 > agendado intermunicipal) e dashboard monitora a frota. **Somente documentação**:
-> `PLANO_TRANSPORTADORA.md` e `PLANO_FROTA_DASHBOARD.md` atualizados/novos; nada de código.
-> **Produto principal:** cliente pessoa física → motoboy, sem empresa no fluxo
+> `PLANO_LOTE_MULTI_PEDIDO.md` e `PLANO_FROTA_DASHBOARD.md` atualizados/novos; nada de código.
+> **Produto principal:** cliente pessoa física → motoboy, sem intermediário no fluxo
 > **Regra operacional:** desenvolvimento e validação local primeiro; nenhuma cloud é ligada sem pedido explícito do Álvaro
 
 ## 1. Objetivo atual
@@ -29,7 +29,7 @@ cliente cadastra → descreve encomenda → recebe preço do servidor → cria p
 | `PLANO_CONFIANCA_E_PRECO.md` | Especificação de encomenda, preço, avaliações, SMS e oferta | Não; detalha `B2C-01` a `B2C-04` |
 | `DIRETRIZES_VISUAIS.md` | Paleta e regras da futura identidade laranja | Não; detalha `UX-01` |
 | `PLANO_PAGAMENTOS.md` | Ledger, reserva, estorno e gateway | Não; detalha `PAY-01` e `PAY-02` |
-| `PLANO_TRANSPORTADORA.md` | Lote multi-pedido (motoboy), blocos agendados intermunicipais, anti-atraso, agrupamento automático | Não; detalha `LOT-01/02` e `TRIP-00/01/02` |
+| `PLANO_LOTE_MULTI_PEDIDO.md` | Lote multi-pedido (motoboy), blocos agendados intermunicipais, anti-atraso, agrupamento automático | Não; detalha `LOT-01/02` e `TRIP-00/01/02` |
 | `PLANO_FROTA_DASHBOARD.md` | Monitoramento de frota em tempo real no dashboard web | Não; detalha `FROTA-01/02` |
 | `PLANO_ADMIN.md` | Painel admin com controle operacional total (pedidos, motoboys, clientes, lotes, financeiro, configurações) | Não; detalha `ADMIN-01..07` |
 | `PLANO_SUPORTE_RECLAMACOES.md` | Suporte e reclamações com dossiê automático, auto-resolução e juiz rápido | Não; detalha `SUP-01..05` |
@@ -52,7 +52,7 @@ cliente cadastra → descreve encomenda → recebe preço do servidor → cria p
 
 | Tema | Decisão atual |
 | --- | --- |
-| Produto | O produto principal é **B2C**. Empresa/B2B permanece apenas por compatibilidade até existir plano de remoção ou reativação. |
+| Produto | Produto **B2C**: três perfis — prestador (motoboy), cliente e admin. Modelo empresa/B2B removido em 2026-08-07. |
 | Preço | Calculado e congelado pelo servidor. O cliente nunca define `priceCents` ou `courierFeeCents`. |
 | Persistência | PostgreSQL continua fonte de verdade; Redis continua suporte para locks, jobs e settings. |
 | Encomenda | Campos próprios entregues em 2026-08-07; manter fallback de `notes` até medir que o legado não é mais usado. |
@@ -262,7 +262,7 @@ Uma fase só pode mudar para ✅ quando cumprir o que for aplicável:
 | Reoferta infinita | Limite de anéis/rodadas e estado terminal recuperável |
 | Misturar cor de marca com status | Tokens semânticos e QA conforme `DIRETRIZES_VISUAIS.md` |
 | Ligar cloud cedo demais | Gates `OPS-02/03` dependem de pedido explícito e credenciais |
-| Construir transportadora sem densidade | Gate de descoberta `TRIP-00` antes de código operacional |
+| Construir rota multi-pedido sem densidade | Gate de descoberta `TRIP-00` antes de código operacional |
 | Dupla oferta do mesmo pedido (individual × lote) | Reserva global por `delivery_id` + aceite atômico com locks |
 | Atraso em lote multi-pedido | Regras D-R1..D-R13, ETAs recalculados, redespacho e índice de pontualidade |
 | Expor localização em tempo real sem controle | Permissão "ver frota" distinta, exposição só em viagem ativa, audit log e ciência do motoboy |
@@ -283,4 +283,4 @@ Ao retomar:
 3. manter `notes` como fallback de leitura e foto opcional até `DEC-01` ser confirmada;
 4. concluir `UX-01C/UX-02` com dashboard laranja e QA visual em dispositivo.
 
-Não iniciar Firebase, deploy, gateway ou transportadora como parte desse pacote.
+Não iniciar Firebase, deploy, gateway ou rota multi-pedido como parte desse pacote.

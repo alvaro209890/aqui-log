@@ -18,10 +18,6 @@ export class Delivery {
   code!: string;
 
   @Index()
-  @Column({ name: 'company_id', type: 'uuid', nullable: true })
-  companyId!: string | null;
-
-  @Index()
   @Column({ name: 'customer_id', type: 'uuid', nullable: true })
   customerId!: string | null;
 

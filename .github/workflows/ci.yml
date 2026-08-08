@@ -106,7 +106,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        app: [company_app, courier_app]
+        app: [customer_app, courier_app]
     steps:
       - uses: actions/checkout@v5
       - uses: subosito/flutter-action@v2

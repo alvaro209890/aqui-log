@@ -7,9 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
-import { CompaniesModule } from './companies/companies.module';
 import { CouriersModule } from './couriers/couriers.module';
-import { Company } from './database/entities/company.entity';
 import { Courier } from './database/entities/courier.entity';
 import { Customer } from './database/entities/customer.entity';
 import { AuditLog } from './database/entities/audit-log.entity';
@@ -56,7 +54,6 @@ import { UsersModule } from './users/users.module';
         database: config.get('DATABASE_NAME', 'aqui_log'),
         entities: [
           User,
-          Company,
           Courier,
           Customer,
           Delivery,
@@ -85,7 +82,6 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     NotificationsModule,
     FinanceModule,
-    CompaniesModule,
     CouriersModule,
     DeliveriesModule,
     DashboardModule,

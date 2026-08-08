@@ -38,7 +38,6 @@ async function seed() {
         passwordHash,
         role: UserRole.SUPER_ADMIN,
         status: AccountStatus.ACTIVE,
-        companyId: null,
       }),
     );
 

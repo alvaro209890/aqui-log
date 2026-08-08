@@ -69,7 +69,7 @@ Toolchain usada nos testes Flutter: Flutter 3.44.9 e Dart 3.12.2.
 - foto continua opcional até `DEC-01`;
 - `notes` legado não será removido nesta versão;
 - cloud Render/Vercel/Firebase continua somente estruturada;
-- pagamentos, PIX, SMS e transportadora permanecem fora desta entrega.
+- pagamentos, PIX, SMS e rotas multi-pedido permanecem fora desta entrega.
 
 ## Próxima retomada
 

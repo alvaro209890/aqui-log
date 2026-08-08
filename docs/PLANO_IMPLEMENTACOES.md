@@ -6,6 +6,7 @@
 > e apps descritos como faltantes foram entregues e estão registrados em
 > `SESSAO_IMPLEMENTACAO.md` e `MVP_COVERAGE.md`. A ordem vigente está em
 > **`ROADMAP.md`**; detalhes atuais do produto estão em `PLANO_B2C.md`.
+> **Em 2026-08-07 o modelo empresa/B2B foi removido do produto** (ver `PLANO_B2C.md`).
 
 > Base atual: commit `6ecc189` (mapa Leaflet + tracking WebSocket no dashboard)
 > Gerado em: 15/07/2026
@@ -96,7 +97,7 @@ apps/dashboard/src/
 ```
 
 ### 5. COMPANY APP (Flutter) — Telas
-**Base:** `apps/company_app/lib/`
+**Base:** `apps/customer_app/lib/`
 
 ```
 lib/
@@ -202,7 +203,7 @@ pnpm dev:api             # Backend porta 3001
 pnpm dev:dashboard       # Frontend porta 5173
 
 # APKs Flutter
-cd apps/company_app && flutter build apk --debug
+cd apps/customer_app && flutter build apk --debug
 cd apps/courier_app && flutter build apk --debug
 ```
 

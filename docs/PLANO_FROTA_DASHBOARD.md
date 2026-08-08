@@ -2,7 +2,7 @@
 
 > **Atualizado:** 2026-08-07
 > **Status:** design aprovado para planejamento (sem implementar ainda — documentação apenas)
-> **Dependências:** `PLANO_TRANSPORTADORA.md` (viagens/lotes), tracking atual (`tracking.gateway.ts`, `LiveMap.tsx`)
+> **Dependências:** `PLANO_LOTE_MULTI_PEDIDO.md` (viagens/lotes), tracking atual (`tracking.gateway.ts`, `LiveMap.tsx`)
 > **Roadmap:** `FROTA-01`, `FROTA-02`
 
 ## 1. Objetivo
@@ -30,7 +30,7 @@ Hoje o evento `courier:location` **exige `deliveryId`** e é rejeitado sem entre
 
 | Endpoint | Conteúdo |
 | --- | --- |
-| `GET /fleet/couriers` | Lista: id, nome, status, lat/lng, `lastSeenAt`, bateria, disponibilidade, `currentDeliveryId?`, `currentTripId?`, estado derivado. Filtros por estado/empresa. |
+| `GET /fleet/couriers` | Lista: id, nome, status, lat/lng, `lastSeenAt`, bateria, disponibilidade, `currentDeliveryId?`, `currentTripId?`, estado derivado. Filtros por estado. |
 | `GET /fleet/couriers/:id` | Detalhe: posição, bateria, pedido/viagem atual, ETA, atraso, janela. |
 | `GET /fleet/couriers/:id/track?from=&to=` | Trilha real do período, com amostragem para exibição (não devolver 2.000 pontos crus). |
 | `GET /fleet/alerts?active=true` | Alertas ativos com ack. |
@@ -94,7 +94,7 @@ Hoje o evento `courier:location` **exige `deliveryId`** e é rejeitado sem entre
 
 ### Permissões
 
-- Só `SUPER_ADMIN/ADMIN/SUPPORT` (e admin da empresa, se aplicável) veem a frota; permissão "ver frota" **distinta** de "ver entrega". `SUPPORT` tem **somente leitura** na frota (nunca cancela/reembolsa sozinho — ver `PLANO_ADMIN.md`). Posição exposta **só em detalhe durante viagens ativas**; ocioso aparece coarsificado (seção 4). Acesso registrado em audit log. Motoboy tem ciência no cadastro (LGPD, seção 6).
+- Só `SUPER_ADMIN/ADMIN/SUPPORT` veem a frota; permissão "ver frota" **distinta** de "ver entrega". `SUPPORT` tem **somente leitura** na frota (nunca cancela/reembolsa sozinho — ver `PLANO_ADMIN.md`). Posição exposta **só em detalhe durante viagens ativas**; ocioso aparece coarsificado (seção 4). Acesso registrado em audit log. Motoboy tem ciência no cadastro (LGPD, seção 6).
 - **Guards de estado:** nenhuma ação do mapa (cancelar, reofertar, reordenar parada) fura a máquina de estados — cancelar exige pedido ≤ `AT_PICKUP` (pós-coleta só com fluxo de devolução), reordenação roda o sequenciador e revalida D-R1..D-R13. Toda ação gera evento em `trip_events` e transação reversa no ledger quando mexe em valor.
 
 ## 5. Regras de alerta (configuráveis server-side)

@@ -63,14 +63,12 @@ export class TrackingGateway
         sub: string;
         email: string;
         role: UserRole;
-        companyId: string | null;
         customerId?: string | null;
       }>(token);
       this.authenticatedUsers.set(client.id, {
         id: payload.sub,
         email: payload.email,
         role: payload.role,
-        companyId: payload.companyId,
         customerId: payload.customerId ?? null,
       });
     } catch {
@@ -139,7 +137,6 @@ export class TrackingGateway
       )
     )
       return true;
-    if (user.companyId === delivery.companyId) return true;
     if (user.role !== UserRole.COURIER) return false;
     const courier = await this.couriers.findOneBy({ userId: user.id });
     return courier?.id === delivery.courierId;

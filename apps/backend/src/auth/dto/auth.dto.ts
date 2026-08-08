@@ -40,31 +40,6 @@ export class ResetPasswordDto {
   password!: string;
 }
 
-export class RegisterCompanyDto {
-  @IsString()
-  @IsNotEmpty()
-  ownerName!: string;
-
-  @IsEmail()
-  email!: string;
-
-  @IsString()
-  @MinLength(8)
-  password!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  legalName!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  tradeName!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  document!: string;
-}
-
 export class RegisterCourierDto {
   @IsString()
   @IsNotEmpty()

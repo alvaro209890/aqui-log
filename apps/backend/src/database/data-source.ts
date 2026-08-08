@@ -1,7 +1,6 @@
 import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import { AuditLog } from './entities/audit-log.entity';
-import { Company } from './entities/company.entity';
 import { Courier } from './entities/courier.entity';
 import { Customer } from './entities/customer.entity';
 import { DeliveryEvent } from './entities/delivery-event.entity';
@@ -26,7 +25,6 @@ export default new DataSource({
   database: process.env.DATABASE_NAME ?? 'aqui_log',
   entities: [
     User,
-    Company,
     Courier,
     Customer,
     Delivery,

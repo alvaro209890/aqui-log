@@ -6,7 +6,6 @@ import {
   ForgotPasswordDto,
   LoginDto,
   RefreshTokenDto,
-  RegisterCompanyDto,
   RegisterCourierDto,
   RegisterCustomerDto,
   ResetPasswordDto,
@@ -42,11 +41,6 @@ export class AuthController {
   @Post('reset-password')
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.auth.resetPassword(dto);
-  }
-
-  @Post('register/company')
-  registerCompany(@Body() dto: RegisterCompanyDto) {
-    return this.auth.registerCompany(dto);
   }
 
   @Post('register/courier')

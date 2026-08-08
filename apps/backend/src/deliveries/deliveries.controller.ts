@@ -32,7 +32,7 @@ export class DeliveriesController {
   constructor(private readonly deliveries: DeliveriesService) {}
 
   @Post()
-  @Roles(UserRole.COMPANY_OWNER, UserRole.COMPANY_USER, UserRole.CUSTOMER)
+  @Roles(UserRole.CUSTOMER)
   create(
     @Body() dto: CreateDeliveryDto,
     @Req() req: Request & { user: AuthenticatedUser },
@@ -44,7 +44,6 @@ export class DeliveriesController {
   findAll(
     @Req() req: Request & { user: AuthenticatedUser },
     @Query('status') status?: string,
-    @Query('company') company?: string,
     @Query('courier') courier?: string,
     @Query('date') date?: string,
     @Query('page') page?: string,
@@ -52,7 +51,6 @@ export class DeliveriesController {
   ) {
     return this.deliveries.findAll(req.user, {
       status,
-      company,
       courier,
       date,
       page,
@@ -130,8 +128,6 @@ export class DeliveriesController {
     UserRole.SUPER_ADMIN,
     UserRole.ADMIN,
     UserRole.COURIER,
-    UserRole.COMPANY_OWNER,
-    UserRole.COMPANY_USER,
     UserRole.CUSTOMER,
   )
   updateStatus(
@@ -143,7 +139,7 @@ export class DeliveriesController {
   }
 
   @Post(':id/rating')
-  @Roles(UserRole.COMPANY_OWNER, UserRole.COMPANY_USER, UserRole.CUSTOMER)
+  @Roles(UserRole.CUSTOMER)
   rate(
     @Param('id') id: string,
     @Body() dto: RateDeliveryDto,

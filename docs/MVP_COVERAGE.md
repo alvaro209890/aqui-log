@@ -2,22 +2,28 @@
 
 Legenda: **funcional** = fluxo exercitado pela API/smoke test ou painel/apps; **fundacao** = contrato/cliente ou interface existe, mas falta completar a experiencia; **planejado** = fora desta entrega.
 
-> **Produto principal desde 2026-08-04:** B2C cliente → motoboy. A seção “Empresa”
-> abaixo documenta compatibilidade B2B legada, não a prioridade atual. A fila de
-> execução vigente está em `ROADMAP.md`.
+> **Produto desde 2026-08-04:** B2C cliente → motoboy. **Em 2026-08-07 o modelo
+> empresa/B2B foi removido** (código, rotas e colunas). A seção abaixo é registro
+> histórico do estado de julho/2026. A fila de execução vigente está em `ROADMAP.md`.
 
-## Empresa
+## Empresa (removida em 2026-08-07)
+
+O modelo B2B legado — cadastro de empresa (`/auth/register/company`), perfis
+`COMPANY_OWNER`/`COMPANY_USER`, página Companies no painel e colunas
+`company_id` — foi **removido** na limpeza de 2026-08-07 (migration
+`RemoveCompanyModel1785200000000`). Os únicos perfis são: **prestador (motoboy),
+cliente e admin**.
 
 | Funcionalidade | Estado | Observacao |
 | --- | --- | --- |
-| Cadastro, aprovacao e login | Funcional | API, perfis e app Flutter com tela de login |
-| Usuarios da empresa | Funcional | Proprietario lista e cria operadores |
-| Solicitar e agendar entrega | Funcional | App: tela `new_delivery` + API |
-| Rastreamento em tempo real | Funcional no backend | Painel com mapa Leaflet; app empresa sem mapa GPS nativo |
+| Cadastro, aprovacao e login | Removido | Perfis B2B não existem mais no enum |
+| Usuarios da empresa | Removido | `POST /users` (operador) e `GET /users` só admin |
+| Solicitar e agendar entrega | B2C | Cliente solicita; agendamento simples existe |
+| Rastreamento em tempo real | Funcional no backend | Painel com mapa; app cliente segue via tracking |
 | Historico | Funcional | Eventos cronologicos; detalhe no app |
-| Financeiro e relatorios | Funcional basico | Totais API + tela `reports` no app empresa |
+| Financeiro e relatorios | Funcional basico | Totais API + tela `reports` no app |
 | Notificacoes | Funcional na API | Push nativo ainda planejado |
-| Avaliacao | Funcional | Uma avaliacao por entrega concluida |
+| Avaliacao | Funcional | Uma avaliacao por entrega concluida (cliente) |
 | Configuracoes | Fundacao | Tela `settings` no app; politicas avancadas ainda leves |
 
 ## Entregador
@@ -39,7 +45,7 @@ Legenda: **funcional** = fluxo exercitado pela API/smoke test ou painel/apps; **
 | --- | --- | --- |
 | Login, KPIs e entregas | Funcional | 7 metricas com variacao % + tabela |
 | Graficos (hora, status, gauge) | Funcional | recharts + endpoints `/dashboard/charts/*` e `/performance` |
-| Empresas, entregadores e usuarios | Funcional | Paginas Companies e Couriers no sidebar |
+| Entregadores e usuarios | Funcional | Paginas Couriers e Users no sidebar |
 | Entregas com filtros | Funcional | Pagina Deliveries + query params na API |
 | Mapa em tempo real | Funcional | Leaflet + WebSocket no painel |
 | Financeiro, relatorios e avaliacoes | Funcional basico | Paginas Finance, Reports, Ratings |
@@ -90,7 +96,7 @@ Legenda: **funcional** = fluxo exercitado pela API/smoke test ou painel/apps; **
 
 - Paginas Usuarios, Auditoria, Configuracoes (settings em Redis)
 - Entregas: despachar / assign / cancelar no painel
-- Empresas e entregadores: reject / suspend / reativar
+- Entregadores: reject / suspend / reativar
 - Relatorios com `from`/`to` via `GET /dashboard/reports`
 - Paginacao opcional (`page`/`limit`) em listagens admin
 
@@ -103,7 +109,7 @@ Legenda: **funcional** = fluxo exercitado pela API/smoke test ou painel/apps; **
 
 ## B2C — Fase App Cliente (2026-08-04) — marco histórico anterior ao backend B2C
 
-- `apps/company_app` reformulado para **cliente** (label "Aqui Log Cliente", applicationId `br.com.aquilog.aqui_log_cliente`)
+- `apps/customer_app` (antigo `company_app`) reformulado para **cliente** (label "Aqui Log Cliente", applicationId `br.com.aquilog.aqui_log_cliente`)
 - Novo pedido: tipo de encomenda (7 categorias), tamanho P/M/G, peso kg, alcance (mesma cidade / outra cidade ou municipio), foto (image_picker + upload storage), enderecos com geocode, destinatario
 - Metadados da encomenda serializados no campo `notes` (`lib/order_meta.dart`) — `notes` exposto no `DeliverySummary` do `aqui_log_core`
 - Abas: Inicio · Pedir · Entregas · Perfil; lista/detalhe mostram a encomenda parseada (com foto)
@@ -114,11 +120,11 @@ Legenda: **funcional** = fluxo exercitado pela API/smoke test ou painel/apps; **
 
 - `POST /auth/register/customer`: cliente pessoa fisica auto-aprovado, devolve tokens (auto-login)
 - Role `CUSTOMER` no enum (`users_role_enum` + migration), entidade/tabela `customers`, `users.customer_id`
-- `deliveries.company_id` nullable + `deliveries.customer_id`; `ratings.company_id` nullable + `customer_id`
+- `deliveries.customer_id` + `ratings.customer_id` (colunas `company_id` do B2B removidas em 2026-08-07)
 - **Auto-dispatch no create**: pedido do cliente publicado direto como oferta pros motoboys disponiveis (sem admin); sem motoboy fica REQUESTED e redespacha
 - Cliente: lista/cancela/avalia so os proprios pedidos (findAll/ensureCanView/ensureCanTransition/rate por customerId)
 - App cliente: cadastro + auto-login ("Criar conta de cliente")
 - App motoboy: card da oferta mostra encomenda (tipo/tamanho/peso/alcance/foto) via `OrderMeta`
 - `OrderMeta` movido p/ `packages/aqui_log_core` (compartilhado)
 - Smoke e2e atualizado p/ auto-dispatch (fallback dispatch manual); validado ao vivo: register → create → OFFERED → accept → ACCEPTED
-- Testes: backend 27/27, cliente 10/10, motoboy 7/7; planos futuros: PLANO_TRANSPORTADORA / PLANO_PAGAMENTOS / PLANO_CONFIANCA_E_PRECO
+- Testes: backend 27/27, cliente 10/10, motoboy 7/7; planos futuros: PLANO_LOTE_MULTI_PEDIDO / PLANO_PAGAMENTOS / PLANO_CONFIANCA_E_PRECO

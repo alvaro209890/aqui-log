@@ -1,7 +1,6 @@
 # Aqui Log
 
 Plataforma B2C de logistica urbana: cliente, motoboy, despacho e operacao em tempo real.
-
 ## Documentacao principal
 
 | Doc | Conteudo |
@@ -11,7 +10,7 @@ Plataforma B2C de logistica urbana: cliente, motoboy, despacho e operacao em tem
 | [PLANO_B2C](docs/PLANO_B2C.md) | Estado funcional e visao do produto cliente para motoboy |
 | [PLANO_CONFIANCA_E_PRECO](docs/PLANO_CONFIANCA_E_PRECO.md) | Encomenda estruturada, preco v2, confianca e reoferta |
 | [PLANO_PAGAMENTOS](docs/PLANO_PAGAMENTOS.md) | Ledger, reserva, estorno e futuro PIX |
-| [PLANO_TRANSPORTADORA](docs/PLANO_TRANSPORTADORA.md) | Descoberta antes de rotas multi-pedido |
+| [PLANO_LOTE_MULTI_PEDIDO](docs/PLANO_LOTE_MULTI_PEDIDO.md) | Descoberta antes de rotas multi-pedido |
 | [DIRETRIZES_VISUAIS](docs/DIRETRIZES_VISUAIS.md) | Tema laranja inspirado no AquiResolve; mobile implementado, dashboard pendente |
 | [ENTREGA MOBILE B2C 2026-08-07](docs/ENTREGA_MOBILE_B2C_2026-08-07.md) | Escopo, contrato, testes, limites e continuidade desta entrega |
 | [DEPLOY_TARGETS](docs/DEPLOY_TARGETS.md) | Render / Vercel / Firebase (estrutura) |
@@ -44,7 +43,7 @@ Nenhum projeto/credencial esta conectado. Ver [HANDOFF](docs/HANDOFF.md).
 apps/
   backend/          API NestJS
   dashboard/        Painel React + TypeScript
-  company_app/      Flutter empresa
+  customer_app/     Flutter cliente
   courier_app/      Flutter entregador
 packages/
   aqui_log_core/    Cliente HTTP mobile
@@ -86,7 +85,7 @@ pnpm smoke
 Flutter:
 
 ```bash
-cd apps/company_app && flutter analyze && flutter test
+cd apps/customer_app && flutter analyze && flutter test
 cd apps/courier_app && flutter analyze && flutter test
 cd packages/aqui_log_core && dart analyze && dart test
 ```

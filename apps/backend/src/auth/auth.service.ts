@@ -9,7 +9,6 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { compare, hash } from 'bcryptjs';
 import { DataSource, IsNull, MoreThan, Repository } from 'typeorm';
-import { Company } from '../database/entities/company.entity';
 import { Courier } from '../database/entities/courier.entity';
 import { Customer } from '../database/entities/customer.entity';
 import { PasswordResetToken } from '../database/entities/password-reset-token.entity';
@@ -21,7 +20,6 @@ import {
   ForgotPasswordDto,
   LoginDto,
   RefreshTokenDto,
-  RegisterCompanyDto,
   RegisterCourierDto,
   RegisterCustomerDto,
   ResetPasswordDto,
@@ -149,33 +147,6 @@ export class AuthService {
     return { ok: true };
   }
 
-  async registerCompany(dto: RegisterCompanyDto) {
-    await this.ensureEmailAvailable(dto.email);
-    return this.dataSource.transaction(async (manager) => {
-      const company = await manager.save(
-        Company,
-        manager.create(Company, {
-          legalName: dto.legalName,
-          tradeName: dto.tradeName,
-          document: dto.document.replace(/\D/g, ''),
-          status: AccountStatus.PENDING,
-        }),
-      );
-      const user = await manager.save(
-        User,
-        manager.create(User, {
-          name: dto.ownerName,
-          email: dto.email.toLowerCase(),
-          passwordHash: await hash(dto.password, 12),
-          role: UserRole.COMPANY_OWNER,
-          status: AccountStatus.PENDING,
-          companyId: company.id,
-        }),
-      );
-      return { id: user.id, companyId: company.id, status: user.status };
-    });
-  }
-
   async registerCourier(dto: RegisterCourierDto) {
     await this.ensureEmailAvailable(dto.email);
     return this.dataSource.transaction(async (manager) => {
@@ -187,7 +158,6 @@ export class AuthService {
           passwordHash: await hash(dto.password, 12),
           role: UserRole.COURIER,
           status: AccountStatus.PENDING,
-          companyId: null,
         }),
       );
       const courier = await manager.save(
@@ -217,7 +187,6 @@ export class AuthService {
           role: UserRole.CUSTOMER,
           // Cliente pessoa física: auto-aprovado, sem fila de admin
           status: AccountStatus.ACTIVE,
-          companyId: null,
           customerId: null,
         }),
       );
@@ -248,7 +217,6 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role,
-      companyId: user.companyId,
       customerId: user.customerId,
     });
     const rawRefresh = generateRawToken();
@@ -272,7 +240,6 @@ export class AuthService {
         name: user.name,
         email: user.email,
         role: user.role,
-        companyId: user.companyId,
         customerId: user.customerId,
       },
     };

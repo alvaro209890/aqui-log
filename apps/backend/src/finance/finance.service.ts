@@ -1,15 +1,10 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import type { AuthenticatedUser } from '../auth/jwt.strategy';
 import { Courier } from '../database/entities/courier.entity';
 import { Delivery } from '../database/entities/delivery.entity';
 import { WalletTransaction } from '../database/entities/wallet-transaction.entity';
-import { DeliveryStatus, TransactionType, UserRole } from '../database/enums';
+import { DeliveryStatus, TransactionType } from '../database/enums';
 
 @Injectable()
 export class FinanceService {
@@ -59,7 +54,7 @@ export class FinanceService {
     return { balanceCents, entries };
   }
 
-  async summary(current: AuthenticatedUser) {
+  async summary() {
     const query = this.deliveries
       .createQueryBuilder('delivery')
       .select('COALESCE(SUM(delivery.priceCents), 0)', 'grossCents')
@@ -70,15 +65,6 @@ export class FinanceService {
       .addSelect('COUNT(*)', 'deliveredCount')
       .where('delivery.status = :status', { status: DeliveryStatus.DELIVERED });
 
-    if (
-      [UserRole.COMPANY_OWNER, UserRole.COMPANY_USER].includes(current.role)
-    ) {
-      if (!current.companyId)
-        throw new ForbiddenException('Usuario sem empresa vinculada');
-      query.andWhere('delivery.companyId = :companyId', {
-        companyId: current.companyId,
-      });
-    }
     const result = await query.getRawOne<{
       grossCents: string;
       courierCostCents: string;

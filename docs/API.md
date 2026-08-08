@@ -12,7 +12,7 @@ Rotas protegidas: `Authorization: Bearer <accessToken>`
 
 | Metodo | Rota | Uso |
 | --- | --- | --- |
-| `POST` | `/auth/register/company` | Empresa e proprietario pendentes |
+| `POST` | `/auth/register/customer` | Cliente pessoa física, auto-aprovado, devolve tokens |
 | `POST` | `/auth/register/courier` | Entregador, veiculo e URLs de documentos pendentes |
 | `POST` | `/auth/login` | Access + **refresh** token |
 | `POST` | `/auth/refresh` | Troca refresh valido por novo par (refresh antigo revogado) |
@@ -20,9 +20,7 @@ Rotas protegidas: `Authorization: Bearer <accessToken>`
 | `POST` | `/auth/forgot-password` | Sempre 200; em local o token vai no log do backend |
 | `POST` | `/auth/reset-password` | Body `{ token, password }` |
 | `GET` | `/auth/me` | Contexto autenticado |
-| `GET/POST` | `/users` | Lista/cria usuarios da empresa |
-| `GET` | `/companies` | Lista administrativa |
-| `PATCH` | `/companies/:id/approve` | Aprova empresa e usuarios |
+| `GET` | `/users` | Lista administrativa (somente admin) |
 | `GET` | `/couriers` | Lista administrativa |
 | `PATCH` | `/couriers/:id/approve` | Aprova entregador |
 | `PATCH` | `/couriers/me/availability` | Disponibilidade do entregador |
@@ -85,7 +83,7 @@ Ofertas expiram em `OFFER_TTL_SECONDS` (default 120). Job a cada 10s expira e te
 Namespace Socket.IO: `/tracking`.
 
 1. Conecte com `auth: { token: '<jwt>' }`.
-2. Empresa/admin envia `delivery:watch` com `{ deliveryId }`.
+2. Cliente/admin envia `delivery:watch` com `{ deliveryId }`.
 3. Entregador vinculado envia `courier:location` com `{ deliveryId, latitude, longitude }`.
 4. Observadores recebem `delivery:location`.
 

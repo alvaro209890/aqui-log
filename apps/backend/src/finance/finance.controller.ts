@@ -16,14 +16,9 @@ export class FinanceController {
   constructor(private readonly finance: FinanceService) {}
 
   @Get('summary')
-  @Roles(
-    UserRole.SUPER_ADMIN,
-    UserRole.ADMIN,
-    UserRole.COMPANY_OWNER,
-    UserRole.COMPANY_USER,
-  )
-  summary(@Req() req: Request & { user: AuthenticatedUser }) {
-    return this.finance.summary(req.user);
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  summary() {
+    return this.finance.summary();
   }
 
   @Get('statement')

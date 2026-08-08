@@ -57,17 +57,6 @@ class AquiLogApiClient {
     refreshToken = null;
   }
 
-  Future<Map<String, dynamic>> registerCompany(
-    Map<String, dynamic> form,
-  ) async =>
-      (await _request(
-            'POST',
-            '/auth/register/company',
-            body: form,
-            auth: false,
-          ))
-          as Map<String, dynamic>;
-
   Future<Map<String, dynamic>> registerCourier(
     Map<String, dynamic> form,
   ) async =>

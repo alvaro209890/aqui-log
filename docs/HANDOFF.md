@@ -30,7 +30,7 @@ O Álvaro decidiu duas capacidades novas, **apenas em plano (nenhum código nest
 
 1. **Motoboy aceita vários pedidos juntos** — inclusive **lotes agendados de um município
    para outro**, com **lógica anti-atraso** (folgas, janelas, ETAs, alertas, redespacho,
-   índice de pontualidade). Plano expandido: **`docs/PLANO_TRANSPORTADORA.md`** (fases
+   índice de pontualidade). Plano expandido: **`docs/PLANO_LOTE_MULTI_PEDIDO.md`** (fases
    `LOT-01`/`LOT-02` no roadmap). O agrupamento **automático** da plataforma continua
    atrás do gate `TRIP-00`.
 2. **Dashboard monitora a frota** — localização dos prestadores em tempo real, se cada
@@ -39,7 +39,7 @@ O Álvaro decidiu duas capacidades novas, **apenas em plano (nenhum código nest
 
 Pré-requisito técnico já identificado: desacoplar o heartbeat `courier:location` de
 `deliveryId` e criar histórico de posição (`courier_positions`). Decisões pendentes
-listadas em `PLANO_TRANSPORTADORA.md` §12 e `PLANO_FROTA_DASHBOARD.md` §8 (`DEC-08..12`
+listadas em `PLANO_LOTE_MULTI_PEDIDO.md` §12 e `PLANO_FROTA_DASHBOARD.md` §8 (`DEC-08..12`
 no roadmap).
 
 ## Atualização de entrega — 2026-08-07
@@ -77,15 +77,14 @@ principal da marca**, bases neutras e cores semânticas preservadas.
 
 O Álvaro decidiu migrar o produto para **B2C direto** (cliente pessoa física → motoboy,
 sem empresa no meio). Plano completo: **`docs/PLANO_B2C.md`** (decisões pendentes §5).
-Planos futuros: `docs/PLANO_TRANSPORTADORA.md`, `docs/PLANO_PAGAMENTOS.md`,
+Planos futuros: `docs/PLANO_LOTE_MULTI_PEDIDO.md`, `docs/PLANO_PAGAMENTOS.md`,
 `docs/PLANO_CONFIANCA_E_PRECO.md`.
 
 **Já implementado (2 rodadas de commits `B2C`):**
 - **Backend funcional:** `POST /auth/register/customer` (auto-aprovado, auto-login),
-  role `CUSTOMER` (enum + entidade `customers`), `deliveries.customer_id`
-  (`company_id` opcional), **auto-dispatch** no create (pedido vai direto pra oferta
-  dos motoboys disponíveis), cliente lista/cancela/avalia os próprios pedidos.
-- **App cliente** (`apps/company_app`, "Aqui Log Cliente"): cadastro de cliente,
+  role `CUSTOMER` (enum + entidade `customers`), `deliveries.customer_id`, **auto-dispatch**
+  no create (pedido vai direto pra oferta dos motoboys disponíveis), cliente lista/cancela/avalia os próprios pedidos.
+- **App cliente** (`apps/customer_app`, "Aqui Log Cliente"): cadastro de cliente,
   login, pedido com **tipo de encomenda, tamanho P/M/G, peso kg, alcance (mesma
   cidade / outro município), foto**, endereços com geocode; abas Início/Pedir/Entregas/Perfil.
 - **App motoboy** (`apps/courier_app`): card da oferta mostra a **encomenda**
@@ -93,13 +92,13 @@ Planos futuros: `docs/PLANO_TRANSPORTADORA.md`, `docs/PLANO_PAGAMENTOS.md`,
 - Metadados da encomenda serializados no `notes` via `OrderMeta`
   (`packages/aqui_log_core/lib/src/order_meta.dart`, compartilhado).
 - **Validado ao vivo:** register customer → create → auto-dispatch (OFFERED) →
-  oferta no app do motoboy → accept (ACCEPTED). Smoke B2B segue verde.
+  oferta no app do motoboy → accept (ACCEPTED). Smoke B2C segue verde.
 - Testes: backend 27/27 · cliente 10/10 · motoboy 7/7 · analyze limpo.
 
 **Próximo pacote recomendado pelo roadmap:** `B2C-01`, colunas próprias de
 encomenda com migration aditiva e fallback de leitura em `notes`. Depois: preço
 v2, avaliação mútua e resiliência da oferta. Pagamentos, SMS, cloud e
-transportadora continuam atrás de gates explícitos.
+lote/viagens continuam atrás de gates explícitos.
 
 ---
 
@@ -122,7 +121,7 @@ transportadora continuam atrás de gates explícitos.
 ### Sprint 3 — Dashboard gestão ✅
 - Páginas **Usuários**, **Auditoria**, **Configurações**
 - Entregas: despachar / assign / cancelar
-- Empresas/couriers: approve / reject / suspend / reativar
+- Couriers: approve / reject / suspend / reativar
 - Relatórios `GET /dashboard/reports?from=&to=`
 - Paginação `page`/`limit` nas listagens admin
 
@@ -172,7 +171,7 @@ Qualidade:
 ```bash
 pnpm build && pnpm lint && pnpm test && pnpm smoke
 # Flutter (opcional nesta máquina):
-cd apps/company_app && flutter analyze && flutter test
+cd apps/customer_app && flutter analyze && flutter test
 cd apps/courier_app && flutter analyze && flutter test
 cd packages/aqui_log_core && dart test
 ```
@@ -190,7 +189,7 @@ cd packages/aqui_log_core && dart test
 | Settings runtime | `settings/` (Redis) |
 | Dashboard | `apps/dashboard/src/` |
 | Mobile core | `packages/aqui_log_core/` |
-| Company / Courier apps | `apps/company_app`, `apps/courier_app` |
+| Cliente / Courier apps | `apps/customer_app`, `apps/courier_app` |
 | Smoke | `scripts/smoke-test.sh` |
 | Docs | `docs/*` |
 
@@ -229,7 +228,7 @@ tokens compartilhados e QA visual, sem misturar mudanças de regra de negócio.
 - SMS: depende de provedor/sandbox (`DEC-04`).
 - Firebase/Render/Vercel: dependem de pedido explícito e `OPS-01/02/03`.
 - PIX: depende de ledger validado, gateway escolhido e `PAY-02`.
-- Transportadora: começa por medição `TRIP-00`, não por telas/CRUD.
+- Lote/viagens: começa por medição `TRIP-00`, não por telas/CRUD.
 
 ### E) Explicitamente **não** fazer agora
 

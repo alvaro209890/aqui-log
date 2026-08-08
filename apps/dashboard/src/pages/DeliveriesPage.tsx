@@ -20,7 +20,6 @@ export function DeliveriesPage({ token }: { token: string }) {
   const [items, setItems] = useState<DeliveryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
-  const [company, setCompany] = useState('');
   const [courier, setCourier] = useState('');
   const [date, setDate] = useState('');
   const [page, setPage] = useState(1);
@@ -34,7 +33,6 @@ export function DeliveriesPage({ token }: { token: string }) {
     api
       .deliveries(token, {
         status: status || undefined,
-        company: company || undefined,
         courier: courier || undefined,
         date: date || undefined,
         page: p,
@@ -87,14 +85,6 @@ export function DeliveriesPage({ token }: { token: string }) {
           </select>
         </label>
         <label>
-          Empresa (ID)
-          <input
-            value={company}
-            onChange={(e) => setCompany(e.target.value)}
-            placeholder="UUID da empresa"
-          />
-        </label>
-        <label>
           Entregador (ID)
           <input
             value={courier}
@@ -134,7 +124,6 @@ export function DeliveriesPage({ token }: { token: string }) {
                   <th>CODIGO</th>
                   <th>COLETA</th>
                   <th>ENTREGA</th>
-                  <th>EMPRESA</th>
                   <th>ENTREGADOR</th>
                   <th>STATUS</th>
                   <th>CRIADA</th>
@@ -149,7 +138,6 @@ export function DeliveriesPage({ token }: { token: string }) {
                     </td>
                     <td>{item.pickupAddress}</td>
                     <td>{item.deliveryAddress}</td>
-                    <td>{item.companyId?.slice(0, 8) ?? '—'}</td>
                     <td>{item.courierId?.slice(0, 8) ?? '—'}</td>
                     <td>
                       <StatusBadge status={item.status} />

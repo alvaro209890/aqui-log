@@ -9,9 +9,8 @@ ADMIN_PASSWORD_VALUE="${ADMIN_PASSWORD:-$(env_value ADMIN_PASSWORD)}"
 API_URL="${API_URL:-http://localhost:${PORT_VALUE:-3000}/api/v1}"
 RUN_ID="$(date +%s)"
 RUN_DOC="$(printf '%011d' "$RUN_ID")"
-COMPANY_EMAIL="empresa.${RUN_ID}@aquilog.test"
+CUSTOMER_EMAIL="cliente.${RUN_ID}@aquilog.test"
 COURIER_EMAIL="entregador.${RUN_ID}@aquilog.test"
-USER_EMAIL="operador.${RUN_ID}@aquilog.test"
 TEST_PASSWORD="TesteSeguro123!"
 PICKUP_LATITUDE="$(awk -v id="$RUN_ID" 'BEGIN { printf "%.6f", -20 + (id % 1000000) / 1000000 }')"
 PICKUP_LONGITUDE="$(awk -v id="$RUN_ID" 'BEGIN { printf "%.6f", -44 + (id % 1000000) / 1000000 }')"
@@ -36,32 +35,30 @@ refresh_token="$(jq -er '.refreshToken' <<<"$admin_login")"
 refreshed="$(api POST /auth/refresh "" "$(jq -nc --arg refreshToken "$refresh_token" '{refreshToken:$refreshToken}')")"
 jq -er '.accessToken' <<<"$refreshed" >/dev/null
 
-company="$(api POST /auth/register/company "" "$(jq -nc --arg ownerName 'Empresa Teste' --arg email "$COMPANY_EMAIL" --arg password "$TEST_PASSWORD" --arg legalName "Aqui Log Teste $RUN_ID LTDA" --arg tradeName 'Empresa Smoke' --arg document "99${RUN_DOC}0" '{ownerName:$ownerName,email:$email,password:$password,legalName:$legalName,tradeName:$tradeName,document:$document}')")"
-company_id="$(jq -er '.companyId' <<<"$company")"
+# Cliente pessoa física: registro auto-aprovado com auto-login (B2C)
+customer_login="$(api POST /auth/register/customer "" "$(jq -nc --arg name 'Cliente Teste' --arg email "$CUSTOMER_EMAIL" --arg password "$TEST_PASSWORD" --arg document "$RUN_DOC" --arg phone '+5531999999999' '{name:$name,email:$email,password:$password,document:$document,phone:$phone}')")"
+customer_token="$(jq -er '.accessToken' <<<"$customer_login")"
 
 courier="$(api POST /auth/register/courier "" "$(jq -nc --arg name 'Entregador Teste' --arg email "$COURIER_EMAIL" --arg password "$TEST_PASSWORD" --arg document "$RUN_DOC" '{name:$name,email:$email,password:$password,document:$document,vehicleType:"MOTORCYCLE",vehiclePlate:"AQL1T23",documentUrls:["https://example.com/documento-teste.pdf"]}')")"
 courier_id="$(jq -er '.courierId' <<<"$courier")"
 
-api PATCH "/companies/$company_id/approve" "$admin_token" >/dev/null
 api PATCH "/couriers/$courier_id/approve" "$admin_token" >/dev/null
 
-owner_token="$(api POST /auth/login "" "$(jq -nc --arg email "$COMPANY_EMAIL" --arg password "$TEST_PASSWORD" '{email:$email,password:$password}')" | jq -er '.accessToken')"
 courier_token="$(api POST /auth/login "" "$(jq -nc --arg email "$COURIER_EMAIL" --arg password "$TEST_PASSWORD" '{email:$email,password:$password}')" | jq -er '.accessToken')"
 
-api POST /users "$owner_token" "$(jq -nc --arg name 'Operador Teste' --arg email "$USER_EMAIL" --arg password "$TEST_PASSWORD" '{name:$name,email:$email,password:$password}')" >/dev/null
 api PATCH /couriers/me/location "$courier_token" "$(jq -nc --argjson latitude "$PICKUP_LATITUDE" --argjson longitude "$PICKUP_LONGITUDE" '{latitude:$latitude,longitude:$longitude}')" >/dev/null
 api PATCH /couriers/me/availability "$courier_token" '{"available":true}' >/dev/null
 
-delivery="$(api POST /deliveries "$owner_token" "$(jq -nc --argjson pickupLatitude "$PICKUP_LATITUDE" --argjson pickupLongitude "$PICKUP_LONGITUDE" --argjson deliveryLatitude "$DELIVERY_LATITUDE" --argjson deliveryLongitude "$DELIVERY_LONGITUDE" '{pickupAddress:"Av. Afonso Pena, 1000 - Centro",pickupLatitude:$pickupLatitude,pickupLongitude:$pickupLongitude,deliveryAddress:"Praca da Liberdade - Savassi",deliveryLatitude:$deliveryLatitude,deliveryLongitude:$deliveryLongitude,recipientName:"Cliente Teste",recipientPhone:"+5531999999999"}')")"
+delivery="$(api POST /deliveries "$customer_token" "$(jq -nc --argjson pickupLatitude "$PICKUP_LATITUDE" --argjson pickupLongitude "$PICKUP_LONGITUDE" --argjson deliveryLatitude "$DELIVERY_LATITUDE" --argjson deliveryLongitude "$DELIVERY_LONGITUDE" '{pickupAddress:"Av. Afonso Pena, 1000 - Centro",pickupLatitude:$pickupLatitude,pickupLongitude:$pickupLongitude,deliveryAddress:"Praca da Liberdade - Savassi",deliveryLatitude:$deliveryLatitude,deliveryLongitude:$deliveryLongitude,recipientName:"Cliente Teste",recipientPhone:"+5531999999999"}')")"
 delivery_id="$(jq -er '.id' <<<"$delivery")"
 delivery_code="$(jq -er '.code' <<<"$delivery")"
 courier_fee="$(jq -er '.courierFeeCents' <<<"$delivery")"
 price_cents="$(jq -er '.priceCents' <<<"$delivery")"
 jq -en --argjson fee "$courier_fee" --argjson price "$price_cents" '$fee > 0 and $price >= $fee' >/dev/null
 
-# B2C: o pedido é publicado automaticamente para os motoboys disponíveis
-# (auto-dispatch no create). Se ninguém estava online no momento, cai no
-# dispatch manual do admin.
+# B2C: o pedido do cliente é publicado automaticamente para os motoboys
+# disponíveis (auto-dispatch no create). Se ninguém estava online no
+# momento, cai no dispatch manual do admin.
 offers="$(api GET /deliveries/offers/mine "$courier_token")"
 offer_id="$(jq -er --arg deliveryId "$delivery_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty' <<<"$offers")"
 if [[ -z "$offer_id" ]]; then
@@ -92,10 +89,10 @@ api PATCH "/deliveries/$delivery_id/status" "$courier_token" '{"status":"IN_TRAN
 proof_delivery="$(upload_proof delivery)"
 api PATCH "/deliveries/$delivery_id/status" "$courier_token" "$(jq -nc --arg proofUrl "$proof_delivery" '{status:"DELIVERED",proofUrl:$proofUrl}')" >/dev/null
 
-api GET "/deliveries/$delivery_id/history" "$owner_token" | jq -e 'length >= 7' >/dev/null
-api POST "/deliveries/$delivery_id/rating" "$owner_token" '{"score":5,"comment":"Entrega concluida no fluxo de teste"}' >/dev/null
+api GET "/deliveries/$delivery_id/history" "$customer_token" | jq -e 'length >= 7' >/dev/null
+api POST "/deliveries/$delivery_id/rating" "$customer_token" '{"score":5,"comment":"Entrega concluida no fluxo de teste"}' >/dev/null
 api GET /finance/statement "$courier_token" | jq -e --argjson fee "$courier_fee" '.balanceCents == $fee' >/dev/null
-api GET /notifications "$owner_token" | jq -e 'length > 0' >/dev/null
+api GET /notifications "$customer_token" | jq -e 'length > 0' >/dev/null
 api GET /audit "$admin_token" | jq -e 'length > 0' >/dev/null
 
 printf 'Smoke test aprovado: %s (%s)\n' "$delivery_code" "$delivery_id"

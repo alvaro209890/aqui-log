@@ -14,7 +14,7 @@ Implementar TODAS as funcionalidades faltantes do AquiLog conforme o mockup do d
 ```
 /home/acer/Documentos/aqui-log
 ```
-Monorepo pnpm workspaces: `apps/backend` (NestJS), `apps/dashboard` (React+Vite), `apps/company_app` (Flutter), `apps/courier_app` (Flutter), `packages/aqui_log_core`, `packages/aqui_log_ui`.
+Monorepo pnpm workspaces: `apps/backend` (NestJS), `apps/dashboard` (React+Vite), `apps/customer_app` (Flutter), `apps/courier_app` (Flutter), `packages/aqui_log_core`, `packages/aqui_log_ui`.
 
 ## 📋 O que implementar (por prioridade)
 
@@ -53,7 +53,7 @@ Monorepo pnpm workspaces: `apps/backend` (NestJS), `apps/dashboard` (React+Vite)
 
 ### FASE 2 — Apps Flutter
 
-**Company App** (`apps/company_app/lib/`):
+**Company App** (`apps/customer_app/lib/`):
 - `screens/login_screen.dart` — login com API
 - `screens/dashboard_screen.dart` — KPIs + botão "Nova entrega"
 - `screens/new_delivery_screen.dart` — formulário de entrega (endereços, coordenadas)

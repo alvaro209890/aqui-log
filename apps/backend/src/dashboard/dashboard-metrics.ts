@@ -242,14 +242,12 @@ export function computePerformance(input: {
 
 export type DeliveryFilterInput = {
   status?: string;
-  company?: string;
   courier?: string;
   date?: string;
 };
 
 export type FilterableDelivery = {
   status: string;
-  companyId: string;
   courierId: string | null;
   createdAt: Date | string;
 };
@@ -260,7 +258,6 @@ export function matchesDeliveryFilters(
   filters: DeliveryFilterInput,
 ): boolean {
   if (filters.status && delivery.status !== filters.status) return false;
-  if (filters.company && delivery.companyId !== filters.company) return false;
   if (filters.courier) {
     if (delivery.courierId !== filters.courier) return false;
   }

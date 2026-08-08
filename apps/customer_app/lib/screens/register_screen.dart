@@ -63,7 +63,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                  'Cadastro rápido. Sem empresa, sem aprovação.',
+                  'Cadastro rápido. Sem aprovação.',
                   style: TextStyle(color: AquiLogColors.muted),
                 ),
                 const SizedBox(height: 22),

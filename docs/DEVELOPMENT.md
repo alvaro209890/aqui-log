@@ -39,7 +39,7 @@ pnpm lint
 pnpm test
 pnpm smoke                 # exige API e banco em execucao
 
-cd apps/company_app && flutter pub get && flutter analyze && flutter test
+cd apps/customer_app && flutter pub get && flutter analyze && flutter test
 cd apps/courier_app && flutter pub get && flutter analyze && flutter test
 cd packages/aqui_log_core && dart pub get && dart analyze && dart test
 ```

@@ -129,7 +129,7 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
                     TileLayer(
                       urlTemplate:
                           'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'br.com.aquilog.empresa',
+                      userAgentPackageName: 'br.com.aquilog.cliente',
                     ),
                     MarkerLayer(
                       markers: [

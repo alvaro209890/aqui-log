@@ -1,6 +1,6 @@
 # FLUXO_APP.md — O app Aqui Log explicado de ponta a ponta
 
-> **Data:** 2026-08-07 · **Público:** qualquer pessoa (incluindo o dono) · **Fontes:** `PLANO_B2C.md`, `PLANO_TRANSPORTADORA.md`, `PLANO_FROTA_DASHBOARD.md`, `PLANO_CONFIANCA_E_PRECO.md`, `PLANO_PAGAMENTOS.md`, `PLANO_ADMIN.md`, `PLANO_SUPORTE_RECLAMACOES.md`
+> **Data:** 2026-08-07 · **Público:** qualquer pessoa (incluindo o dono) · **Fontes:** `PLANO_B2C.md`, `PLANO_LOTE_MULTI_PEDIDO.md`, `PLANO_FROTA_DASHBOARD.md`, `PLANO_CONFIANCA_E_PRECO.md`, `PLANO_PAGAMENTOS.md`, `PLANO_ADMIN.md`, `PLANO_SUPORTE_RECLAMACOES.md`
 > **Como ler:** se você quer só entender o que funciona HOJE, leia as seções 1–4 e pule direto para a 10. Se quer entender o desenho completo (incluindo o que está planejado), leia tudo em ordem.
 
 ---
@@ -8,7 +8,7 @@
 ## 1. Visão geral (em 5 linhas)
 
 1. **O Aqui Log é um app de entregas B2C**: a pessoa física se cadastra sozinha, descreve a encomenda (tipo, tamanho, peso, foto, alcance) e pede uma entrega.
-2. **Não há empresa nem atendente no meio**: o próprio sistema publica o pedido para os motoboys disponíveis, e o motoboy decide se aceita.
+2. **Não há atendente nem intermediário no meio**: o próprio sistema publica o pedido para os motoboys disponíveis, e o motoboy decide se aceita.
 3. **Tudo que importa é rastreado**: status do pedido, GPS ao vivo, fotos de prova na coleta e na entrega, avaliação e extrato do motoboy.
 4. **O preço é sempre calculado no servidor** — o app nunca "chuta" valor; cliente e motoboy veem o mesmo número.
 5. **Para onde vai**: o motoboy poderá aceitar vários pedidos juntos (lote, inclusive entre municípios em blocos agendados), o dono acompanhará a frota num mapa em tempo real, o painel admin controlará quase tudo, e o dinheiro passará a ser controlado por uma carteira contábil (ledger) antes de qualquer gateway de pagamento real.
@@ -310,7 +310,7 @@ O ledger é **imutável**: cada evento financeiro gera lançamentos que somam ze
 - Cada pacote tem **fatia própria** de preço e repasse (`trip_quotes`).
 - Cliente **nunca paga acima** do preço individual já mostrado.
 - Fallback para corrida individual reutiliza o **preço congelado original** (nunca maior), com auditoria de motivo.
-- Estorno da fatia cancelada mantém o preço dos demais — a diferença vira custo/margem da plataforma, com **piso de repasse** por viagem para evitar margem negativa (decisão pendente do `PLANO_TRANSPORTADORA.md`).
+- Estorno da fatia cancelada mantém o preço dos demais — a diferença vira custo/margem da plataforma, com **piso de repasse** por viagem para evitar margem negativa (decisão pendente do `PLANO_LOTE_MULTI_PEDIDO.md`).
 
 ---
 
@@ -367,7 +367,7 @@ O ledger é **imutável**: cada evento financeiro gera lançamentos que somam ze
 | `PAY-01` | Ledger interno sem gateway: reserva, liquidação, estorno — **aguarda autorização** + preço v2 |
 | `TRIP-00/01/02` | Agrupamento automático: primeiro o gate de descoberta, depois shadow mode, depois piloto |
 
-### 🔒 Futuro (bloqueado por gate — nada de cloud, gateway ou transportadora operacional sem o gate)
+### 🔒 Futuro (bloqueado por gate — nada de cloud, gateway ou rota multi-pedido operacional sem o gate)
 
 | Item | Gate que destrava |
 |---|---|

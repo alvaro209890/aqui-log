@@ -1,7 +1,6 @@
 import {
   AlertTriangle,
   Bike,
-  Building2,
   CircleDollarSign,
   FileChartColumn,
   Headphones,
@@ -23,7 +22,6 @@ const ops = [
   { to: '/', label: 'Visao geral', icon: LayoutDashboard, end: true },
   { to: '/map', label: 'Mapa ao vivo', icon: Map },
   { to: '/deliveries', label: 'Entregas', icon: PackageCheck },
-  { to: '/companies', label: 'Empresas', icon: Building2 },
   { to: '/couriers', label: 'Entregadores', icon: Bike },
   { to: '/finance', label: 'Financeiro', icon: CircleDollarSign },
   { to: '/ratings', label: 'Avaliacoes', icon: Star },

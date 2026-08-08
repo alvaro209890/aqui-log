@@ -7,7 +7,6 @@ import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { AlertsPage } from './pages/AlertsPage';
 import { AuditPage } from './pages/AuditPage';
-import { CompaniesPage } from './pages/CompaniesPage';
 import { CouriersPage } from './pages/CouriersPage';
 import { DeliveriesPage } from './pages/DeliveriesPage';
 import { FinancePage } from './pages/FinancePage';
@@ -94,10 +93,6 @@ export function App() {
             path="/deliveries"
             element={<DeliveriesPage token={token} />}
           />
-          <Route
-            path="/companies"
-            element={<CompaniesPage token={token} />}
-          />
           <Route path="/couriers" element={<CouriersPage token={token} />} />
           <Route path="/finance" element={<FinancePage token={token} />} />
           <Route path="/ratings" element={<RatingsPage token={token} />} />
@@ -157,7 +152,7 @@ function LoginPage({
         <p className="eyebrow">PAINEL OPERACIONAL</p>
         <h1>Entre na sua conta</h1>
         <p className="login-copy">
-          Gerencie empresas, entregadores e entregas em tempo real.
+          Gerencie entregadores, entregas e clientes em tempo real.
         </p>
         <form onSubmit={submit}>
           <label>

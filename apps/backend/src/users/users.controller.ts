@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  Query,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -14,7 +6,6 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import type { AuthenticatedUser } from '../auth/jwt.strategy';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '../database/enums';
-import { CreateCompanyUserDto } from './dto/user.dto';
 import { UsersService } from './users.service';
 
 @ApiTags('Usuarios')
@@ -25,21 +16,12 @@ export class UsersController {
   constructor(private readonly users: UsersService) {}
 
   @Get()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.COMPANY_OWNER)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   findAll(
     @Req() req: Request & { user: AuthenticatedUser },
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     return this.users.findAll(req.user, page, limit);
-  }
-
-  @Post()
-  @Roles(UserRole.COMPANY_OWNER)
-  create(
-    @Body() dto: CreateCompanyUserDto,
-    @Req() req: Request & { user: AuthenticatedUser },
-  ) {
-    return this.users.createCompanyUser(dto, req.user);
   }
 }

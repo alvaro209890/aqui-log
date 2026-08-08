@@ -5,7 +5,7 @@
 O monorepo mantem produtos, contratos, banco e infraestrutura versionados em conjunto. O backend e um monolito modular NestJS para reduzir custo operacional no MVP sem misturar os dominios.
 
 ```text
-Empresa Flutter ─┐
+Cliente Flutter ─┐
 Entregador Flutter├── REST + WebSocket autenticado ── NestJS ── PostgreSQL
 Dashboard React ──┘                                      │
                                                         └── Redis
@@ -13,10 +13,10 @@ Dashboard React ──┘                                      │
 
 ## Dominios
 
-- `auth` e `users`: cadastro, login JWT, perfis e usuarios da empresa.
-- `companies` e `couriers`: aprovacao, documentos por URL, disponibilidade e localizacao.
+- `auth` e `users`: cadastro, login JWT e perfis (prestador, cliente, admin).
+- `couriers`: aprovacao, documentos por URL, disponibilidade e localizacao.
 - `deliveries`: solicitacao, agenda, oferta persistida, despacho manual/automatico, aceite/recusa, estados, comprovantes e avaliacao.
-- `tracking`: canal Socket.IO autenticado; empresa, administrador e entregador vinculado podem acompanhar uma entrega.
+- `tracking`: canal Socket.IO autenticado; cliente, administrador e entregador vinculado podem acompanhar uma entrega.
 - `notifications`: caixa persistida por usuario, preparada para push/e-mail futuros.
 - `finance`: receita da plataforma e credito basico na carteira ao concluir a entrega.
 - `audit`: registro das operacoes sensiveis.
@@ -24,7 +24,7 @@ Dashboard React ──┘                                      │
 
 ## Persistencia
 
-PostgreSQL e a fonte de verdade. A migration inicial cria usuarios, empresas, entregadores, entregas, ofertas, eventos, notificacoes, avaliacoes, carteira e auditoria. Redis e usado para locks de aceite de oferta (Sprint 1). Jobs de expiracao de oferta e despacho agendado rodam via `@nestjs/schedule`. Precificacao e server-side (Haversine + env `PRICING_*`). Auth: JWT access + refresh tokens persistidos (hash) e recuperacao de senha.
+PostgreSQL e a fonte de verdade. A migration inicial cria usuarios, entregadores, entregas, ofertas, eventos, notificacoes, avaliacoes, carteira e auditoria (a tabela `companies` e as colunas `company_id` foram removidas em 2026-08-07). Redis e usado para locks de aceite de oferta (Sprint 1). Jobs de expiracao de oferta e despacho agendado rodam via `@nestjs/schedule`. Precificacao e server-side (Haversine + env `PRICING_*`). Auth: JWT access + refresh tokens persistidos (hash) e recuperacao de senha.
 
 Valores financeiros sao inteiros em centavos. Identificadores internos sao UUID; cada entrega tambem recebe um codigo publico `AQL-*`.
 

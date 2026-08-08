@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "br.com.aquilog.aqui_log_empresa"
+    namespace = "br.com.aquilog.aqui_log_cliente"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 

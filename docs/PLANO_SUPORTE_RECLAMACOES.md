@@ -2,7 +2,7 @@
 
 > **Criado:** 2026-08-07 · **Papel:** especificação subordinada ao `ROADMAP.md`
 > **Abrange:** `SUP-01` a `SUP-05`
-> **Dependências:** `PLANO_CONFIANCA_E_PRECO.md` (B2C-03 avaliação mútua), `PLANO_PAGAMENTOS.md` (PAY-01 ledger/estorno), `PLANO_TRANSPORTADORA.md` (LOT-01/02, lote), `PLANO_FROTA_DASHBOARD.md` (FROTA-01), `PLANO_ADMIN.md` (painel admin)
+> **Dependências:** `PLANO_CONFIANCA_E_PRECO.md` (B2C-03 avaliação mútua), `PLANO_PAGAMENTOS.md` (PAY-01 ledger/estorno), `PLANO_LOTE_MULTI_PEDIDO.md` (LOT-01/02, lote), `PLANO_FROTA_DASHBOARD.md` (FROTA-01), `PLANO_ADMIN.md` (painel admin)
 > **Não autoriza:** gateway, SMS pago, WhatsApp, cloud, payout real
 
 ## 1. Filosofia: reclamação é parte do produto
@@ -145,7 +145,7 @@ botão rápido → perguntas dinâmicas (1–3) → evidência exigida (se houve
 - Nota de confiança não consome o limite acima (é proativo, não pedido).
 - Assédio e segurança nunca passam pelo juiz rápido.
 - Todo veredito automático tem **botão de contestação**; contestação vira `ESCALADO` com dossiê anexado.
-- **Estorno pós-coleta:** automático apenas até teto (R$ 30); acima disso, humano com SLA — alinhado ao `PLANO_TRANSPORTADORA.md` R6.3.
+- **Estorno pós-coleta:** automático apenas até teto (R$ 30); acima disso, humano com SLA — alinhado ao `PLANO_LOTE_MULTI_PEDIDO.md` R6.3.
 
 ## 4. Modelo de dados
 
@@ -170,7 +170,7 @@ ratings      + complaint_ref (avaliação 1 estrela pode puxar o ticket — vín
 couriers     + complaint_rate_30d, block_flags (jsonb)
 customers    + complaint_rate_30d, fraud_flags
 ledger_transactions (PLANO_PAGAMENTOS)   + ticket_id (referência opcional no estorno)
-courier_metrics (PLANO_TRANSPORTADORA)   + coluna de confiabilidade (ver §6)
+courier_metrics (PLANO_LOTE_MULTI_PEDIDO)   + coluna de confiabilidade (ver §6)
 ```
 
 ## 5. Máquina de estados do ticket
@@ -280,14 +280,14 @@ Nenhuma mensagem de status fica **sem link para o dossiê** — transparência �
 | Improcedência por dossiê | reclamações contra motoboy com dossiê completo a favor | sem meta, monitorar para calibrar proteção |
 | Fraude detectada | tickets de fraude ÷ tickets | < 3% |
 
-Alimenta o mesmo pipeline de relatórios do dashboard (`B2C-01B`) e os guardrails de lote (`PLANO_TRANSPORTADORA.md` §11: "incidentes e suporte não aumentam de forma material").
+Alimenta o mesmo pipeline de relatórios do dashboard (`B2C-01B`) e os guardrails de lote (`PLANO_LOTE_MULTI_PEDIDO.md` §11: "incidentes e suporte não aumentam de forma material").
 
 ## 10. Edge cases
 
 | Caso | Resolução |
 |---|---|
 | **Reclamação falsa** | dossiê completo contra + reincidência → análise manual, fraude flag, reembolso automático desligado por 90 dias (§6) |
-| **Cliente nunca busca o pedido** (não recebe na parada) | motoboy registra `CLIENTE_AUSENTE` (foto + 10 min); reoferta/redespacho conforme `R7`; se cliente sumiu, ticket de motoboy → taxa de nova tentativa (decisão pendente do `PLANO_TRANSPORTADORA.md` §12 #7) decide quem paga |
+| **Cliente nunca busca o pedido** (não recebe na parada) | motoboy registra `CLIENTE_AUSENTE` (foto + 10 min); reoferta/redespacho conforme `R7`; se cliente sumiu, ticket de motoboy → taxa de nova tentativa (decisão pendente do `PLANO_LOTE_MULTI_PEDIDO.md` §12 #7) decide quem paga |
 | **Reembolso em pedido agrupado/lote** | estorno **só da fatia** alocada em `trip_quotes`; demais pedidos e repasses intactos (§6); viagem re-sequenciada sem tocar o resto; verificação do `trip_stops` e do `eta_forecast` |
 | **Reclamação depois de 30 dias** | fora do prazo (§2) → rejeitada com explicação automática; aceita só por exceção do admin (fraude de motoboy conhecida) |
 | **Entrega não concluída** (`FAILED`) | status vira reembolso automático na hora (se elegível) + pedido re-oferecido ou cancelado sem custo (`D-R13`); motoboy não é punido se dossiê mostrar motivo alheio |
@@ -323,6 +323,6 @@ Alimenta o mesmo pipeline de relatórios do dashboard (`B2C-01B`) e os guardrail
 | S-3 | Percentuais da nota de confiança (10/20%) | parametrizável; medir efeito na reincidência |
 | S-4 | Limites de fraude (3/30d, 5/60d, 90 d de desligamento) | confirmar com dono |
 | S-5 | WhatsApp como canal (provider + custo) | só após `B2C-04` e OPS-02 |
-| S-6 | Taxa de nova tentativa por ausência do cliente (herdado de `PLANO_TRANSPORTADORA` §12 #7) | decidir junto — afeta `CLIENTE_AUSENTE` |
+| S-6 | Taxa de nova tentativa por ausência do cliente (herdado de `PLANO_LOTE_MULTI_PEDIDO` §12 #7) | decidir junto — afeta `CLIENTE_AUSENTE` |
 | S-7 | Janela de contestação do payout (48–72 h) e retenção percentual | definir com `PAY-02` |
 | S-8 | SLA humano noturno/fim de semana (horário comercial + backlog com prazo prometido) | confirmar cobertura do suporte |

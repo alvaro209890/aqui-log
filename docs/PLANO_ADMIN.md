@@ -3,7 +3,7 @@
 > **Atualizado:** 2026-08-07
 > **Status:** design aprovado para planejamento (sem implementar ainda — documentação apenas)
 > **Documentos base:** `ROADMAP.md` (ordem e gates), `PLANO_B2C.md` (estado B2C),
-> `PLANO_TRANSPORTADORA.md` (lotes/viagens), `PLANO_FROTA_DASHBOARD.md` (frota),
+> `PLANO_LOTE_MULTI_PEDIDO.md` (lotes/viagens), `PLANO_FROTA_DASHBOARD.md` (frota),
 > `PLANO_PAGAMENTOS.md` (ledger/financeiro), `PLANO_SUPORTE_RECLAMACOES.md` (suporte)
 > **Objetivo:** o dono consegue operar e corrigir quase tudo pelo painel, sem depender de dev.
 > **Roadmap:** `ADMIN-01` … `ADMIN-07` (seção 6), dependentes de `B2C-01B`, `FROTA-01/02`, `LOT-01/02`, `PAY-01`.
@@ -83,7 +83,7 @@ Referência completa: `docs/PLANO_FROTA_DASHBOARD.md`. No painel admin:
   - Reordenar paradas (o servidor roda o sequenciador e revalida os invariantes: coleta antes de entrega, janelas, folgas D-R1..D-R3 — e registra evento `reorder`);
   - Remover pedido do lote (→ `REMOVED_FROM_TRIP` → `REQUESTED`, re-sequenciamento, efeito financeiro exibido antes);
   - Cancelar lote inteiro (pedidos não concluídos voltam à fila com evento de auditoria);
-  - Intervenção geral com **motivo obrigatório** (desistência pós-coleta, desvio, falha) — libera ações de suporte previstas em `PLANO_TRANSPORTADORA.md` R6/R7.
+  - Intervenção geral com **motivo obrigatório** (desistência pós-coleta, desvio, falha) — libera ações de suporte previstas em `PLANO_LOTE_MULTI_PEDIDO.md` R6/R7.
 - **Ações com confirmação dupla:** remover pedido do lote, cancelar lote, qualquer intervenção em viagem `IN_PROGRESS`.
 
 ### 2.7 Reclamações e suporte — módulo novo

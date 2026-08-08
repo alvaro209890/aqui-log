@@ -3,7 +3,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, type JwtModuleOptions } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Company } from '../database/entities/company.entity';
 import { Courier } from '../database/entities/courier.entity';
 import { PasswordResetToken } from '../database/entities/password-reset-token.entity';
 import { RefreshToken } from '../database/entities/refresh-token.entity';
@@ -16,13 +15,7 @@ import { JwtStrategy } from './jwt.strategy';
   imports: [
     ConfigModule,
     PassportModule,
-    TypeOrmModule.forFeature([
-      User,
-      Company,
-      Courier,
-      RefreshToken,
-      PasswordResetToken,
-    ]),
+    TypeOrmModule.forFeature([User, Courier, RefreshToken, PasswordResetToken]),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

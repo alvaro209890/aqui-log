@@ -29,9 +29,6 @@ export class User {
   @Column({ type: 'enum', enum: AccountStatus, default: AccountStatus.PENDING })
   status!: AccountStatus;
 
-  @Column({ name: 'company_id', type: 'uuid', nullable: true })
-  companyId!: string | null;
-
   @Column({ name: 'customer_id', type: 'uuid', nullable: true })
   customerId!: string | null;
 

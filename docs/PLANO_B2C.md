@@ -3,7 +3,7 @@
 > **Status geral:** ✅ **MVP B2C funcional** (2026-08-04) — fluxo cliente → motoboy
 > rodando de ponta a ponta, sem empresa no meio. Próximas fases planejadas abaixo.
 > **Data de criação:** 2026-08-03 · **Última atualização:** 2026-08-07
-> **Planos derivados:** `PLANO_PAGAMENTOS.md` · `PLANO_TRANSPORTADORA.md` · `PLANO_CONFIANCA_E_PRECO.md`
+> **Planos derivados:** `PLANO_PAGAMENTOS.md` · `PLANO_LOTE_MULTI_PEDIDO.md` · `PLANO_CONFIANCA_E_PRECO.md`
 > **Prioridade e ordem de execução:** `ROADMAP.md` é a fonte de verdade; este documento descreve o domínio e o estado funcional.
 
 ---
@@ -22,7 +22,7 @@ O Aqui Log deixou de ser B2B (empresa cria entrega, admin despacha) e virou
 | Motoboy vê a encomenda e aceita/recusa | ✅ app motoboy |
 | Acompanhamento/avaliação | ✅ lista/detalhe + rating |
 | Pagamento do cliente | 🟠 pendente → `PLANO_PAGAMENTOS.md` |
-| Rota multi-pedido (transportadora) | ⏳ futuro → `PLANO_TRANSPORTADORA.md` |
+| Rota multi-pedido (lote) | ⏳ futuro → `PLANO_LOTE_MULTI_PEDIDO.md` |
 
 ---
 
@@ -34,8 +34,8 @@ O Aqui Log deixou de ser B2B (empresa cria entrega, admin despacha) e virou
 | **Motoboy** | Executa as entregas (`couriers`) | Admin (documentos) — inalterado |
 | **Admin** | Aprova motoboys, vê relatórios | — |
 
-A empresa desaparece do fluxo de pedidos. O modelo antigo (B2B) continua
-suportado no backend por compatibilidade, mas o produto novo é o B2C.
+A empresa foi **removida** do produto (2026-08-07): código, rotas e colunas B2B
+não existem mais no backend. O produto é o B2C com três perfis: prestador, cliente e admin.
 
 ---
 
@@ -96,7 +96,7 @@ continuam legíveis por `OrderMeta.fromNotes`, sem backfill textual arriscado.
 | 2 | Peso | Kg livre no formulário (faixas só no preço, quando houver) |
 | 4 | Tipo de produto | Categorias fixas (Documento, Alimento, Eletrônico, Frágil, Roupas, Medicamento, Outro) |
 | 7 | Alcance | Cliente declara: mesma cidade / outra cidade ou município |
-| 10 | App do cliente | Reformular o `company_app` (não criar app novo) |
+| 10 | App do cliente | Reformular o `customer_app` (não criar app novo) |
 | — | Preço | Sempre calculado no servidor (sem valor vindo do app) |
 | — | Despacho | Publicação automática para motoboys disponíveis (auto-dispatch) |
 
@@ -110,7 +110,7 @@ continuam legíveis por `OrderMeta.fromNotes`, sem backfill textual arriscado.
 | `DEC-04` | Validação de telefone | Código SMS com provider adapter, TTL e rate limit | Gate para cadastro público em produção |
 | `DEC-05/06` | Carteira e gateway | Provar ledger interno antes de escolher/ligar PIX | Nenhuma cobrança real antes dos gates |
 | `DEC-07` | Rota compartilhada | Opt-in no primeiro piloto e somente após medir densidade | Bloqueia piloto multi-pedido, não o MVP simples |
-| `DEC-08/09/10/11` | Lote multi-pedido e blocos agendados intermunicipais | Motoboy aceita vários pedidos juntos com lógica anti-atraso; decisões detalhadas em `PLANO_TRANSPORTADORA.md` §12 | Define `LOT-01/02` |
+| `DEC-08/09/10/11` | Lote multi-pedido e blocos agendados intermunicipais | Motoboy aceita vários pedidos juntos com lógica anti-atraso; decisões detalhadas em `PLANO_LOTE_MULTI_PEDIDO.md` §12 | Define `LOT-01/02` |
 | `DEC-12` | Mapa de frota no dashboard | Exposição de posição só em viagem ativa, retenção e LGPD | Define `FROTA-01` |
 
 ---
@@ -126,8 +126,8 @@ continuam legíveis por `OrderMeta.fromNotes`, sem backfill textual arriscado.
 | 6 | `PAY-01` | Ledger interno, reserva e estorno, sem gateway | autorização explícita + preço v2 | `PLANO_PAGAMENTOS.md` |
 | 7 | `B2C-04` | Validação SMS | provedor/sandbox | `PLANO_CONFIANCA_E_PRECO.md` §5 |
 | 8 | `OPS-*` | Endurecimento e eventual publicação | gates operacionais + pedido explícito | `ROADMAP.md` |
-| 9 | `TRIP-00` | Medir viabilidade do agrupamento automático de pedidos | telemetria e operação estável | `PLANO_TRANSPORTADORA.md` |
-| 10 | `LOT-01/02` | **Lote multi-pedido pelo motoboy** (aceite de vários juntos, blocos agendados intermunicipais) e anti-atraso | decisão do dono 2026-08-07; sem código ainda | `PLANO_TRANSPORTADORA.md` |
+| 9 | `TRIP-00` | Medir viabilidade do agrupamento automático de pedidos | telemetria e operação estável | `PLANO_LOTE_MULTI_PEDIDO.md` |
+| 10 | `LOT-01/02` | **Lote multi-pedido pelo motoboy** (aceite de vários juntos, blocos agendados intermunicipais) e anti-atraso | decisão do dono 2026-08-07; sem código ainda | `PLANO_LOTE_MULTI_PEDIDO.md` |
 | 11 | `FROTA-01/02` | **Dashboard monitora frota**: localização dos prestadores, coleta recolhida ou não, trajeto em viagem | decisão do dono 2026-08-07; sem código ainda | `PLANO_FROTA_DASHBOARD.md` |
 | 12 | `ADMIN-01..07` | **Painel admin com controle máximo**: pedidos, motoboys, clientes, lotes, financeiro, configurações | decisão do dono 2026-08-07; sem código ainda | `PLANO_ADMIN.md` |
 | 13 | `SUP-01..05` | **Suporte/reclamações**: dossiê automático, auto-resolução, juiz rápido, nota de confiança | decisão do dono 2026-08-07; sem código ainda | `PLANO_SUPORTE_RECLAMACOES.md` |
@@ -135,7 +135,7 @@ continuam legíveis por `OrderMeta.fromNotes`, sem backfill textual arriscado.
 
 Trilha paralela, quando autorizada: `UX-01/02`, identidade laranja e QA visual conforme `DIRETRIZES_VISUAIS.md`.
 
-Regra de ouro: **nada de cloud, gateway ou transportadora operacional** sem cumprir o gate correspondente no `ROADMAP.md`.
+Regra de ouro: **nada de cloud, gateway ou rota multi-pedido operacional** sem cumprir o gate correspondente no `ROADMAP.md`.
 
 ---
 
@@ -148,7 +148,7 @@ Regra de ouro: **nada de cloud, gateway ou transportadora operacional** sem cump
 | Sem pagamento | Ninguém paga nada ainda | `PLANO_PAGAMENTOS.md` |
 | Despacho por "motoboy mais próximo" (1 oferta por vez) | Sem concorrência de ofertas visíveis | Aceite/recusa já existe; anéis de raio futuros |
 | Sem validação de telefone | Contas lixo possíveis | `PLANO_CONFIANCA_E_PRECO.md` §5 |
-| Empresas ainda existem no backend | Dois modelos convivendo | B2B fica como legado; produto é B2C |
+| Modelo empresa/B2B removido | — | Limpeza concluída em 2026-08-07 (migration `RemoveCompanyModel`); só existem prestador, cliente e admin |
 
 ---
 
@@ -160,12 +160,12 @@ cd /home/acer/Documentos/aqui-log
 pnpm install
 pnpm db:migrate && pnpm db:admin
 pnpm build && pnpm test          # backend
-pnpm smoke                        # e2e: empresa + motoboy (B2B legado segue verde)
+pnpm smoke                        # e2e: cliente + motoboy (fluxo B2C)
 # apps
-cd apps/company_app && flutter analyze && flutter test
+cd apps/customer_app && flutter analyze && flutter test
 cd ../courier_app  && flutter analyze && flutter test
 # APK do cliente (release, arm64):
-cd apps/company_app && flutter build apk --release --target-platform android-arm64
+cd apps/customer_app && flutter build apk --release --target-platform android-arm64
 ```
 
 **Fluxo B2C manual (curl):**
@@ -194,5 +194,5 @@ curl -X POST localhost:3001/api/v1/auth/register/customer -H 'Content-Type: appl
 ## 10. Fora de escopo (por enquanto)
 
 - Gateway de pagamento externo real (PIX/cartão processado)
-- Agendamento avançado, rotas multi-parada, IA — em design: lote multi-pedido e blocos agendados em `PLANO_TRANSPORTADORA.md`; monitoramento de frota em `PLANO_FROTA_DASHBOARD.md`; painel admin em `PLANO_ADMIN.md`; suporte/reclamações em `PLANO_SUPORTE_RECLAMACOES.md` (sem código nesta rodada)
+- Agendamento avançado, rotas multi-parada, IA — em design: lote multi-pedido e blocos agendados em `PLANO_LOTE_MULTI_PEDIDO.md`; monitoramento de frota em `PLANO_FROTA_DASHBOARD.md`; painel admin em `PLANO_ADMIN.md`; suporte/reclamações em `PLANO_SUPORTE_RECLAMACOES.md` (sem código nesta rodada)
 - Entregas para empresas (se voltar, entra como "cliente tipo empresa")

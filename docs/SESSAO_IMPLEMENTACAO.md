@@ -32,7 +32,7 @@ Agregações puras em `dashboard-metrics.ts` cobertas por testes unitários (sem
 - Sidebar completa com rotas; páginas: Deliveries, Companies, Couriers, Finance, Ratings, Reports, Alerts (+ Overview e Map)
 - UX: skeletons de loading, toasts Sonner, badge de notificações, layout responsivo mobile
 
-### Flutter — Company (`apps/company_app`)
+### Flutter — Company (`apps/customer_app`)
 
 Telas: login, dashboard, new_delivery, deliveries, delivery_detail, reports, settings — integradas ao `aqui_log_core`.
 

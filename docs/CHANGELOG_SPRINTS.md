@@ -16,7 +16,7 @@ Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
 - `ROADMAP.md` refeito como fila executiva do produto B2C atual.
 - Próximo pacote definido: `B2C-01`, dados estruturados da encomenda com fallback legado.
-- Planos de confiança/preço, pagamentos e transportadora ganharam dependências,
+- Planos de confiança/preço, pagamentos e lote multi-pedido ganharam dependências,
   invariantes, gates e critérios de aceite.
 - `PLANO_IMPLEMENTACOES.md` e `PROMPT_AGENTE.md` marcados como históricos para
   evitar reexecução de trabalho já entregue.

@@ -21,7 +21,7 @@ export function RatingsPage({ token }: { token: string }) {
         <div>
           <p>QUALIDADE</p>
           <h1>Avaliacoes</h1>
-          <span>Notas das empresas sobre entregas concluidas.</span>
+          <span>Notas dos clientes sobre entregas concluidas.</span>
         </div>
       </section>
       <section className="panel">

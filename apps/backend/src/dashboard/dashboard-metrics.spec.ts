@@ -181,33 +181,28 @@ describe('dashboard-metrics', () => {
     const items = [
       {
         status: 'DELIVERED',
-        companyId: 'c1',
         courierId: 'k1',
         createdAt: '2026-07-15T10:00:00.000Z',
       },
       {
         status: 'REQUESTED',
-        companyId: 'c2',
         courierId: null,
         createdAt: '2026-07-14T10:00:00.000Z',
       },
       {
         status: 'DELIVERED',
-        companyId: 'c1',
         courierId: 'k2',
         createdAt: new Date('2026-07-15T18:00:00.000Z'),
       },
     ];
 
-    it('filters by status company courier and date', () => {
+    it('filters by status courier and date', () => {
       expect(filterDeliveries(items, { status: 'DELIVERED' })).toHaveLength(2);
-      expect(filterDeliveries(items, { company: 'c2' })).toHaveLength(1);
       expect(filterDeliveries(items, { courier: 'k1' })).toHaveLength(1);
       expect(filterDeliveries(items, { date: '2026-07-15' })).toHaveLength(2);
       expect(
         filterDeliveries(items, {
           status: 'DELIVERED',
-          company: 'c1',
           date: '2026-07-15',
         }),
       ).toHaveLength(2);

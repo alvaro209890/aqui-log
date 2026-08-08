@@ -8,13 +8,11 @@ export interface Session {
     name: string;
     email: string;
     role: string;
-    companyId: string | null;
   };
 }
 
 export interface DashboardSummary {
   deliveriesToday: number;
-  activeCompanies: number;
   availableCouriers: number;
   inProgress: number;
   revenueCents: number;
@@ -56,7 +54,6 @@ export interface PerformanceResponse {
 export interface DeliveryRecord {
   id: string;
   code: string;
-  companyId: string;
   pickupAddress: string;
   pickupLatitude: number;
   pickupLongitude: number;
@@ -67,15 +64,6 @@ export interface DeliveryRecord {
   status: string;
   priceCents?: number;
   createdAt: string;
-}
-
-export interface CompanyRecord {
-  id: string;
-  legalName?: string;
-  tradeName?: string;
-  document?: string;
-  status: string;
-  createdAt?: string;
 }
 
 export interface CourierRecord {
@@ -93,7 +81,6 @@ export interface CourierRecord {
 export interface RatingRecord {
   id: string;
   deliveryId: string;
-  companyId: string;
   courierId: string;
   score: number;
   comment: string | null;
@@ -122,7 +109,6 @@ export interface UserRecord {
   email: string;
   role: string;
   status: string;
-  companyId: string | null;
   createdAt: string;
 }
 
@@ -165,7 +151,6 @@ export type PageResult<T> = {
 
 export type DeliveryFilters = {
   status?: string;
-  company?: string;
   courier?: string;
   date?: string;
   page?: number;
@@ -258,14 +243,6 @@ export const api = {
     );
     return asPage(data);
   },
-  companies: async (token: string, page = 1, limit = 20) =>
-    asPage(
-      await request<CompanyRecord[] | PageResult<CompanyRecord>>(
-        `/companies${qs({ page, limit })}`,
-        {},
-        token,
-      ),
-    ),
   couriers: async (token: string, page = 1, limit = 20) =>
     asPage(
       await request<CourierRecord[] | PageResult<CourierRecord>>(
@@ -307,24 +284,6 @@ export const api = {
   markNotificationRead: (token: string, id: string) =>
     request<NotificationRecord>(
       `/notifications/${id}/read`,
-      { method: 'PATCH' },
-      token,
-    ),
-  approveCompany: (token: string, id: string) =>
-    request<CompanyRecord>(
-      `/companies/${id}/approve`,
-      { method: 'PATCH' },
-      token,
-    ),
-  rejectCompany: (token: string, id: string) =>
-    request<CompanyRecord>(
-      `/companies/${id}/reject`,
-      { method: 'PATCH' },
-      token,
-    ),
-  suspendCompany: (token: string, id: string) =>
-    request<CompanyRecord>(
-      `/companies/${id}/suspend`,
       { method: 'PATCH' },
       token,
     ),

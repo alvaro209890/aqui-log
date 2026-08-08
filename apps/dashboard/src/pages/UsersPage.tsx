@@ -55,7 +55,6 @@ export function UsersPage({ token }: { token: string }) {
                   <th>E-MAIL</th>
                   <th>PAPEL</th>
                   <th>STATUS</th>
-                  <th>EMPRESA</th>
                 </tr>
               </thead>
               <tbody>
@@ -69,7 +68,6 @@ export function UsersPage({ token }: { token: string }) {
                     <td>
                       <StatusBadge status={u.status} />
                     </td>
-                    <td>{u.companyId?.slice(0, 8) ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>

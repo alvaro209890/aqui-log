@@ -8,7 +8,6 @@ export interface AuthenticatedUser {
   id: string;
   email: string;
   role: UserRole;
-  companyId: string | null;
   customerId: string | null;
 }
 
@@ -26,14 +25,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     sub: string;
     email: string;
     role: UserRole;
-    companyId: string | null;
     customerId?: string | null;
   }) {
     return {
       id: payload.sub,
       email: payload.email,
       role: payload.role,
-      companyId: payload.companyId,
       customerId: payload.customerId ?? null,
     };
   }

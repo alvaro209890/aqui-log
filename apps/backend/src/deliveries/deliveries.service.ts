@@ -64,8 +64,8 @@ export class DeliveriesService {
 
   async create(dto: CreateDeliveryDto, user: AuthenticatedUser) {
     const isCustomer = user.role === UserRole.CUSTOMER;
-    if (!isCustomer && !user.companyId)
-      throw new ForbiddenException('Usuario sem empresa vinculada');
+    if (!isCustomer)
+      throw new ForbiddenException('Somente clientes podem criar pedidos');
     if (isCustomer && !user.customerId)
       throw new ForbiddenException('Cliente sem cadastro completo');
     const productPhotoUrls = dto.productPhotoUrls ?? [];
@@ -82,7 +82,6 @@ export class DeliveriesService {
       this.deliveries.create({
         ...dto,
         code: this.createCode(),
-        companyId: isCustomer ? null : user.companyId,
         customerId: isCustomer ? user.customerId : null,
         createdById: user.id,
         courierId: null,
@@ -113,7 +112,6 @@ export class DeliveriesService {
       resourceId: delivery.id,
       metadata: {
         code: delivery.code,
-        companyId: delivery.companyId,
         customerId: delivery.customerId,
         package: {
           productType: delivery.productType,
@@ -140,7 +138,6 @@ export class DeliveriesService {
     user: AuthenticatedUser,
     filters: {
       status?: string;
-      company?: string;
       courier?: string;
       date?: string;
       page?: string;
@@ -161,10 +158,6 @@ export class DeliveriesService {
       qb.andWhere('delivery.customerId = :customerId', {
         customerId: user.customerId,
       });
-    } else if (user.companyId) {
-      qb.andWhere('delivery.companyId = :companyId', {
-        companyId: user.companyId,
-      });
     } else {
       const courier = await this.getCourierByUser(user.id);
       qb.andWhere('delivery.courierId = :courierId', {
@@ -174,16 +167,6 @@ export class DeliveriesService {
 
     if (filters.status) {
       qb.andWhere('delivery.status = :status', { status: filters.status });
-    }
-    if (
-      filters.company &&
-      [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SUPPORT].includes(
-        user.role,
-      )
-    ) {
-      qb.andWhere('delivery.companyId = :filterCompany', {
-        filterCompany: filters.company,
-      });
     }
     if (filters.courier) {
       qb.andWhere('delivery.courierId = :filterCourier', {
@@ -507,8 +490,8 @@ export class DeliveriesService {
       ) {
         throw new ForbiddenException('Entrega de outro cliente');
       }
-    } else if (!user.companyId || delivery.companyId !== user.companyId) {
-      throw new ForbiddenException('Entrega de outra empresa');
+    } else {
+      throw new ForbiddenException('Somente clientes podem avaliar');
     }
     if (delivery.status !== DeliveryStatus.DELIVERED || !delivery.courierId) {
       throw new BadRequestException(
@@ -521,8 +504,7 @@ export class DeliveriesService {
     return this.ratings.save(
       this.ratings.create({
         deliveryId: id,
-        companyId: isCustomer ? null : user.companyId,
-        customerId: isCustomer ? user.customerId : null,
+        customerId: user.customerId,
         courierId: delivery.courierId,
         score: dto.score,
         comment: dto.comment ?? null,
@@ -593,7 +575,6 @@ export class DeliveriesService {
         return;
       throw new ForbiddenException('Acesso negado');
     }
-    if (user.companyId === delivery.companyId) return;
     const courier = await this.getCourierByUser(user.id);
     if (courier.id !== delivery.courierId)
       throw new ForbiddenException('Acesso negado');
@@ -605,17 +586,6 @@ export class DeliveriesService {
     user: AuthenticatedUser,
   ) {
     if ([UserRole.SUPER_ADMIN, UserRole.ADMIN].includes(user.role)) return;
-    if ([UserRole.COMPANY_OWNER, UserRole.COMPANY_USER].includes(user.role)) {
-      if (
-        target !== DeliveryStatus.CANCELED ||
-        user.companyId !== delivery.companyId
-      ) {
-        throw new ForbiddenException(
-          'Empresa pode apenas cancelar suas entregas',
-        );
-      }
-      return;
-    }
     if (user.role === UserRole.CUSTOMER) {
       if (
         target !== DeliveryStatus.CANCELED ||

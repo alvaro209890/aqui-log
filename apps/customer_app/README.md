@@ -1,4 +1,4 @@
-# aqui_log_empresa
+# aqui_log_cliente
 
 A new Flutter project.
 
