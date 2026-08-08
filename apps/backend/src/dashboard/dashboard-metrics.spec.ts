@@ -184,31 +184,42 @@ describe('dashboard-metrics', () => {
         courierId: 'k1',
         createdAt: '2026-07-15T10:00:00.000Z',
         productType: 'FOOD',
+        packageSize: 'SMALL',
       },
       {
         status: 'REQUESTED',
         courierId: null,
         createdAt: '2026-07-14T10:00:00.000Z',
         productType: null,
+        packageSize: null,
       },
       {
         status: 'DELIVERED',
         courierId: 'k2',
         createdAt: new Date('2026-07-15T18:00:00.000Z'),
         productType: 'DOCUMENT',
+        packageSize: 'LARGE',
       },
       {
         status: 'OFFERED',
         courierId: null,
         createdAt: '2026-07-15T12:00:00.000Z',
         productType: 'FOOD',
+        packageSize: 'MEDIUM',
+      },
+      {
+        status: 'ACCEPTED',
+        courierId: 'k1',
+        createdAt: '2026-07-15T13:00:00.000Z',
+        productType: 'FOOD',
+        packageSize: 'SMALL',
       },
     ];
 
     it('filters by status courier and date', () => {
       expect(filterDeliveries(items, { status: 'DELIVERED' })).toHaveLength(2);
-      expect(filterDeliveries(items, { courier: 'k1' })).toHaveLength(1);
-      expect(filterDeliveries(items, { date: '2026-07-15' })).toHaveLength(3);
+      expect(filterDeliveries(items, { courier: 'k1' })).toHaveLength(2);
+      expect(filterDeliveries(items, { date: '2026-07-15' })).toHaveLength(4);
       expect(
         filterDeliveries(items, {
           status: 'DELIVERED',
@@ -218,7 +229,7 @@ describe('dashboard-metrics', () => {
     });
 
     it('filters by productType alone and combined with status', () => {
-      expect(filterDeliveries(items, { productType: 'FOOD' })).toHaveLength(2);
+      expect(filterDeliveries(items, { productType: 'FOOD' })).toHaveLength(3);
       expect(filterDeliveries(items, { productType: 'DOCUMENT' })).toHaveLength(
         1,
       );
@@ -228,12 +239,30 @@ describe('dashboard-metrics', () => {
           status: 'DELIVERED',
         }),
       ).toHaveLength(1);
-      // legado sem productType nao entra no filtro de categoria
       expect(
         filterDeliveries(items, { productType: 'FOOD' }).every(
           (d) => d.productType === 'FOOD',
         ),
       ).toBe(true);
+    });
+
+    it('filters by packageSize alone and combined with productType', () => {
+      expect(filterDeliveries(items, { packageSize: 'SMALL' })).toHaveLength(2);
+      expect(filterDeliveries(items, { packageSize: 'LARGE' })).toHaveLength(1);
+      expect(
+        filterDeliveries(items, {
+          productType: 'FOOD',
+          packageSize: 'SMALL',
+        }),
+      ).toHaveLength(2);
+      expect(
+        filterDeliveries(items, { packageSize: 'SMALL' }).every(
+          (d) => d.packageSize === 'SMALL',
+        ),
+      ).toBe(true);
+      expect(matchesDeliveryFilters(items[1], { packageSize: 'SMALL' })).toBe(
+        false,
+      );
     });
 
     it('matchesDeliveryFilters rejects non-matching rows', () => {

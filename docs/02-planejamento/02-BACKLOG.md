@@ -83,8 +83,8 @@ Plano do fluxo novo: `docs/02-planejamento/planos/PLANO_FLUXO_CLIENTE_PRESTADOR.
 
 | Fatia | Estado | Evidência |
 | --- | --- | --- |
-| `productType` (API + predicado + select/coluna dashboard) | ✅ | testes `dashboard-metrics` + build backend/dashboard |
-| `packageSize` | ⏳ | — |
+| `productType` (API + predicado + select/coluna dashboard) | ✅ | testes + build |
+| `packageSize` | ✅ | testes + build |
 | faixa de peso | ⏳ | — |
 | filtro por cliente | ⏳ | — |
 | QA navegador | ⏳ | API local / browser não exercitados nesta fatia |
@@ -92,10 +92,11 @@ Plano do fluxo novo: `docs/02-planejamento/planos/PLANO_FLUXO_CLIENTE_PRESTADOR.
 ### Critérios de aceite
 
 - [x] Filtro isolado `productType` (e combo com `status` nos predicados puros)
-- [ ] Cada filtro restante (cliente, tamanho, peso) isolado e combinação relevante
-- [x] Paginação continua com o filtro `productType` (mesma `findAll` + page/limit)
+- [x] Filtro isolado `packageSize` (e combo com `productType`)
+- [ ] Cada filtro restante (cliente, peso) isolado e combinação relevante
+- [x] Paginação continua com os filtros B2C (mesma `findAll` + page/limit)
 - [ ] Apenas papéis administrativos autorizados acessam os dados (inalterado; não revalidado em HTTP vivo)
-- [x] Pedido legado sem `productType` não entra no filtro de categoria (documentado + teste)
+- [x] Pedido legado sem categoria/tamanho não entra nos filtros B2C (documentado + teste)
 - [x] Dashboard trata zero resultados / loading / erro (já existente; mantido)
 - [ ] QA do navegador com evidência
 

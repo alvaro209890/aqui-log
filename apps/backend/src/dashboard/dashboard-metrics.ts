@@ -246,6 +246,8 @@ export type DeliveryFilterInput = {
   date?: string;
   /** Categoria da encomenda B2C (`product_type`). */
   productType?: string;
+  /** Tamanho da encomenda B2C (`package_size`). */
+  packageSize?: string;
 };
 
 export type FilterableDelivery = {
@@ -253,6 +255,7 @@ export type FilterableDelivery = {
   courierId: string | null;
   createdAt: Date | string;
   productType?: string | null;
+  packageSize?: string | null;
 };
 
 /** Pure filter predicates for unit testing without HTTP/DB. */
@@ -274,6 +277,9 @@ export function matchesDeliveryFilters(
   }
   if (filters.productType) {
     if (delivery.productType !== filters.productType) return false;
+  }
+  if (filters.packageSize) {
+    if (delivery.packageSize !== filters.packageSize) return false;
   }
   return true;
 }

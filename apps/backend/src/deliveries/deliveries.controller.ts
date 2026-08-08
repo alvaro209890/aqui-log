@@ -47,6 +47,7 @@ export class DeliveriesController {
     @Query('courier') courier?: string,
     @Query('date') date?: string,
     @Query('productType') productType?: string,
+    @Query('packageSize') packageSize?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
@@ -55,6 +56,7 @@ export class DeliveriesController {
       courier,
       date,
       productType,
+      packageSize,
       page,
       limit,
     });

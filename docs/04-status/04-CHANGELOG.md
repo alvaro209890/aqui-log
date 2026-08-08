@@ -4,7 +4,14 @@ Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
 ## Fluxo cliente↔prestador nos planos — 2026-08-07
 
+## B2C-01B fatia 2 (`packageSize`) — 2026-08-08
+
+- `GET /deliveries?packageSize=` com validação (`SMALL`/`MEDIUM`/`LARGE`).
+- Dashboard: select Tamanho + coluna; combo com `productType` nos testes.
+- Backend 34 testes; builds/lints verdes. `B2C-01B` ainda `IN_PROGRESS`.
+
 ## B2C-01B fatia 1 (`productType`) — 2026-08-08
+
 
 - `GET /deliveries?productType=` com validação de catálogo (`400` se inválido).
 - Predicados puros + testes; dashboard: select Categoria + coluna na tabela.

@@ -37,6 +37,7 @@ import { assertDeliveryTransition, distanceInKm } from './delivery-rules';
 import {
   AssignCourierDto,
   CreateDeliveryDto,
+  PACKAGE_SIZES,
   PRODUCT_TYPES,
   RateDeliveryDto,
   UpdateDeliveryStatusDto,
@@ -142,6 +143,7 @@ export class DeliveriesService {
       courier?: string;
       date?: string;
       productType?: string;
+      packageSize?: string;
       page?: string;
       limit?: string;
     } = {},
@@ -187,6 +189,16 @@ export class DeliveriesService {
       }
       qb.andWhere('delivery.productType = :productType', {
         productType: filters.productType,
+      });
+    }
+    if (filters.packageSize) {
+      if (!(PACKAGE_SIZES as readonly string[]).includes(filters.packageSize)) {
+        throw new BadRequestException(
+          `packageSize invalido. Use: ${PACKAGE_SIZES.join(', ')}`,
+        );
+      }
+      qb.andWhere('delivery.packageSize = :packageSize', {
+        packageSize: filters.packageSize,
       });
     }
 

@@ -39,7 +39,8 @@ Rotas protegidas: `Authorization: Bearer <accessToken>`
 | `status` | Status da entrega |
 | `courier` | UUID do motoboy |
 | `date` | Dia de criação (`YYYY-MM-DD`) |
-| `productType` | Categoria B2C (`DOCUMENT`, `FOOD`, …). Valor inválido → `400`. Pedidos legados sem categoria **não** entram no filtro. Fatia `B2C-01B`. |
+| `productType` | Categoria B2C (`DOCUMENT`, `FOOD`, …). Valor inválido → `400`. Pedidos legados sem categoria **não** entram no filtro. |
+| `packageSize` | Tamanho B2C (`SMALL`, `MEDIUM`, `LARGE`). Valor inválido → `400`. Legado sem tamanho **não** entra. Fatias `B2C-01B`. |
 | `page`, `limit` | Paginação |
 
 | Metodo | Rota | Uso |

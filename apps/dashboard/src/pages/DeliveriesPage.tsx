@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
   api,
+  PACKAGE_SIZE_OPTIONS,
   PRODUCT_TYPE_OPTIONS,
   type DeliveryRecord,
 } from '../api';
@@ -27,6 +28,13 @@ function productTypeLabel(value: string | null | undefined): string {
   );
 }
 
+function packageSizeLabel(value: string | null | undefined): string {
+  if (!value) return '—';
+  return (
+    PACKAGE_SIZE_OPTIONS.find((o) => o.value === value)?.label ?? value
+  );
+}
+
 export function DeliveriesPage({ token }: { token: string }) {
   const [items, setItems] = useState<DeliveryRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,6 +42,7 @@ export function DeliveriesPage({ token }: { token: string }) {
   const [courier, setCourier] = useState('');
   const [date, setDate] = useState('');
   const [productType, setProductType] = useState('');
+  const [packageSize, setPackageSize] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -48,6 +57,7 @@ export function DeliveriesPage({ token }: { token: string }) {
         courier: courier || undefined,
         date: date || undefined,
         productType: productType || undefined,
+        packageSize: packageSize || undefined,
         page: p,
         limit: 20,
       })
@@ -111,6 +121,19 @@ export function DeliveriesPage({ token }: { token: string }) {
           </select>
         </label>
         <label>
+          Tamanho
+          <select
+            value={packageSize}
+            onChange={(e) => setPackageSize(e.target.value)}
+          >
+            {PACKAGE_SIZE_OPTIONS.map((opt) => (
+              <option key={opt.value || 'all-sizes'} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
           Entregador (ID)
           <input
             value={courier}
@@ -149,6 +172,7 @@ export function DeliveriesPage({ token }: { token: string }) {
                 <tr>
                   <th>CODIGO</th>
                   <th>CATEGORIA</th>
+                  <th>TAMANHO</th>
                   <th>COLETA</th>
                   <th>ENTREGA</th>
                   <th>ENTREGADOR</th>
@@ -164,6 +188,7 @@ export function DeliveriesPage({ token }: { token: string }) {
                       <strong>{item.code}</strong>
                     </td>
                     <td>{productTypeLabel(item.productType)}</td>
+                    <td>{packageSizeLabel(item.packageSize)}</td>
                     <td>{item.pickupAddress}</td>
                     <td>{item.deliveryAddress}</td>
                     <td>{item.courierId?.slice(0, 8) ?? '—'}</td>

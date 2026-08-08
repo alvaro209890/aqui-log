@@ -157,8 +157,10 @@ export type DeliveryFilters = {
   status?: string;
   courier?: string;
   date?: string;
-  /** Filtro B2C-01B (fatia 1): categoria da encomenda. */
+  /** Filtro B2C-01B: categoria da encomenda. */
   productType?: string;
+  /** Filtro B2C-01B: tamanho P/M/G. */
+  packageSize?: string;
   page?: number;
   limit?: number;
 };
@@ -172,6 +174,13 @@ export const PRODUCT_TYPE_OPTIONS = [
   { value: 'CLOTHING', label: 'Roupas' },
   { value: 'MEDICINE', label: 'Medicamento' },
   { value: 'OTHER', label: 'Outro' },
+] as const;
+
+export const PACKAGE_SIZE_OPTIONS = [
+  { value: '', label: 'Todos' },
+  { value: 'SMALL', label: 'P' },
+  { value: 'MEDIUM', label: 'M' },
+  { value: 'LARGE', label: 'G' },
 ] as const;
 
 async function request<T>(

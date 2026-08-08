@@ -1,47 +1,36 @@
 # Handoff vigente
 
-- **Data/hora:** 2026-08-08 (~00:05 BRT)
+- **Data/hora:** 2026-08-08 (~00:10 BRT)
 - **Agente:** Cursor Grok
-- **Tarefa:** `B2C-01B` fatia 1 — filtro `productType` no dashboard
+- **Tarefa:** `B2C-01B` fatia 2 — filtro `packageSize`
 - **Branch/commit:** `main` (a registrar)
-- **Escopo autorizado:** fatia pequena bem feita; documentar; testar por código; push `main`; Segundo Cérebro
+- **Escopo:** fatia pequena; testes por código; docs; push; Segundo Cérebro
 
 ## Resultado
 
-Filtro de **categoria** (`productType`) ponta a ponta: API `GET /deliveries?productType=`,
-predicados unitários, select + coluna no `DeliveriesPage`. `B2C-01B` ficou
-`IN_PROGRESS` (não DONE). `BASE-04` permanece `READY` (não executado; Álvaro
-autorizou iniciar B2C-01B mesmo assim).
+Filtro de **tamanho** (`packageSize` SMALL/MEDIUM/LARGE) ponta a ponta, no mesmo
+padrão da fatia `productType`. `B2C-01B` continua `IN_PROGRESS`.
 
 ## Alterações
 
-- Backend: `deliveries.controller/service`, `dashboard-metrics` (+ spec)
-- Dashboard: `api.ts`, `DeliveriesPage.tsx`, README
-- Docs: API, backlog, roadmap, handoff, changelog, estado
+- Backend: controller/service + `dashboard-metrics` (+ spec)
+- Dashboard: select Tamanho + coluna; `PACKAGE_SIZE_OPTIONS`
+- Docs: API, backlog, handoff, changelog
 
-## Evidências executadas
+## Evidências
 
-| Verificação | Resultado | Observação |
-| --- | --- | --- |
-| `jest` dashboard-metrics | PASS | 12 testes |
-| `jest` backend completo | PASS | 33 testes |
-| `pnpm --filter backend build` | PASS | |
-| `pnpm --filter backend lint` | PASS | |
-| `pnpm --filter dashboard build` | PASS | |
-| `pnpm --filter dashboard lint` | PASS | tsc |
-| Smoke / QA navegador / Postgres vivo | NÃO EXECUTADO | sem API/DB nesta sessão |
+| Verificação | Resultado |
+| --- | --- |
+| jest backend | PASS 34/34 |
+| build/lint backend | PASS |
+| build/lint dashboard | PASS |
+| QA browser / BASE-04 | NÃO EXECUTADO |
 
-## Não feito
+## Próximo
 
-- Filtros `packageSize`, peso, cliente
-- `BASE-04`, QA visual no browser
-- Integração HTTP e2e do `productType`
-
-## Próximo passo recomendado
-
-1. Continuar `B2C-01B` fatia 2 (`packageSize`) **ou** executar `BASE-04` se quiser baseline de banco primeiro
-2. Não misturar com `UX-01C`
+1. Fatia 3: faixa de peso (`weightMin`/`weightMax`) **ou** filtro por cliente
+2. Ou `BASE-04` se quiser baseline de banco
 
 ## Mensagem de retomada
 
-> `B2C-01B` parcial: só `productType`. Próxima fatia = tamanho ou peso. Ler backlog §3.
+> `B2C-01B`: `productType` + `packageSize` ok. Faltam peso, cliente e QA browser.
