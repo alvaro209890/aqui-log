@@ -4,6 +4,26 @@ Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
 ## Fluxo cliente↔prestador nos planos — 2026-08-07
 
+## `UX-01C`: identidade laranja no dashboard — 2026-08-08
+
+- `styles.css` ganha uma camada de tokens em `:root` e vira a **fonte única** de
+  cor de marca do painel; o verde/menta saiu, inclusive dos neutros que eram
+  tingidos de verde. Sidebar passa a ser escura neutra com destaque laranja.
+- `theme.ts` (novo) leva os tokens para Recharts e Leaflet exportando **nome** de
+  token (`var(--...)`), não valor. Resultado: 0 hexadecimais fora do tema.
+- **Dois laranjas, uma marca:** `--color-primary` `#F97316` para acentos, ícones
+  e séries de gráfico; `--color-primary-strong` `#C54B07` (4,8:1 sobre branco)
+  para botões, links e texto — branco sobre `#F97316` dá 2,8:1 e reprova no AA.
+  `#C2410C` foi testado e revertido: passa no contraste, mas lê como vermelho.
+- `StatusBadge`: `DELIVERED` e `CANCELED` usavam **o mesmo cinza** — entrega
+  concluída ficava indistinguível de cancelada. Agora verde e vermelho;
+  `IN_TRANSIT` vira azul (rastreamento) e `REJECTED` vermelho. Criada `.status.red`.
+- Vocabulário: placeholder da busca deixa de citar "empresa" (B2B removido do
+  produto) e a ação "Assign" vira "Atribuir".
+- QA em Chrome real: 11 telas sem verde de marca, 7 pares de texto ≥ 4,5:1,
+  foco de teclado visível e mobile 430px sem overflow horizontal.
+- Evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-UX-01C.md`.
+
 ## `B2C-05`: foto e campos obrigatórios na criação — 2026-08-08
 
 - `CreateDeliveryDto`: `productType`, `packageSize`, `weightKg` e

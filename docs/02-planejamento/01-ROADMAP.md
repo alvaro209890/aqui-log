@@ -4,7 +4,7 @@
 > **Status:** fonte de verdade para prioridade, dependências e ordem de execução
 > **Rodada atual:** `BASE-04` e `B2C-01B` fechados com evidência de runtime local
 > (migrations + rollback, health, smoke B2C vivo e QA de navegador do dashboard).
-> **Próximo pacote:** `UX-01C` (identidade), `PICK-01` (código de recolhimento) ou `B2C-02` (preço v2).
+> **Próximo pacote:** `PICK-01` (código de recolhimento), `UX-02` (QA visual) ou `B2C-02` (preço v2).
 > **Produto principal:** cliente pessoa física → motoboy, sem intermediário no fluxo
 > **Regra operacional:** desenvolvimento e validação local primeiro; nenhuma cloud é ligada sem pedido explícito do Álvaro
 
@@ -85,7 +85,7 @@ Plano detalhado do fluxo: [PLANO_FLUXO_CLIENTE_PRESTADOR.md](planos/PLANO_FLUXO_
 | Avaliação | ✅ unilateral | Falta avaliação mútua com origem explícita |
 | Carteira do motoboy | ✅ básica | Crédito MVP; falta ledger + taxa cancelamento + saque (`DEC-22/23`) |
 | Carteira/pagamento do cliente | Não existe | Exige ledger, política de cancelamento e idempotência antes de gateway |
-| Dashboard | ✅ operacional + filtros B2C com QA de navegador feito | identidade laranja pendente (`UX-01C`); busca da `TopBar` é decorativa |
+| Dashboard | ✅ operacional + filtros B2C + **identidade laranja** (`UX-01C`, 2026-08-08) | busca da `TopBar` é decorativa (`UX-02`) |
 | Cloud | Alvos decididos (`DEC-25`); scaffold Render/Vercel/Firebase — sem credencial conectada |
 
 ## 6. Caminho crítico de implementação
@@ -239,8 +239,8 @@ Esta trilha pode ocorrer em paralelo às Fases 1–4 quando houver autorização
 | UX-01 | ✅ | Tokens laranja e cores semânticas no `aqui_log_ui` | [diretrizes](../01-produto/02-DIRETRIZES-VISUAIS.md) |
 | UX-01A | ✅ | Aplicar tema no app cliente e cobrir por testes | [diretrizes](../01-produto/02-DIRETRIZES-VISUAIS.md) |
 | UX-01B | ✅ | Aplicar tema no app motoboy e cobrir por testes | [diretrizes](../01-produto/02-DIRETRIZES-VISUAIS.md) |
-| UX-01C | ▶️ | Aplicar os tokens equivalentes no dashboard (`BASE-04` ✅; painel ainda verde) | Diretrizes visuais |
-| UX-02 | ⏳ | Acessibilidade, estados, responsividade e QA visual após `UX-01C` | Critérios do documento visual |
+| UX-01C | ✅ | Tokens laranja no dashboard, com QA de navegador e contraste AA medidos (2026-08-08) | Diretrizes visuais |
+| UX-02 | ▶️ | Acessibilidade, estados, responsividade e QA visual dos fluxos; parte mobile exige dispositivo | Critérios do documento visual |
 
 ## 8. Registro de decisões pendentes
 
@@ -302,12 +302,13 @@ ser simplesmente omitida.
 
 ## 11. Próximo pacote recomendado
 
-`BASE-04`, `B2C-01B` e `B2C-05` fecharam em 2026-08-08 com evidência de runtime
-local. Três IDs estão `READY`:
+`BASE-04`, `B2C-01B`, `B2C-05` e `UX-01C` fecharam em 2026-08-08 com evidência
+de runtime local. Três IDs estão `READY`:
 
-- **`UX-01C`** — identidade laranja do painel, que continua verde;
-- **`PICK-01`** — `pickup_code` na coleta; promovido nesta rodada porque
-  `B2C-05` fechou e `DEC-24` já estava decidida;
+- **`PICK-01`** — `pickup_code` na coleta; liberado porque `B2C-05` fechou e
+  `DEC-24` já estava decidida;
+- **`UX-02`** — QA visual e de acessibilidade dos fluxos; a parte do dashboard
+  saiu em `UX-01C`, o que resta exige dispositivo/emulador;
 - **`B2C-02`** — preço v2 versionado, com os **valores finais** atrás de `DEC-02`.
 
 Ao retomar:

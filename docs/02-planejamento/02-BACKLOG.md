@@ -11,22 +11,22 @@
 | — | `BASE-04` | `DONE` (2026-08-08) | P0 | Banco de teste migrado, rollback ensaiado e smoke B2C vivo documentado | evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-BASE-04.md` |
 | — | `B2C-01B` | `DONE` (2026-08-08) | P0 | Dashboard filtra e relata encomendas B2C | QA de navegador executado; mesma evidência |
 | — | `B2C-05` | `DONE` (2026-08-08) | P0 | Foto + campos obrigatórios na criação | evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-05.md` |
-| 1 | `UX-01C` | `READY` | P1 | Dashboard usa tokens laranja equivalentes | `BASE-04` DONE |
-| 2 | `UX-02` | `BLOCKED` | P1 | Fluxos principais passam por QA visual/acessibilidade | `UX-01C`, navegador e dispositivo/emulador |
-| 3 | `B2C-02` | `READY` | P1 | Preço v2 versionado com breakdown | dep `B2C-01B` DONE; estrutura liberada, **valores finais** atrás de `DEC-02` |
-| 4 | `B2C-06` | `BLOCKED` | P1 | Dual km imediato/agendado + settings admin | `B2C-02` (ou unificado); `DEC-19`; valores `DEC-02` |
-| 5 | `SCHED-01` | `BLOCKED` | P1 | Modo `SCHEDULED` individual + aceite antecipado | `B2C-06`; `DEC-18`, `DEC-20` |
-| 6 | `COUR-01` | `BLOCKED` | P1 | App prestador: Em andamento + Agenda | `SCHED-01`; `DEC-21` |
-| 7 | `PICK-01` | `READY` | P1 | Código de recolhimento na coleta | `B2C-05` DONE; `DEC-24` decidida |
-| 8 | `B2C-03` | `BLOCKED` | P1 | Avaliação mútua por papel | baseline estável e migração de ratings definida |
-| 9 | `DISP-01` | `BLOCKED` | P1 | Reoferta limitada por anéis e recusas | `B2C-02`, `DEC-03` |
-| 10 | `PAY-01` | `BLOCKED` | P2 | Ledger interno (cliente + prestador) sem gateway | autorização explícita + `B2C-02`; `DEC-23` |
-| 11 | `COUR-02` | `BLOCKED` | P2 | Cancelamento prestador + taxa no saldo | `PAY-01`, `COUR-01`; `DEC-22` |
-| 12 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-02B`, `B2C-03A`, `DISP-03` (`B2C-01B` ok) |
-| 13 | `OPS-DB-01` | `BLOCKED` | P2 | Modelo + migração Postgres → Firestore | `DEC-25`; credenciais Firebase |
-| 14 | `OPS-02` | `BLOCKED` | P2 | Firebase Firestore/Storage/FCM reais | pedido + credenciais; ver `PLANO_HOSPEDAGEM.md` |
-| 15 | `OPS-03` | `BLOCKED` | P2 | Deploy Render + Vercel + smoke público | `OPS-01`, `OPS-02`, credenciais |
-| 16 | `LOT-01` | `BLOCKED` | P3 | Aceite atômico de lote manual | `B2C-02B`, `B2C-03A`, `DISP-03`, `DEC-10`, `DEC-11` (`B2C-01B` ok) |
+| — | `UX-01C` | `DONE` (2026-08-08) | P1 | Dashboard usa tokens laranja equivalentes | evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-UX-01C.md` |
+| 1 | `UX-02` | `READY` | P1 | Fluxos principais passam por QA visual/acessibilidade | `UX-01C` DONE; exige dispositivo/emulador para a parte mobile |
+| 2 | `B2C-02` | `READY` | P1 | Preço v2 versionado com breakdown | dep `B2C-01B` DONE; estrutura liberada, **valores finais** atrás de `DEC-02` |
+| 3 | `B2C-06` | `BLOCKED` | P1 | Dual km imediato/agendado + settings admin | `B2C-02` (ou unificado); `DEC-19`; valores `DEC-02` |
+| 4 | `SCHED-01` | `BLOCKED` | P1 | Modo `SCHEDULED` individual + aceite antecipado | `B2C-06`; `DEC-18`, `DEC-20` |
+| 5 | `COUR-01` | `BLOCKED` | P1 | App prestador: Em andamento + Agenda | `SCHED-01`; `DEC-21` |
+| 6 | `PICK-01` | `READY` | P1 | Código de recolhimento na coleta | `B2C-05` DONE; `DEC-24` decidida |
+| 7 | `B2C-03` | `BLOCKED` | P1 | Avaliação mútua por papel | baseline estável e migração de ratings definida |
+| 8 | `DISP-01` | `BLOCKED` | P1 | Reoferta limitada por anéis e recusas | `B2C-02`, `DEC-03` |
+| 9 | `PAY-01` | `BLOCKED` | P2 | Ledger interno (cliente + prestador) sem gateway | autorização explícita + `B2C-02`; `DEC-23` |
+| 10 | `COUR-02` | `BLOCKED` | P2 | Cancelamento prestador + taxa no saldo | `PAY-01`, `COUR-01`; `DEC-22` |
+| 11 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-02B`, `B2C-03A`, `DISP-03` (`B2C-01B` ok) |
+| 12 | `OPS-DB-01` | `BLOCKED` | P2 | Modelo + migração Postgres → Firestore | `DEC-25`; credenciais Firebase |
+| 13 | `OPS-02` | `BLOCKED` | P2 | Firebase Firestore/Storage/FCM reais | pedido + credenciais; ver `PLANO_HOSPEDAGEM.md` |
+| 14 | `OPS-03` | `BLOCKED` | P2 | Deploy Render + Vercel + smoke público | `OPS-01`, `OPS-02`, credenciais |
+| 15 | `LOT-01` | `BLOCKED` | P3 | Aceite atômico de lote manual | `B2C-02B`, `B2C-03A`, `DISP-03`, `DEC-10`, `DEC-11` (`B2C-01B` ok) |
 
 Cloud: alvos **decididos** (`DEC-25` — Render / Vercel / Firebase). Ligar projetos
 ainda exige credenciais e pacote OPS. SMS, PIX e lote automático idem.
@@ -94,21 +94,38 @@ endereços (`DEC-01`, `DEC-18`). Leitura de pedido legado permanece intacta.
 
 Evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-05.md`.
 
-## 3. Tarefa pronta — `UX-01C`
+### `UX-01C` — `DONE`
 
-- **Objetivo:** aplicar os tokens laranja das diretrizes visuais no dashboard,
-  que hoje continua verde (`docs/01-produto/02-DIRETRIZES-VISUAIS.md`).
-- **Achados já levantados** para esta tarefa e para `UX-02`: busca decorativa na
-  `TopBar` com placeholder falando em "empresa" (vocabulário B2B removido) e
-  ação "Assign" em inglês.
-- **Fora do escopo:** qualquer regra de negócio; `PICK-01`.
+Dashboard passa a usar os tokens laranja das diretrizes; o verde/menta de marca
+saiu por completo, e as cores semânticas foram preservadas.
 
-### Alternativas autorizadas
+| Critério | Resultado |
+| --- | --- |
+| Identidade verde/menta substituída por laranja | ✅ 0 verdes de marca em 11 telas (varredura de cor computada) |
+| Cores semânticas preservadas | ✅ sucesso/alerta/erro/informação intactos |
+| Cores de marca literais removidas do código | ✅ 0 hexadecimais fora de `styles.css` |
+| Contraste, foco e estados validados | ✅ 7 pares de texto reais ≥ 4,5:1; `:focus-visible` com contorno |
+| Revisão visual das telas principais | ✅ login, navegação, filtros, cards, tabelas, mapa e gráficos |
+| Build, lint e validação visual real | ✅ Chrome real + mobile 430px sem overflow |
 
-`PICK-01` (código de recolhimento na coleta) passou a `READY` nesta rodada:
-`B2C-05` está `DONE` com evidência e `DEC-24` está decidida. `B2C-02` também
-segue `READY`, com os valores finais atrás de `DEC-02`. Não misturar IDs na
-mesma sessão.
+Achado corrigido no caminho: `DELIVERED` e `CANCELED` usavam **o mesmo cinza**,
+deixando entrega concluída indistinguível de cancelada na tabela.
+
+Evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-UX-01C.md`.
+
+## 3. Tarefa pronta — `PICK-01` (ou `UX-02`, ou `B2C-02`)
+
+Três IDs estão `READY`; escolher **um**.
+
+- **`PICK-01`** — `pickup_code` na coleta (`DEC-24`). A transição
+  `AT_PICKUP → PICKED_UP` passa a exigir código válido **e** foto de prova do
+  prestador. A foto de prova é distinta da foto que o cliente manda na criação
+  (`B2C-05`). Exige migration, backend e app do motoboy.
+- **`UX-02`** — QA visual e de acessibilidade dos fluxos principais. A parte do
+  dashboard ficou coberta por `UX-01C`; o que resta depende de
+  **dispositivo/emulador**, que segue indisponível nesta máquina.
+- **`B2C-02`** — preço v2 versionado com breakdown; a estrutura está liberada,
+  mas os **valores finais** continuam atrás de `DEC-02`.
 
 ## 4. Pacotes do fluxo cliente↔prestador
 

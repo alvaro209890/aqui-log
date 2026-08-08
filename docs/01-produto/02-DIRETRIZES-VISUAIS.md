@@ -1,6 +1,7 @@
 # Aqui Log — Diretrizes visuais e tema de cores
 
-> **Status:** identidade mobile implementada em 2026-08-07; dashboard e QA visual em dispositivo pendentes
+> **Status:** identidade implementada nas TRÊS interfaces — mobile em 2026-08-07,
+> dashboard em 2026-08-08 (`UX-01C`); QA visual em dispositivo ainda pendente
 > **Referência visual:** [AquiResolve](https://github.com/alvaro209890/AquiResolve)
 > **Escopo futuro:** dashboard React, app do cliente, app do motoboy e pacote compartilhado `aqui_log_ui`
 
@@ -81,11 +82,26 @@ Em 2026-08-07, a identidade mobile passou a usar os tokens canônicos deste docu
 - testes do pacote compartilhado validam a cor primária, rótulos pt-BR e cores semânticas;
 - os antigos tokens `#123A31`, `#0D2A24` e `#62D6A9` foram removidos do código mobile.
 
+Em 2026-08-08 (`UX-01C`) o dashboard fechou o ciclo:
+
+- `apps/dashboard/src/styles.css` ganhou uma camada de tokens em `:root` e é a
+  **fonte única** de cor de marca do painel; o verde/menta saiu por completo,
+  incluindo os neutros que eram tingidos de verde;
+- `apps/dashboard/src/theme.ts` leva os tokens para Recharts e Leaflet exportando
+  **nome** de token (`var(--...)`), nunca valor — zero hexadecimal fora do tema;
+- a sidebar passou a ser escura **neutra**, com o destaque ativo em laranja.
+
+**Dois laranjas, um só sistema de marca.** Branco sobre o `#F97316` canônico dá
+2,8:1 e reprova no AA. Por isso `--color-primary` (`#F97316`) vale para acentos,
+ícones e séries de gráfico, e `--color-primary-strong` (`#C54B07`, 4,8:1 sobre
+branco) carrega botões, links e texto laranja. Escurecer mais começa a ler como
+vermelho — foi testado e revertido.
+
 Permanece pendente:
 
-- `apps/dashboard/src/styles.css`: sidebar verde `#102B25`, destaque menta `#65D6AD` e diversos verdes de ação;
-- gráficos e componentes do dashboard contêm cores literais verdes;
-- QA visual real em dispositivo/emulador, pois o AVD disponível ficou `offline` no ADB durante esta sessão.
+- QA visual real em dispositivo/emulador para os **apps** (`UX-02`), pois o AVD
+  disponível continua indisponível;
+- modo escuro do dashboard, que a regra 7 trata como opcional.
 
 ## 6. Critérios para concluir a implementação
 

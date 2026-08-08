@@ -2,7 +2,7 @@
 
 > **Data de referência:** 2026-08-08
 > **Ambiente:** desenvolvimento local no PC `acer`; nada produtivo roda aqui.
-> **Baseline de código:** `f987e26` no início desta sessão (`B2C-05`).
+> **Baseline de código:** `f987e26` no início da sessão (`B2C-05` + `UX-01C`).
 
 ## 1. Produto vigente
 
@@ -19,7 +19,7 @@ coluna `company_id`).
 | Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso**), ofertas, tracking, pricing básico, dashboard e storage local | — migrations revalidadas em banco vivo em 2026-08-08 |
 | App cliente Flutter | Cadastro/login, pedido estruturado **com foto obrigatória**, histórico e acompanhamento | QA recente em dispositivo/emulador pendente |
 | App motoboy Flutter | Cadastro, disponibilidade, oferta, coleta, prova, entrega e carteira básica | QA recente em dispositivo/emulador pendente |
-| Dashboard React | KPIs, entregas (+ categoria/tamanho/peso/cliente com QA de navegador feito), mapa, motoboys, usuários, auditoria, configurações e relatórios | identidade laranja pendente (`UX-01C`); busca da `TopBar` é decorativa |
+| Dashboard React | KPIs, entregas (+ categoria/tamanho/peso/cliente com QA de navegador feito), mapa, motoboys, usuários, auditoria, configurações e relatórios | **identidade laranja aplicada** (`UX-01C`); busca da `TopBar` continua decorativa (`UX-02`) |
 | Postgres/Redis | Containers `aqui-log-postgres` (5433) e `aqui-log-redis` (6379) ativos | banco de teste é descartável; nenhum dado tem valor |
 | Cloud | Scaffolds Render/Vercel/Firebase; alvos **decididos** (`DEC-25`) | nenhum projeto ou credencial conectado |
 
@@ -40,6 +40,18 @@ Executado no banco descartável `aqui_log_b2c05` com API em `PORT=3011`:
   no core.
 
 Documento de evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-05.md`.
+
+### `UX-01C` (esta rodada)
+
+QA em Chrome real contra a API viva, com dashboard em `vite --port 5199`:
+
+- varredura de cor computada em 11 telas: **0 verdes de marca**;
+- 0 hexadecimais de marca fora de `styles.css`;
+- 7 pares de texto reais medidos, todos ≥ 4,5:1 (WCAG AA);
+- layout mobile (430px) sem overflow horizontal;
+- achado corrigido: `DELIVERED` e `CANCELED` usavam o mesmo cinza.
+
+Documento de evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-UX-01C.md`.
 
 ### `BASE-04` e `B2C-01B` (rodada anterior)
 
@@ -73,10 +85,10 @@ Evidência anterior (mobile, 2026-08-07):
 
 ## 5. Próximo passo
 
-`BASE-04`, `B2C-01B` e `B2C-05` estão `DONE`. A fila libera `UX-01C` (identidade
-do dashboard), `PICK-01` (código de recolhimento, promovido a `READY` porque
-`B2C-05` fechou e `DEC-24` está decidida) e `B2C-02` (preço v2, com valores
-finais atrás de `DEC-02`). Escolher um único ID, conforme o backlog.
+`BASE-04`, `B2C-01B`, `B2C-05` e `UX-01C` estão `DONE`. A fila libera `PICK-01`
+(código de recolhimento), `UX-02` (QA visual dos fluxos — a parte mobile exige
+dispositivo/emulador) e `B2C-02` (preço v2, com valores finais atrás de
+`DEC-02`). Escolher um único ID, conforme o backlog.
 
 ## 6. Bloqueios externos
 
