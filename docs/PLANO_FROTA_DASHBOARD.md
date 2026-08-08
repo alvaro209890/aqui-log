@@ -65,12 +65,15 @@ Hoje o evento `courier:location` **exige `deliveryId`** e é rejeitado sem entre
 
 | Estado | Visual |
 | --- | --- |
-| Ocioso (disponível) | Verde, moto |
+| Ocioso (disponível) | Verde, moto — **coarsificado**: raio/área aproximada (ex.: célula ~500 m), sem endereço exato, para não revelar a casa do motoboy (LGPD) |
 | Indo para coleta | Laranja, seta |
 | Com carga / em trânsito | Índigo, pacote |
 | Entregando | Roxo, casa |
 | Sem sinal (> 90 s) | Cinza, borda tracejada pulsante |
 | Parado no trajeto | Anel pulsante (alerta) |
+
+- Posição exata e trilha completa só são expostas **durante viagem ativa**; fora dela, apenas o pino coarsificado (ou oculto fora da zona operacional — decisão pendente 12).
+- Drawer de detalhe: telefone do motoboy e dados do cliente **só para papéis que precisam** (SUPPORT em incidente), com registro de visualização no audit log.
 
 - Pinos de coleta/entrega: **coleta recolhida = selo verde "✓"**; coleta pendente com motoboy presente = pulsar; sem motoboy = cinza.
 - Linhas: trajeto real sólida azul (tooltip com horário por ponto); rota prevista tracejada cinza; desvio destacado em vermelho; cabeça de cobra (direção).
@@ -91,7 +94,8 @@ Hoje o evento `courier:location` **exige `deliveryId`** e é rejeitado sem entre
 
 ### Permissões
 
-- Só `SUPER_ADMIN/ADMIN/SUPPORT` (e admin da empresa, se aplicável) veem a frota; permissão "ver frota" **distinta** de "ver entrega". Acesso registrado em audit log. Posição exposta **só durante viagens ativas** (nunca em casa/offline). Motoboy tem ciência no cadastro (LGPD, seção 6).
+- Só `SUPER_ADMIN/ADMIN/SUPPORT` (e admin da empresa, se aplicável) veem a frota; permissão "ver frota" **distinta** de "ver entrega". `SUPPORT` tem **somente leitura** na frota (nunca cancela/reembolsa sozinho — ver `PLANO_ADMIN.md`). Posição exposta **só em detalhe durante viagens ativas**; ocioso aparece coarsificado (seção 4). Acesso registrado em audit log. Motoboy tem ciência no cadastro (LGPD, seção 6).
+- **Guards de estado:** nenhuma ação do mapa (cancelar, reofertar, reordenar parada) fura a máquina de estados — cancelar exige pedido ≤ `AT_PICKUP` (pós-coleta só com fluxo de devolução), reordenação roda o sequenciador e revalida D-R1..D-R13. Toda ação gera evento em `trip_events` e transação reversa no ledger quando mexe em valor.
 
 ## 5. Regras de alerta (configuráveis server-side)
 
@@ -146,6 +150,7 @@ Calculadas no backend (job + eventos), entregues por `courier:alert`:
 | 9 | Ack de alerta: quem pode e SLA | Admin/suporte, auditado |
 | 10 | Bateria no payload | Obrigatória no Android, opcional no iOS |
 | 11 | Reordenação de paradas em voo | Evento `trip:event:reorder` notifica o dashboard |
+| 12 | Pino ocioso: coarsificação (raio ~500 m) ou oculto fora da zona operacional? | Coarsificado na zona operacional; oculto fora dela |
 
 ## 9. Ordem sugerida de implementação (`FROTA-01` → `FROTA-02`)
 

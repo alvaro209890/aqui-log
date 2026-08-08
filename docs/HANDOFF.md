@@ -1,6 +1,30 @@
 # HANDOFF — Continuidade para o próximo agente
 
-## Atualização de produto — 2026-08-07 (somente documentação)
+## Atualização de produto — 2026-08-07 (somente documentação, 2ª rodada)
+
+O Álvaro decidiu mais duas capacidades novas, **apenas em plano (nenhum código nesta rodada)**:
+
+1. **Painel admin com controle máximo** — pedidos (status/cancelar/redespachar/reatribuir),
+   motoboys, clientes, viagens/lotes, financeiro (ledger), configurações versionadas e
+   notificações, tudo com confirmação dupla + motivo obrigatório + audit log.
+   Plano: **`docs/PLANO_ADMIN.md`** (fases `ADMIN-01..07`).
+2. **Suporte/reclamações do cliente ("algo legal")** — dossiê automático da entrega
+   ("prova reversa": o sistema monta a timeline com fotos/GPS/horários server-side e
+   decide sem depender da palavra de ninguém), auto-resolução guiada (botões: cancelar
+   sem custo / desconto / aguardar), juiz rápido (vereditos automáticos com estorno via
+   ledger até teto) e nota de confiança (compensação proativa sem o cliente pedir).
+   Plano: **`docs/PLANO_SUPORTE_RECLAMACOES.md`** (fases `SUP-01..05`).
+3. **Guia didático do fluxo completo**: **`docs/FLUXO_APP.md`** — jornadas do cliente,
+   motoboy e admin, máquina de estados unificada, cadeia do dinheiro, "quem faz o quê"
+   e o que é funcional/design/futuro.
+
+Correções de consistência aplicadas nos planos existentes (achados da revisão adversarial):
+carga corrente de lote corrigida (R4.4), estorno pós-coleta por fase com teto (R6.3),
+deadhead intermunicipal no preço (R5.1A), índice de pontualidade isenta atrasos com causa
+registrada, pino ocioso coarsificado no mapa de frota (LGPD), SUPPORT com somente leitura
+na frota, TSP exaustivo só ≤ 4 paradas, clawback/janela de contestação do payout.
+
+## Atualização de produto — 2026-08-07 (1ª rodada: lote + frota)
 
 O Álvaro decidiu duas capacidades novas, **apenas em plano (nenhum código nesta rodada)**:
 

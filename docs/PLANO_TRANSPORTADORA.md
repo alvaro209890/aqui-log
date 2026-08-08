@@ -87,22 +87,26 @@ Invariantes (herdados + novos):
 - R4.1. `couriers` ganham `capacity_kg`, `capacity_volume_l`, `max_packages` por veículo, recolhidos no cadastro/habilitação (decisão pendente 13).
 - R4.2. Banda verde ≤ 80%; 80–100% exige confirmação explícita extra; > 100% bloqueado.
 - R4.3. Nenhum lote com soma > capacidade é aceitável (invariante duro).
-- R4.4. Carga corrente decresce na coleta e cresce na entrega, revalidada a cada parada.
+- R4.4. Carga corrente **cresce na coleta e decresce na entrega**, revalidada a cada parada (regra corrigida 2026-08-07: versão anterior estava invertida e viraria teste errado).
 
 ### 4.5 Anti-atraso (comportamento)
 
-- R5.1. Sequenciador do servidor: coletas por janela mais cedo; entregas respeitando coleta-antes-entrega; TSP exaustivo para ≤ 4 paradas. Reordenação manual do motoboy é sempre revalidada.
+- R5.1. Sequenciador do servidor: coletas por janela mais cedo; entregas respeitando coleta-antes-entrega. TSP exaustivo para ≤ 4 paradas; acima disso, heurística com janela (teto intermunicipal pode gerar até 12 paradas — exaustivo explodiria). Reordenação manual do motoboy é sempre revalidada.
+- R5.1A. **Deadhead intermunicipal:** viagem de retorno vazio precisa entrar no cálculo de preço/repasse (custo do trecho de volta), senão nenhum motoboy aceita bloco. O sequenciador estima distância ida+volta; decisão pendente 17 define a fórmula.
 - R5.2. A cada evento (chegada, coleta, entrega, cancelamento, GPS), ETAs recalculados; divergência > 5 min gera `eta_updated` (auditável) e notifica cliente.
 - R5.3. Parada com ETA além do fim da janela → `AT_RISK` + push ao motoboy com 3 opções (seguir, pular, reordenar); cliente avisado com nova estimativa.
 - R5.4. Sem resposta em 120 s e pedido não coletado → redespacho oferecido. Já coletado → registra `late_delivery` e segue (política suave).
-- R5.5. Índice de pontualidade do motoboy (janela móvel 30 dias, tolerância 15 min) afeta prioridade de fila e elegibilidade a blocos agendados; **não** afeta pagamento na v1.
+- R5.5. Índice de pontualidade do motoboy (janela móvel 30 dias, tolerância 15 min) afeta prioridade de fila e elegibilidade a blocos agendados; **não** afeta pagamento na v1. **Atrasos com causa registrada são excluídos do índice:** cliente ausente na coleta, falha de parada anterior na mesma trip, espera por resposta D-R9. A captura de espera por parada (`arrived_at`/`departed_at` em `trip_stops`) alimenta essa isenção — sem ela, motoboy é punido por atraso que não é dele.
 - R5.6. Bloco intermunicipal: coleta de todos com folga > 30 min antes da partida; chegada no destino com folga ≥ 45 min sobre a 1ª entrega.
 
 ### 4.6 Falha parcial, cancelamento e redespacho
 
 - R6.1. Falha em um pedido não afeta os demais: parada `FAILED` com motivo + prova, viagem re-sequenciada.
 - R6.2. Falha antes da coleta → pedido volta à fila (`REMOVED_FROM_TRIP` → `REQUESTED`) e re-despacha como individual.
-- R6.3. Cancelamento do cliente: pedido sai da viagem, re-sequenciamento, cliente não paga o trecho cancelado (alocação de preço por delivery permite estorno parcial), motoboy recebe compensação parcial de deslocamento se cancelamento após coleta (decisão pendente 5).
+- R6.3. Cancelamento do cliente: pedido sai da viagem, re-sequenciamento, cliente não paga o trecho cancelado (alocação de preço por delivery permite estorno parcial). **Estorno por fase** (fecha a divergência com `PLANO_PAGAMENTOS.md`):
+  - coleta **não ocorrida** → estorno automático da fatia (`trip_quotes`);
+  - coleta **ocorrida** → automático apenas até teto de valor (R$ 30); acima disso, análise humana com SLA;
+  - motoboy recebe compensação parcial de deslocamento se cancelamento após coleta (decisão pendente 5).
 - R6.4. Cancelamento da viagem inteira → pedidos não concluídos voltam à fila com evento de auditoria.
 - R7.1. Desistência antes da 1ª coleta: sem penalidade dura, registrada e afeta índice de confiabilidade.
 - R7.2. Desistência após 1ª coleta: só com autorização de suporte; devolução/repasso conforme política (decisão pendente 6).
@@ -110,7 +114,7 @@ Invariantes (herdados + novos):
 
 ### 4.7 Comunicação com o cliente
 
-- R8.1. Cliente vê no app: confirmação do lote, janelas prometidas, ajustes de ETA (delta > 5 min), status da própria parada, aviso de chegada.
+- R8.1. Cliente vê no app: confirmação do lote, **espera de agrupamento** (5–15 min com linguagem clara: "buscando motoboy para otimizar sua entrega"), janelas prometidas, ajustes de ETA (delta > 5 min), **"seu pacote está a N paradas de você"**, status da própria parada, aviso de chegada, e — em falha/redespacho — a informação de que o pacote foi transferido para outro motoboy.
 - R8.2. Cliente **nunca paga acima** do preço individual já apresentado sem nova confirmação.
 - R8.3. Atraso inevitável: nova janela estimada + opção de cancelar sem custo se atraso > 45 min além da janela.
 - R8.4. **Privacidade cruzada:** cliente rastreia só o próprio pacote (ETA/status, "a N paradas de você"); nunca vê coordenadas/endereço de paradas de terceiros.
@@ -290,6 +294,9 @@ Monitoramento de frota no dashboard — ver `docs/PLANO_FROTA_DASHBOARD.md`.
 14. B2B legado: lote é B2C-only no piloto? (recomendação: sim)
 15. Onde começa o piloto (região/município de maior densidade) e critérios de sucesso/abort (p95 atraso, cancelamentos, aceite de lotes).
 16. Regras e gatilhos de `TRIP-00` (quem decide os limiares e o que acontece se o gate não fechar).
+17. **Deadhead intermunicipal:** como o trecho de retorno entra no preço do cliente e no repasse do motoboy (percentual sobre km ida+volta? tarifa mínima por município?).
+18. **Avaliação em lote:** flag `trip_id` na tela de avaliação + contexto "lote de N pacotes"; avaliações de entregas com evento `LATE` sistêmico passam por revisão leve (evita punir motoboy por decisão do sequenciador e vingança cruzada na avaliação mútua).
+19. **Fraude de auto-entrega:** correlação cliente-novo × motoboy-novo × mesmo dispositivo/IP na criação + teto de estorno por conta antes de telefone verificado (`B2C-04`).
 
 ## 13. Fora de escopo inicial
 

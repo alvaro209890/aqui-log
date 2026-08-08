@@ -31,6 +31,9 @@ cliente cadastra → descreve encomenda → recebe preço do servidor → cria p
 | `PLANO_PAGAMENTOS.md` | Ledger, reserva, estorno e gateway | Não; detalha `PAY-01` e `PAY-02` |
 | `PLANO_TRANSPORTADORA.md` | Lote multi-pedido (motoboy), blocos agendados intermunicipais, anti-atraso, agrupamento automático | Não; detalha `LOT-01/02` e `TRIP-00/01/02` |
 | `PLANO_FROTA_DASHBOARD.md` | Monitoramento de frota em tempo real no dashboard web | Não; detalha `FROTA-01/02` |
+| `PLANO_ADMIN.md` | Painel admin com controle operacional total (pedidos, motoboys, clientes, lotes, financeiro, configurações) | Não; detalha `ADMIN-01..07` |
+| `PLANO_SUPORTE_RECLAMACOES.md` | Suporte e reclamações com dossiê automático, auto-resolução e juiz rápido | Não; detalha `SUP-01..05` |
+| `FLUXO_APP.md` | Guia didático do fluxo completo do app (jornadas, estados, dinheiro, quem faz o quê) | Não |
 | `MVP_COVERAGE.md` | Evidência do que existe e limitações atuais | Não |
 | `CHANGELOG_SPRINTS.md` / `SESSAO_IMPLEMENTACAO.md` | Histórico das entregas anteriores | Não |
 | `PLANO_IMPLEMENTACOES.md` | Plano histórico de julho de 2026 | **Não executar** |
@@ -174,6 +177,30 @@ continua atrás de `TRIP-00`.
 Não implementar CRUD/telas de rota do agrupamento automático antes de `TRIP-00`
 demonstrar demanda suficiente; o lote manual (`LOT-01/02`) não espera esse gate.
 
+### Fase 8 — painel admin e suporte/reclamações
+
+O dono decidiu (2026-08-07) que o **painel admin deve controlar o máximo de coisas
+possível** e que o **cliente precisa de um canal de reclamação eficiente** ("algo
+legal": dossiê automático, auto-resolução e juiz rápido). Ambos estão em design,
+**somente documentação** — sem código.
+
+| ID | Status | Dependências | Entrega |
+| --- | --- | --- | --- |
+| ADMIN-01 | ⏳ | `B2C-01B` | Fundação do painel: ações com motivo obrigatório, audit log completo, matriz de permissões, confirmação dupla |
+| ADMIN-02 | ⏳ | `ADMIN-01` | Comandos de domínio: status manual, cancelar (guard), redespachar, reatribuir, aprovar/suspender motoboy, suspender cliente |
+| ADMIN-03 | ⏳ | `PAY-01`, `PAY-01A/B` | Financeiro admin: ledger, crédito/estorno manual com gate, relatórios |
+| ADMIN-04 | ⏳ | `FROTA-01/02` | Frota no painel: mapa, ack de alertas, ações forçadas |
+| ADMIN-05 | ⏳ | `LOT-01/02` | Viagens e lotes no painel: reordenar paradas, remover/cancelar lote, intervenção |
+| ADMIN-06 | ⏳ | `ADMIN-02/03`, `SUP-01..03` | Reclamações/suporte no painel: fila, SLA, estorno, penalização |
+| ADMIN-07 | ⏳ | `B2C-02`, `B2C-03` | Configurações versionadas, notificações, moderação de avaliações |
+| SUP-01 | ⏳ | `B2C-01` + telemetria | Fundação de suporte: schema tickets, dossiê automático ("prova reversa"), abertura no app, ack < 5 s |
+| SUP-02 | ⏳ | `SUP-01`, `B2C-02`, `PAY-01` | Auto-resolução guiada + juiz rápido + nota de confiança + triagem em 3 níveis |
+| SUP-03 | ⏳ | `SUP-02`, `B2C-03` | Reclamação do motoboy + reputação por dossiê + fraude flags |
+| SUP-04 | ⏳ | `SUP-02/03`, `ADMIN` | Painel de suporte completo (fila, SLA, decisões em lote) |
+| SUP-05 | ⏳ | `SUP-04`, `B2C-04` | SMS fallback / WhatsApp, NPS automatizado |
+
+Guia didático de referência (lógica do app ponta a ponta): `docs/FLUXO_APP.md`.
+
 ## 7. Trilha paralela de experiência
 
 Esta trilha pode ocorrer em paralelo às Fases 1–4 quando houver autorização, mas não deve alterar contratos de negócio.
@@ -202,6 +229,11 @@ Esta trilha pode ocorrer em paralelo às Fases 1–4 quando houver autorização
 | DEC-10 | Janela de espera para agrupar antes de virar corrida individual | 5–15 min, cliente avisado no pedido | `LOT-01` |
 | DEC-11 | Tolerâncias anti-atraso (folgas 10/15/45 min, timeout 120 s, atraso 15 min, cancelamento grátis 45 min) | Valores v1 propostos; confirmar | `LOT-01` |
 | DEC-12 | Mapa de frota: retenção da trilha e exposição só em viagens ativas | crua 7 d / agregada 30 d / diária 90 d; LGPD | `FROTA-01` |
+| DEC-13 | Estorno pós-coleta: automático até teto ou sempre humano? | Automático até R$ 30; acima, análise humana com SLA (fecha divergência com `PLANO_PAGAMENTOS.md`) | `SUP-02`, `LOT-01` |
+| DEC-14 | Pino ocioso no mapa de frota (LGPD) | Coarsificado (raio ~500 m) na zona operacional; oculto fora dela | `FROTA-01` |
+| DEC-15 | Deadhead intermunicipal: como o retorno entra no preço/repasse | Percentual sobre km ida+volta ou tarifa mínima por município | `LOT-02` |
+| DEC-16 | Tetos do juiz rápido de suporte (R$ 50 reembolso, R$ 100/mês por cliente) | Começar conservador; subir com dados | `SUP-02` |
+| DEC-17 | Payout do motoboy com janela de contestação/clawback | Buffer 48–72 h antes do payout (futuro `PAY-02`) | `PAY-02` |
 
 Toda decisão fechada deve registrar data, autor e consequência nos planos afetados.
 
@@ -235,6 +267,10 @@ Uma fase só pode mudar para ✅ quando cumprir o que for aplicável:
 | Atraso em lote multi-pedido | Regras D-R1..D-R13, ETAs recalculados, redespacho e índice de pontualidade |
 | Expor localização em tempo real sem controle | Permissão "ver frota" distinta, exposição só em viagem ativa, audit log e ciência do motoboy |
 | Heartbeat sem histórico/desacoplamento | `courier:position` sem `deliveryId` + `courier_positions` + Redis pub/sub |
+| Reembolso indevido/duplicado no suporte | Ledger idempotente, triagem em 3 níveis, limites por cliente, dossiê com timestamp server-side |
+| Admin com poder sem trilha | Confirmação dupla + motivo obrigatório + audit log + guards da máquina de estados |
+| Guarda/segurança e LGPD da frota | Pino ocioso coarsificado, exposição exata só em viagem ativa, permissão "ver frota" + audit de acesso |
+| Payout duplicado após reclamação tardia | Janela de contestação (48–72 h) e clawback no termo do motoboy |
 
 ## 11. Próximo pacote recomendado
 

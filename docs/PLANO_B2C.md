@@ -129,6 +129,9 @@ continuam legíveis por `OrderMeta.fromNotes`, sem backfill textual arriscado.
 | 9 | `TRIP-00` | Medir viabilidade do agrupamento automático de pedidos | telemetria e operação estável | `PLANO_TRANSPORTADORA.md` |
 | 10 | `LOT-01/02` | **Lote multi-pedido pelo motoboy** (aceite de vários juntos, blocos agendados intermunicipais) e anti-atraso | decisão do dono 2026-08-07; sem código ainda | `PLANO_TRANSPORTADORA.md` |
 | 11 | `FROTA-01/02` | **Dashboard monitora frota**: localização dos prestadores, coleta recolhida ou não, trajeto em viagem | decisão do dono 2026-08-07; sem código ainda | `PLANO_FROTA_DASHBOARD.md` |
+| 12 | `ADMIN-01..07` | **Painel admin com controle máximo**: pedidos, motoboys, clientes, lotes, financeiro, configurações | decisão do dono 2026-08-07; sem código ainda | `PLANO_ADMIN.md` |
+| 13 | `SUP-01..05` | **Suporte/reclamações**: dossiê automático, auto-resolução, juiz rápido, nota de confiança | decisão do dono 2026-08-07; sem código ainda | `PLANO_SUPORTE_RECLAMACOES.md` |
+| — | Guia didático | Lógica do app ponta a ponta explicada | pronto (doc) | `FLUXO_APP.md` |
 
 Trilha paralela, quando autorizada: `UX-01/02`, identidade laranja e QA visual conforme `DIRETRIZES_VISUAIS.md`.
 
@@ -191,5 +194,5 @@ curl -X POST localhost:3001/api/v1/auth/register/customer -H 'Content-Type: appl
 ## 10. Fora de escopo (por enquanto)
 
 - Gateway de pagamento externo real (PIX/cartão processado)
-- Agendamento avançado, rotas multi-parada, IA — em design: lote multi-pedido e blocos agendados em `PLANO_TRANSPORTADORA.md`; monitoramento de frota em `PLANO_FROTA_DASHBOARD.md` (sem código nesta rodada)
+- Agendamento avançado, rotas multi-parada, IA — em design: lote multi-pedido e blocos agendados em `PLANO_TRANSPORTADORA.md`; monitoramento de frota em `PLANO_FROTA_DASHBOARD.md`; painel admin em `PLANO_ADMIN.md`; suporte/reclamações em `PLANO_SUPORTE_RECLAMACOES.md` (sem código nesta rodada)
 - Entregas para empresas (se voltar, entra como "cliente tipo empresa")
