@@ -4,6 +4,30 @@ Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
 ## Fluxo cliente↔prestador nos planos — 2026-08-07
 
+## `BASE-04` e `B2C-01B` fechados com evidência de runtime — 2026-08-08
+
+- `BASE-04` `DONE`: banco descartável `aqui_log_base04`, 8 migrations sem
+  `synchronize=true`, `RemoveCompanyModel` revertida e reaplicada, health com
+  `db`/`redis` `ok`, smoke B2C aprovado em 6 execuções com códigos distintos.
+- `B2C-01B` `DONE`: QA de navegador em Chrome real cobrindo os quatro filtros,
+  combinação, estado vazio, paginação com filtro e escopo por papel
+  (`CUSTOMER` ignora `customerId` alheio; não-UUID → 400; sem token → 401).
+- `pnpm build`, `pnpm lint` e `pnpm test` verdes (backend 10 suítes / 36 testes).
+- Achados de UI registrados para `UX-01C`/`UX-02`: busca decorativa na `TopBar`
+  com vocabulário B2B ("empresa"), ação "Assign" em inglês, painel ainda verde.
+- Evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-BASE-04.md`.
+
+## Smoke deixa de aprovar com upload de prova quebrado — 2026-08-08
+
+- `scripts/smoke-test.sh`: a falha do `PUT` da prova era engolida dentro de `$( )`,
+  onde `set -e` não aborta; o script imprimia `Smoke test aprovado` mesmo com o
+  arquivo nunca subindo.
+- Agora `upload_proof` retorna erro e a chamada usa `|| exit 1`, com mensagem que
+  nomeia a prova, a URL tentada e explica o alinhamento de `PUBLIC_API_URL`.
+- Verificado nos dois sentidos: falha com `exit=1` quando desalinhado, aprova com
+  `exit=0` quando alinhado.
+- Consequência: evidências de smoke anteriores a esta data não comprovam upload.
+
 ## B2C-01B fatia 4 (`customerId`) — 2026-08-08
 
 - `GET /deliveries?customerId=` com validação UUID (`400` se inválido).

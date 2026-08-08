@@ -26,8 +26,10 @@ Plataforma B2C de logística urbana: cliente, motoboy, despacho e operação em 
 - Dashboard React (KPIs, mapa, gestao users/audit/settings, acoes operacionais)
 - Apps Flutter cliente B2C + entregador (mapa OSM, prova, GPS e identidade laranja compartilhada)
 - Encomenda B2C estruturada na API (`productType`, `packageSize`, `weightKg`, `deliveryScope`, `productPhotoUrls`) com fallback para pedidos antigos em `notes`
-- Postgres + Redis via Docker Compose, script de smoke e CI. O runtime local atual
-  ainda precisa da revalidação `BASE-04` descrita no backlog.
+- Postgres + Redis via Docker Compose, script de smoke e CI. O runtime local foi
+  revalidado em 2026-08-08 (`BASE-04`): migrations + rollback em banco descartável,
+  health e smoke B2C ponta a ponta. Evidência em
+  [`docs/04-status/entregas/2026-08-08-EVIDENCIA-BASE-04.md`](docs/04-status/entregas/2026-08-08-EVIDENCIA-BASE-04.md).
 
 ## Alvo cloud (estrutura apenas — nao vinculado)
 

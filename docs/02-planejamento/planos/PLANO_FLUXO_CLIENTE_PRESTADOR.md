@@ -252,13 +252,13 @@ dupla se houver pedidos em voo.
 
 ## 11. Pacotes de implementação (ordem relativa)
 
-Não altera o `READY` atual (`BASE-04`). Após baseline:
+Baseline concluído em 2026-08-08; `B2C-05` é o primeiro pacote deste plano a ficar `READY`.
 
 | Ordem | ID | Entrega | Dependências |
 | ---: | --- | --- | --- |
-| — | `BASE-04` | Baseline runtime | (já `READY`) |
-| 1 | `B2C-01B` | Filtros dashboard B2C | `BASE-04` |
-| 2 | `B2C-05` | Obrigatoriedade foto + campos na criação | `B2C-01B`, `DEC-01` |
+| ✅ | `BASE-04` | Baseline runtime | concluído 2026-08-08 |
+| ✅ | `B2C-01B` | Filtros dashboard B2C | concluído 2026-08-08 |
+| 1 | `B2C-05` | Obrigatoriedade foto + campos na criação | `B2C-01B` ✅, `DEC-01` |
 | 3 | `B2C-06` | Preço dual km imediato/agendado + settings | `B2C-02` (ou unificar), `DEC-19`; valores `DEC-02` |
 | 4 | `SCHED-01` | Modo `SCHEDULED` individual + aceite antecipado | `B2C-06`, `DEC-18`, `DEC-20` |
 | 5 | `COUR-01` | Tela Em andamento / Agenda | `SCHED-01`, `DEC-21` |

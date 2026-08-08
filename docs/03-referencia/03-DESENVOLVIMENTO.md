@@ -54,6 +54,36 @@ cd packages/aqui_log_core && dart pub get && dart analyze && dart test
 
 O script em `scripts/smoke-test.sh` cobre registro, aprovacao, despacho, aceite, ciclo de status, historico, avaliacao, carteira (fee server-side), notificacoes, auditoria e **refresh token**. Redis e usado em runtime para lock de aceite de oferta e jobs de expiracao/re-despacho.
 
+### `PUBLIC_API_URL` precisa apontar para a mesma API
+
+A URL de upload da prova vem da presign do **servidor**, montada a partir de
+`PUBLIC_API_URL` — nao do `API_URL` que o script chama. Se voce subir a API em uma
+porta diferente da que esta no `.env`, passe as duas variaveis juntas:
+
+```bash
+DATABASE_NAME=aqui_log_base04 PORT=3011 PUBLIC_API_URL=http://localhost:3011/api/v1 \
+  pnpm --filter backend start:prod
+PORT=3011 API_URL=http://localhost:3011/api/v1 pnpm smoke
+```
+
+Desalinhadas, o `PUT` da prova falha. Desde 2026-08-08 o smoke **aborta** com
+mensagem explicativa nesse caso; antes disso ele aprovava silenciosamente, entao
+evidencias anteriores nao comprovam que o upload de prova funcionou.
+
+### Rodar em banco descartavel sem tocar no `.env`
+
+`dotenv` e o `ConfigModule` do Nest nao sobrescrevem variaveis ja presentes no
+ambiente, entao da para apontar para outro banco so na linha de comando:
+
+```bash
+docker exec aqui-log-postgres psql -U aqui_log -d postgres -c 'CREATE DATABASE aqui_log_teste;'
+DATABASE_NAME=aqui_log_teste pnpm db:migrate
+DATABASE_NAME=aqui_log_teste pnpm db:admin
+```
+
+Use isso para o ensaio de rollback (`migration:revert` + `migration:run`); nunca em
+banco com dados que importam.
+
 Timezone padrao: `America/Sao_Paulo` (`APP_TIMEZONE`).
 
 Continuidade multiagente e alvos cloud: [handoff vigente](../04-status/02-HANDOFF.md)

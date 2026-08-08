@@ -122,9 +122,10 @@ continuam legíveis por `OrderMeta.fromNotes`, sem backfill textual arriscado.
 
 | Ordem | ID | Entrega vertical | Gate/Dependência | Doc |
 |---|---|---|---|---|
-| 1 | `BASE-04` | Aplicar migrations e provar o smoke em runtime local | Postgres/Redis descartáveis | backlog |
-| 2 | `B2C-01B` | Gestão de clientes e relatórios por categoria/tamanho/peso | `BASE-04` | roadmap |
-| 3 | `B2C-02` | Preço v2 com breakdown/versionamento e prévia | `B2C-01B`, `DEC-02` para valores finais | plano de confiança e preço §3 |
+| ✅ | `BASE-04` | Aplicar migrations e provar o smoke em runtime local | concluído 2026-08-08 | backlog |
+| ✅ | `B2C-01B` | Gestão de clientes e relatórios por categoria/tamanho/peso | concluído 2026-08-08 | roadmap |
+| 1 | `B2C-05` | Foto e campos obrigatórios na criação | `B2C-01B` ✅, `DEC-01` | plano de fluxo cliente↔prestador |
+| 2 | `B2C-02` | Preço v2 com breakdown/versionamento e prévia | `B2C-01B`, `DEC-02` para valores finais | plano de confiança e preço §3 |
 | 4 | `B2C-03` | Avaliação mútua por papel | migração de ratings legados | plano de confiança e preço §4 |
 | 5 | `DISP-01/03` | Reoferta por anéis, aviso e telemetria | `B2C-02`, `DEC-03` | plano de confiança e preço §6 |
 | 6 | `PAY-01` | Ledger interno, reserva e estorno, sem gateway | autorização explícita + preço v2 | plano de pagamentos |
@@ -149,8 +150,8 @@ gate correspondente no [roadmap](../01-ROADMAP.md).
 
 | Limitação | Impacto | Mitigação |
 |---|---|---|
-| Dashboard ainda não usa os campos próprios | Relatórios/consultas por categoria não existem | `B2C-01B` é a prioridade |
-| Foto ainda opcional no código | Motoboy aceita sem ver o produto | `DEC-01` decidida; ativar em `B2C-05` após baseline |
+| Dashboard não tem relatório agregado por categoria | Filtros existem desde `B2C-01B` (2026-08-08), mas não há agregação | tratar em `ADMIN-01/07`, não em nova fatia de `B2C-01B` |
+| Foto ainda opcional no código | Motoboy aceita sem ver o produto | `DEC-01` decidida; baseline concluído — `B2C-05` está `READY` |
 | Sem pagamento | Ninguém paga nada ainda | `PLANO_PAGAMENTOS.md` |
 | Despacho por "motoboy mais próximo" (1 oferta por vez) | Sem concorrência de ofertas visíveis | Aceite/recusa já existe; anéis de raio futuros |
 | Sem validação de telefone | Contas lixo possíveis | `PLANO_CONFIANCA_E_PRECO.md` §5 |

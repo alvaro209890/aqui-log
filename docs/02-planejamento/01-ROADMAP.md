@@ -1,10 +1,10 @@
 # Aqui Log — Roadmap executivo B2C
 
-> **Atualizado:** 2026-08-07
+> **Atualizado:** 2026-08-08
 > **Status:** fonte de verdade para prioridade, dependências e ordem de execução
-> **Rodada atual:** formalização do fluxo cliente↔prestador (modos imediato/agendado,
-> foto obrigatória, cancelamento com taxa, código de recolhimento, saldo sacável).
-> **Somente documentação; nenhum código ou runtime foi alterado.**
+> **Rodada atual:** `BASE-04` e `B2C-01B` fechados com evidência de runtime local
+> (migrations + rollback, health, smoke B2C vivo e QA de navegador do dashboard).
+> **Próximo pacote:** `B2C-05` (foto e campos obrigatórios) ou `UX-01C` (identidade).
 > **Produto principal:** cliente pessoa física → motoboy, sem intermediário no fluxo
 > **Regra operacional:** desenvolvimento e validação local primeiro; nenhuma cloud é ligada sem pedido explícito do Álvaro
 
@@ -85,7 +85,7 @@ Plano detalhado do fluxo: [PLANO_FLUXO_CLIENTE_PRESTADOR.md](planos/PLANO_FLUXO_
 | Avaliação | ✅ unilateral | Falta avaliação mútua com origem explícita |
 | Carteira do motoboy | ✅ básica | Crédito MVP; falta ledger + taxa cancelamento + saque (`DEC-22/23`) |
 | Carteira/pagamento do cliente | Não existe | Exige ledger, política de cancelamento e idempotência antes de gateway |
-| Dashboard | ✅ operacional + filtros B2C (categoria/tamanho/peso/cliente) | QA browser pendente (`B2C-01B`); identidade = `UX-01C` |
+| Dashboard | ✅ operacional + filtros B2C com QA de navegador feito | identidade laranja pendente (`UX-01C`); busca da `TopBar` é decorativa |
 | Cloud | Alvos decididos (`DEC-25`); scaffold Render/Vercel/Firebase — sem credencial conectada |
 
 ## 6. Caminho crítico de implementação
@@ -97,7 +97,7 @@ Plano detalhado do fluxo: [PLANO_FLUXO_CLIENTE_PRESTADOR.md](planos/PLANO_FLUXO_
 | BASE-01 | ✅ | MVP B2C ponta a ponta | Smoke e testes anteriores documentados em `PLANO_B2C.md` |
 | BASE-02 | ⏸️ | Fechar decisões mínimas de produto | Álvaro registra respostas de `DEC-01` a `DEC-03` na seção 8 |
 | BASE-03 | ✅ | Congelar contratos aditivos de `B2C-01` | DTO, resposta, compatibilidade e rollback implementados/documentados |
-| BASE-04 | ▶️ | Validar o baseline em runtime local | Migrations atuais aplicadas em banco descartável, health e smoke B2C registrados |
+| BASE-04 | ✅ | Validar o baseline em runtime local | 8 migrations em banco descartável + rollback ensaiado, health `db/redis ok`, smoke B2C aprovado 6× (2026-08-08) |
 
 `BASE-02` / `DEC-01`: a **obrigatoriedade de foto** foi decidida (2026-08-07). A
 ativação em código fica em `B2C-05` após `BASE-04`/`B2C-01B`. Cobrança real e
@@ -109,8 +109,8 @@ valores finais de km continuam atrás de `DEC-05`/`DEC-02`.
 | --- | --- | --- | --- |
 | B2C-01 | ✅ | `BASE-03` | Colunas próprias para tipo, tamanho, peso, alcance e fotos; leitura compatível com `notes` legado |
 | B2C-01A | ✅ | `B2C-01` | Apps e core consomem campos próprios com fallback legado |
-| B2C-01B | ▶️ parcial | autorizado sem `BASE-04` | Fatias código ok; falta QA browser |
-| B2C-05 | ⏳ | `B2C-01B`, `DEC-01` | Obrigatoriedade de foto + peso/tipo/tamanho/endereços na criação; legados legíveis |
+| B2C-01B | ✅ | `BASE-03` | Quatro filtros B2C no painel, com QA de navegador e escopo por papel verificados em HTTP vivo (2026-08-08) |
+| B2C-05 | ▶️ | `B2C-01B` ✅, `DEC-01` | Obrigatoriedade de foto + peso/tipo/tamanho/endereços na criação; legados legíveis |
 
 **Estratégia de migração:** mudança aditiva, leitura dupla durante a transição e remoção do parser legado somente em uma versão posterior, após medir que não existem pedidos antigos dependentes dele.
 
@@ -120,7 +120,7 @@ valores finais de km continuam atrás de `DEC-05`/`DEC-02`.
 
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
-| B2C-02 | ⏳ | `B2C-01` | Preço com faixas de peso/tamanho e configuração server-side |
+| B2C-02 | ▶️ | `B2C-01` ✅ | Preço com faixas de peso/tamanho e configuração server-side (valores finais atrás de `DEC-02`) |
 | B2C-02A | ⏳ | `B2C-02` | Persistir breakdown e versão da regra usada no pedido |
 | B2C-02B | ⏳ | `B2C-02` | Prévia de preço antes da confirmação, sem confiar em valores enviados pelo app |
 | B2C-06 | ⏳ | `B2C-02` ou unificado, `DEC-19` | Dual `price_per_km_immediate` / `price_per_km_scheduled` + validação imediato > agendado |
@@ -239,7 +239,7 @@ Esta trilha pode ocorrer em paralelo às Fases 1–4 quando houver autorização
 | UX-01 | ✅ | Tokens laranja e cores semânticas no `aqui_log_ui` | [diretrizes](../01-produto/02-DIRETRIZES-VISUAIS.md) |
 | UX-01A | ✅ | Aplicar tema no app cliente e cobrir por testes | [diretrizes](../01-produto/02-DIRETRIZES-VISUAIS.md) |
 | UX-01B | ✅ | Aplicar tema no app motoboy e cobrir por testes | [diretrizes](../01-produto/02-DIRETRIZES-VISUAIS.md) |
-| UX-01C | ⏳ | Aplicar os tokens equivalentes no dashboard após `BASE-04` | Diretrizes visuais |
+| UX-01C | ▶️ | Aplicar os tokens equivalentes no dashboard (`BASE-04` ✅; painel ainda verde) | Diretrizes visuais |
 | UX-02 | ⏳ | Acessibilidade, estados, responsividade e QA visual após `UX-01C` | Critérios do documento visual |
 
 ## 8. Registro de decisões pendentes
@@ -302,16 +302,20 @@ ser simplesmente omitida.
 
 ## 11. Próximo pacote recomendado
 
-Próximo trabalho técnico: **`BASE-04 — validar migrations e smoke B2C em runtime local`**.
+`BASE-04` e `B2C-01B` fecharam em 2026-08-08 com evidência de runtime local. O
+próximo trabalho técnico é **`B2C-05 — foto e campos obrigatórios na criação`**
+(`DEC-01` já decidida), com **`UX-01C`** como alternativa autorizada se o Álvaro
+preferir tratar a identidade do painel antes.
 
 Ao retomar:
 
-1. usar banco descartável e aplicar `1785100000000-DeliveryPackageFields` e
-   `1785200000000-RemoveCompanyModel`;
-2. executar health, smoke B2C vivo e verificações de build/lint/test;
-3. registrar toda evidência e promover `B2C-01B` para `READY` somente se o baseline passar;
-4. manter `notes` como fallback de leitura; **não** implementar `B2C-05`…`PICK-01`
-   nesta sessão — só após baseline e na ordem do
-   [plano de fluxo](planos/PLANO_FLUXO_CLIENTE_PRESTADOR.md).
+1. escolher **um** ID — `B2C-05` **ou** `UX-01C` — e não misturar os dois;
+2. em `B2C-05`, obrigar foto/peso/tipo/tamanho/endereços apenas na **criação**;
+   pedido legado precisa continuar legível em apps e painel;
+3. manter `notes` como fallback de leitura;
+4. reproduzir o ambiente de teste com banco descartável, `PORT` livre e
+   `PUBLIC_API_URL` alinhado à API — receita em
+   `docs/03-referencia/03-DESENVOLVIMENTO.md`;
+5. **não** antecipar `B2C-06`…`PICK-01`, ledger, gateway ou cloud.
 
 Não iniciar Firebase, deploy, gateway ou rota multi-pedido como parte desse pacote.

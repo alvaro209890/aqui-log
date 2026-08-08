@@ -66,7 +66,8 @@ Não fazer backfill SQL frágil sobre texto localizado. Se o backfill for necess
 
 **Decisão (`DEC-01`, 2026-08-07):** exigir ao menos uma foto na **criação** de
 pedido novo. Pedidos legados sem foto continuam legíveis; criação sem foto é
-rejeitada. Ativação em código: pacote `B2C-05` (após `BASE-04` / `B2C-01B`).
+rejeitada. Ativação em código: pacote `B2C-05`, `READY` desde 2026-08-08
+(`BASE-04` e `B2C-01B` concluídos).
 
 - validar MIME, tamanho, quantidade e host no backend;
 - armazenar chaves/URLs privadas conforme o adapter de storage;

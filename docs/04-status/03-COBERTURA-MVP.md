@@ -47,7 +47,7 @@ cliente e admin**.
 | Login, KPIs e entregas | Funcional | 7 metricas com variacao % + tabela |
 | Graficos (hora, status, gauge) | Funcional | recharts + endpoints `/dashboard/charts/*` e `/performance` |
 | Entregadores e usuarios | Funcional | Paginas Couriers e Users no sidebar |
-| Entregas com filtros | Funcional | Pagina Deliveries + query params na API |
+| Entregas com filtros | Funcional | Pagina Deliveries + query params na API; filtros B2C com QA de navegador em 2026-08-08 |
 | Mapa em tempo real | Funcional | Leaflet + WebSocket no painel |
 | Financeiro, relatorios e avaliacoes | Funcional basico | Paginas Finance, Reports, Ratings |
 | Alertas / notificacoes | Funcional basico | Pagina Alerts + badge no topbar |
@@ -55,6 +55,19 @@ cliente e admin**.
 | Motor de despacho | Funcional MVP | Proximidade, disponibilidade e exclusao de recusas |
 | API publica e integracoes | Planejado | ERP, e-commerce e marketplaces ficam para fase futura |
 | IA, BI, calor, roteirizacao e agrupamento | Planejado | Explicitamente fora do MVP estrutural |
+
+## `BASE-04` + `B2C-01B` (2026-08-08) ✅
+
+- Baseline provado em banco descartável (`aqui_log_base04`): 8 migrations sem
+  `synchronize=true`, `RemoveCompanyModel` revertida e reaplicada, schema final
+  conferido (sem `companies`, sem `company_id`).
+- Health com Postgres e Redis `ok`; smoke B2C aprovado 6× com códigos distintos.
+- Dashboard: filtros de categoria, tamanho, faixa de peso e cliente exercitados no
+  **navegador real**, com paginação, estado vazio e escopo por papel verificados.
+- `scripts/smoke-test.sh` corrigido: não aprova mais com upload de prova quebrado —
+  evidências de smoke anteriores a esta data não comprovam upload.
+- Continua pendente: APK release atual e QA visual em emulador/dispositivo.
+- Evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-BASE-04.md`.
 
 ## Bloqueios antes de producao
 
