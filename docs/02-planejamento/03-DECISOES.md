@@ -23,7 +23,7 @@ consequência; os planos passam apenas a apontar para este registro.
 | ID | Estado | Dono | Decisão | Bloqueia / libera |
 | --- | --- | --- | --- | --- |
 | `DEC-01` | `DECIDIDA` (2026-08-07, Álvaro) | Álvaro | Foto da encomenda **obrigatória** na criação de pedido novo (mín. 1). Pedidos legados sem foto continuam legíveis; criação sem foto é rejeitada. | Libera ativação em `B2C-05`; flag alinhada a true para novos |
-| `DEC-02` | `PENDENTE` | Álvaro | Valores finais: faixas/adicionais de peso/tamanho **e** centavos/km imediato vs agendado | Valores finais de `B2C-02` / `B2C-06` |
+| `DEC-02` | `DECIDIDA` (2026-08-08, Álvaro) | Álvaro | Valores **provisórios** definidos para destravar a implementação: base R$ 7,00; mínimo R$ 9,00; plataforma 20%; km imediato R$ 2,50 / agendado R$ 1,80; faixas de peso até 2/5/10/20 kg (+R$ 0 / 2 / 4,50 / 9) e +R$ 15 acima; tamanho P/M/G = +R$ 0 / 1,50 / 4. Multa do prestador R$ 3,00, do cliente R$ 0, cutoffs 5 min (imediato) e 60 min (agendado). **Tudo editável no painel admin**, sem deploy; calibragem real fica na tela de configurações. | Destrava `B2C-02` ✅ e `B2C-06` |
 | `DEC-03` | `PENDENTE` | Álvaro | Sem aceite: raio, preço ou cancelamento? Recomendação: ampliar raio com limite; aumento só com consentimento | `DISP-01/02` |
 | `DEC-04` | `PENDENTE` | Álvaro | Provedor de SMS | `B2C-04` |
 | `DEC-05` | `PENDENTE` | Álvaro | Iniciar ledger sem gateway? | `PAY-01` |

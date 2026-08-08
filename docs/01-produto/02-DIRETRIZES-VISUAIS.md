@@ -97,11 +97,21 @@ Em 2026-08-08 (`UX-01C`) o dashboard fechou o ciclo:
 branco) carrega botões, links e texto laranja. Escurecer mais começa a ler como
 vermelho — foi testado e revertido.
 
+Em 2026-08-08 o dashboard também ganhou **tema escuro**, conforme a regra 7
+(derivado, não invertido): só os tokens mudam em `:root[data-theme='dark']`,
+com os valores escuros da tabela da seção 2. A escolha do usuário fica no
+`localStorage` e, sem escolha, vale a preferência do sistema.
+
+**O laranja troca de papel no escuro.** No claro, texto pequeno exige o laranja
+escuro (`#C54B07`); no escuro esse mesmo tom daria 2,6:1 e sumiria. Por isso o
+tema escuro usa `#FB923C` (8,7:1 sobre o fundo) para acento **e** texto, com
+quase-preto sobre o laranja nos botões (8,2:1).
+
 Permanece pendente:
 
 - QA visual real em dispositivo/emulador para os **apps** (`UX-02`), pois o AVD
-  disponível continua indisponível;
-- modo escuro do dashboard, que a regra 7 trata como opcional.
+  continua indisponível;
+- tema escuro nos **apps Flutter** (esta rodada cobriu só o painel web).
 
 ## 6. Critérios para concluir a implementação
 

@@ -1,103 +1,115 @@
 # Handoff vigente
 
-- **Data/hora:** 2026-08-08 (~16:10 BRT)
+- **Data/hora:** 2026-08-08 (~17:00 BRT)
 - **Agente:** Claude Code (Opus 5)
-- **Tarefas:** `B2C-05` (foto e campos obrigatórios) e `UX-01C` (identidade laranja)
+- **Tarefas:** `B2C-05`, `UX-01C`, `DEC-02` + `B2C-02`/`B2C-02A` e tema escuro
 - **Branch/commit inicial:** `main` @ `f987e26`
 
-> Duas tarefas na mesma sessão por autorização explícita do Álvaro ("faça o que
-> der pra você"). Foram executadas **em sequência**, com commits separados e
-> evidência própria — não misturadas.
+> Várias tarefas na mesma sessão por autorização explícita do Álvaro. Foram
+> executadas **em sequência**, com commits e evidência próprios.
 
 ## Resultado
 
-`B2C-05` e `UX-01C` estão `DONE`, ambas com evidência executada.
+Quatro IDs `DONE` e uma decisão fechada.
 
-**`B2C-05`** — a criação de pedido passa a exigir foto (≥ 1), tipo, tamanho, peso
-e os dois endereços (`DEC-01`, `DEC-18`). A obrigatoriedade vale só para criação:
-pedido legado continua legível e o fallback de `notes` está intacto.
+**`B2C-05`** — criação de pedido exige foto (≥1), tipo, tamanho, peso e os dois
+endereços. Vale só para criação: pedido legado continua legível.
 
-**`UX-01C`** — o dashboard deixou de ser verde. `styles.css` virou a fonte única
-de cor de marca do painel, com camada de tokens; `theme.ts` (novo) leva os tokens
-para Recharts e Leaflet exportando **nome** de token, então não sobrou nenhum
-hexadecimal de marca fora do tema.
+**`UX-01C`** — o painel deixou de ser verde; `styles.css` virou a fonte única de
+cor de marca e nenhum hexadecimal de marca sobrou fora do tema.
 
-## Duas decisões que valem registro
+**`DEC-02` + `B2C-02`/`B2C-02A`** — preço v2 versionado:
+`base + km × tarifa_do_modo + peso + tamanho`, com piso. Versão e breakdown ficam
+congelados no pedido, então mudar configuração **não** mexe em pedido já criado.
+Todos os valores — inclusive **multas e cutoffs** — são editáveis no painel admin.
 
-1. **Dois laranjas, uma marca.** Branco sobre o `#F97316` canônico dá 2,8:1 e
-   reprova no WCAG AA. Por isso acentos/ícones/gráficos usam `#F97316` e
-   botões/links usam `--color-primary-strong` `#C54B07` (4,8:1 sobre branco).
-   A primeira tentativa foi `#C2410C`: passa com folga no contraste, mas na tela
-   **lê como vermelho** — foi revertido depois de olhar o screenshot, não o número.
-2. **Mensagens de erro.** Um campo obrigatório ausente dispara *todas* as
-   constraints dele no `class-validator`. Sem mensagem própria em cada uma, o
-   cliente recebia ruído em inglês ("weightKg must not be greater than 1000")
-   para um peso que nem foi enviado.
+**Tema escuro** do painel, derivado por tokens, com alternador, persistência e
+respeito ao `prefers-color-scheme`.
+
+## Coisas que o próximo agente precisa saber
+
+1. **Os valores do `DEC-02` são provisórios.** Foram escolhidos para destravar a
+   implementação, não são calibragem de mercado. A calibragem real é do Álvaro,
+   na tela de configurações — sem deploy.
+2. **As multas são configuráveis mas não são cobradas.** A cobrança depende de
+   `PAY-01`/`COUR-02`. A tela avisa o operador.
+3. **Dois laranjas, dois papéis, por causa do contraste.** No claro, texto usa
+   `#C54B07`; no escuro, `#FB923C` — o tom do claro sumiria no escuro, e o
+   `#F97316` puro reprova no AA com texto branco.
+4. **`class-transformer` entrega o DTO com as chaves ausentes em `undefined`.**
+   Foi a raiz de um bug de perda silenciosa em settings. Qualquer merge de patch
+   parcial precisa filtrar `undefined` antes.
 
 ## Evidências
 
 | Verificação | Resultado |
 | --- | --- |
-| `pnpm build` | PASS (backend + dashboard) |
+| `pnpm build` | PASS |
 | `pnpm lint` | PASS |
-| `pnpm test` | PASS — backend 10 suítes / **44 testes** (eram 36) |
-| `pnpm smoke` (API `:3011`) | PASS — 6 execuções no total |
-| smoke com expectativa invertida | FALHA esperada — `exit=1`; o assert negativo é vivo |
-| Rejeição de criação em HTTP vivo | PASS — 10 casos, todos `400` em português |
-| Leitura de pedido legado | PASS — lista, detalhe, histórico e visão admin em `200` |
-| `flutter analyze` + `flutter test` (customer_app) | PASS — 11 testes (era 10) |
-| `flutter analyze` + `flutter test` (courier_app) | PASS — 7 testes |
-| `dart analyze` + `dart test` (aqui_log_core) | PASS — 6 testes |
-| QA de navegador do dashboard (Chrome real) | PASS — 11 telas sem verde de marca |
-| Contraste AA (7 pares de texto reais) | PASS — todos ≥ 4,5:1 |
-| Layout mobile 430px | PASS — sem overflow horizontal |
+| `pnpm test` | PASS — 11 suítes / **70 testes** (eram 36 no início da sessão) |
+| `pnpm smoke` | PASS — 9 execuções no total da sessão |
+| `pnpm db:migrate` em banco descartável | PASS — 9 migrations |
+| Rollback + reaplicação da migration nova | PASS |
+| Preço v2 em HTTP vivo | PASS — 4 cenários de peso/tamanho |
+| Congelamento do preço | PASS — base alterada, pedido intacto |
+| `DEC-19` na escrita de settings | PASS — `400` nos dois casos inválidos |
+| Salvar configurações pela UI | PASS — valor persistido, 14 campos auditados |
+| Rejeição de criação (`B2C-05`) | PASS — 10 casos, `400` em português |
+| Leitura de pedido legado | PASS |
+| Contraste AA | PASS — 0 reprovações em 11 telas × **2 temas** |
+| `flutter analyze` / `flutter test` | PASS na rodada do `B2C-05`; N/A depois |
 | APK e QA em emulador/dispositivo | **NÃO EXECUTADO** |
 
-Documentos: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-05.md` e
-`docs/04-status/entregas/2026-08-08-EVIDENCIA-UX-01C.md`.
+Documentos em `docs/04-status/entregas/2026-08-08-EVIDENCIA-*`.
 
-## Achado corrigido no QA
+## Defeitos corrigidos no caminho
 
-`StatusBadge` violava a regra 1 das diretrizes visuais: `DELIVERED` e `CANCELED`
-usavam **o mesmo cinza**, deixando entrega concluída indistinguível de cancelada
-na tabela; `IN_TRANSIT` usava o verde que pertence ao sucesso. Corrigido para
-verde / vermelho / azul, com a classe `.status.red` que não existia.
+- **Settings perdiam valores personalizados** em patch parcial (silencioso).
+- **Formulário de configurações não submetia**: `min=0.001` com `step=0.5`
+  invalida todo peso inteiro e o navegador bloqueia o submit inteiro sem aviso.
+- **`DELIVERED` e `CANCELED` com o mesmo cinza** na tabela de entregas.
+- **`@IsNotEmpty` aceitava `"   "`** como endereço.
+
+## Defeito registrado e NÃO corrigido
+
+**O gráfico "Entregas por status" não renderiza setores.** Legenda e eixos
+aparecem, o `<Pie>` produz um `<g>` vazio, sem erro no console. Não é regressão
+desta sessão: reproduzi com as cores hexadecimais originais, sem o `label` e sem
+os `<Cell>`. Os outros dois gráficos funcionam. Aparenta ser incompatibilidade
+do Recharts 3.9 com React 19. Escopo de `UX-02`.
 
 ## Ambiente usado
 
-Bancos descartáveis `aqui_log_b2c05` e `aqui_log_ux01c` (container
-`aqui-log-postgres`, porta 5433), Redis em 6379, API em `PORT=3011` com
+Bancos descartáveis `aqui_log_b2c05`, `aqui_log_ux01c` e `aqui_log_b2c02`
+(container `aqui-log-postgres`, 5433), Redis em 6379, API em `PORT=3011` com
 `PUBLIC_API_URL` alinhado, dashboard em `vite --port 5199`. O `.env` **não** foi
-alterado; todos os overrides foram por variável de ambiente. Processos de teste
-encerrados e bancos descartáveis removidos ao fim da sessão.
+alterado (só o `.env.example`); overrides por variável de ambiente. Processos de
+teste encerrados e bancos descartáveis removidos.
 
 ## Próximo
 
 Escolher **um** ID:
 
-1. `PICK-01` — `pickup_code` na coleta (P1, `DEC-24` decidida). Exige migration,
-   backend e app do motoboy; **ou**
-2. `UX-02` — QA visual/acessibilidade dos fluxos. A parte do dashboard já saiu em
-   `UX-01C`; o que resta depende de dispositivo/emulador; **ou**
-3. `B2C-02` — preço v2 versionado, com os valores finais atrás de `DEC-02`.
+1. `PICK-01` — `pickup_code` na coleta (P1, `DEC-24` decidida). Migration +
+   backend + app do motoboy; **ou**
+2. `UX-02` — QA visual/acessibilidade dos fluxos. Inclui o gráfico de pizza
+   quebrado e a busca decorativa da `TopBar`; a parte mobile exige dispositivo.
+
+`SCHED-01` ficou mais perto: a tarifa dual e o admin dela já existem; falta o
+cliente **escolher** o modo.
 
 ## Pendências herdadas
 
-- APK atual e QA visual em emulador/dispositivo continuam não executados — e
-  ficaram mais relevantes, porque `B2C-05` mudou a tela de novo pedido do app
-  cliente. A mudança está provada por teste de widget, não por uso real.
-- A busca da `TopBar` continua **decorativa**: nesta rodada só o vocabulário B2B
-  ("empresa") foi corrigido. Torná-la funcional é `UX-02`.
-- O dashboard não tem runner de teste, então a identidade não tem teste
-  automatizado — a garantia é o QA de navegador e a regra "zero hexadecimal fora
-  do tema", verificável por `grep`.
+- APK e QA visual em emulador/dispositivo seguem não executados.
+- Busca da `TopBar` continua decorativa.
+- O dashboard não tem runner de teste — mudança visual só se prova com QA de
+  navegador.
 - Cloud, SMS e pagamentos reais continuam atrás de credenciais e autorização.
 
 ## Mensagem de retomada
 
-> `B2C-05` e `UX-01C` fechados com evidência. Criação de pedido agora exige foto,
-> tipo, tamanho, peso e endereços (10 casos negativos em HTTP vivo, legado ainda
-> legível). O dashboard deixou de ser verde: tokens em `styles.css`, zero
-> hexadecimal fora do tema, 11 telas conferidas em Chrome real e contraste AA
-> medido. Bônus do QA: "Entregue" e "Cancelada" não são mais o mesmo cinza.
-> Próximo: `PICK-01`, `UX-02` ou `B2C-02`.
+> `B2C-05`, `UX-01C` e `B2C-02` fechados com evidência. `DEC-02` decidida com
+> valores provisórios **editáveis no admin** (inclusive multas). Preço v2 com
+> breakdown congelado no pedido, painel com tema claro/escuro e contraste AA
+> medido nos dois. 70 testes. Três bugs corrigidos no caminho, um registrado sem
+> correção (gráfico de pizza, Recharts × React 19). Próximo: `PICK-01` ou `UX-02`.

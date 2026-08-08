@@ -13,20 +13,20 @@
 | — | `B2C-05` | `DONE` (2026-08-08) | P0 | Foto + campos obrigatórios na criação | evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-05.md` |
 | — | `UX-01C` | `DONE` (2026-08-08) | P1 | Dashboard usa tokens laranja equivalentes | evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-UX-01C.md` |
 | 1 | `UX-02` | `READY` | P1 | Fluxos principais passam por QA visual/acessibilidade | `UX-01C` DONE; exige dispositivo/emulador para a parte mobile |
-| 2 | `B2C-02` | `READY` | P1 | Preço v2 versionado com breakdown | dep `B2C-01B` DONE; estrutura liberada, **valores finais** atrás de `DEC-02` |
-| 3 | `B2C-06` | `BLOCKED` | P1 | Dual km imediato/agendado + settings admin | `B2C-02` (ou unificado); `DEC-19`; valores `DEC-02` |
-| 4 | `SCHED-01` | `BLOCKED` | P1 | Modo `SCHEDULED` individual + aceite antecipado | `B2C-06`; `DEC-18`, `DEC-20` |
-| 5 | `COUR-01` | `BLOCKED` | P1 | App prestador: Em andamento + Agenda | `SCHED-01`; `DEC-21` |
-| 6 | `PICK-01` | `READY` | P1 | Código de recolhimento na coleta | `B2C-05` DONE; `DEC-24` decidida |
-| 7 | `B2C-03` | `BLOCKED` | P1 | Avaliação mútua por papel | baseline estável e migração de ratings definida |
-| 8 | `DISP-01` | `BLOCKED` | P1 | Reoferta limitada por anéis e recusas | `B2C-02`, `DEC-03` |
-| 9 | `PAY-01` | `BLOCKED` | P2 | Ledger interno (cliente + prestador) sem gateway | autorização explícita + `B2C-02`; `DEC-23` |
-| 10 | `COUR-02` | `BLOCKED` | P2 | Cancelamento prestador + taxa no saldo | `PAY-01`, `COUR-01`; `DEC-22` |
-| 11 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-02B`, `B2C-03A`, `DISP-03` (`B2C-01B` ok) |
-| 12 | `OPS-DB-01` | `BLOCKED` | P2 | Modelo + migração Postgres → Firestore | `DEC-25`; credenciais Firebase |
-| 13 | `OPS-02` | `BLOCKED` | P2 | Firebase Firestore/Storage/FCM reais | pedido + credenciais; ver `PLANO_HOSPEDAGEM.md` |
-| 14 | `OPS-03` | `BLOCKED` | P2 | Deploy Render + Vercel + smoke público | `OPS-01`, `OPS-02`, credenciais |
-| 15 | `LOT-01` | `BLOCKED` | P3 | Aceite atômico de lote manual | `B2C-02B`, `B2C-03A`, `DISP-03`, `DEC-10`, `DEC-11` (`B2C-01B` ok) |
+| — | `B2C-02` | `DONE` (2026-08-08) | P1 | Preço v2 versionado com breakdown congelado | `DEC-02` decidida; evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-02-E-TEMA-ESCURO.md` |
+| 2 | `B2C-06` | `BLOCKED` | P1 | Dual km imediato/agendado + settings admin | tarifa dual e admin **já entregues** em `B2C-02`; falta a escolha do modo, que depende de `SCHED-01` |
+| 3 | `SCHED-01` | `BLOCKED` | P1 | Modo `SCHEDULED` individual + aceite antecipado | `B2C-06`; `DEC-18`, `DEC-20` |
+| 4 | `COUR-01` | `BLOCKED` | P1 | App prestador: Em andamento + Agenda | `SCHED-01`; `DEC-21` |
+| 5 | `PICK-01` | `READY` | P1 | Código de recolhimento na coleta | `B2C-05` DONE; `DEC-24` decidida |
+| 6 | `B2C-03` | `BLOCKED` | P1 | Avaliação mútua por papel | baseline estável e migração de ratings definida |
+| 7 | `DISP-01` | `BLOCKED` | P1 | Reoferta limitada por anéis e recusas | `B2C-02`, `DEC-03` |
+| 8 | `PAY-01` | `BLOCKED` | P2 | Ledger interno (cliente + prestador) sem gateway | autorização explícita + `B2C-02`; `DEC-23` |
+| 9 | `COUR-02` | `BLOCKED` | P2 | Cancelamento prestador + taxa no saldo | `PAY-01`, `COUR-01`; `DEC-22` |
+| 10 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-02B`, `B2C-03A`, `DISP-03` (`B2C-01B` ok) |
+| 11 | `OPS-DB-01` | `BLOCKED` | P2 | Modelo + migração Postgres → Firestore | `DEC-25`; credenciais Firebase |
+| 12 | `OPS-02` | `BLOCKED` | P2 | Firebase Firestore/Storage/FCM reais | pedido + credenciais; ver `PLANO_HOSPEDAGEM.md` |
+| 13 | `OPS-03` | `BLOCKED` | P2 | Deploy Render + Vercel + smoke público | `OPS-01`, `OPS-02`, credenciais |
+| 14 | `LOT-01` | `BLOCKED` | P3 | Aceite atômico de lote manual | `B2C-02B`, `B2C-03A`, `DISP-03`, `DEC-10`, `DEC-11` (`B2C-01B` ok) |
 
 Cloud: alvos **decididos** (`DEC-25` — Render / Vercel / Firebase). Ligar projetos
 ainda exige credenciais e pacote OPS. SMS, PIX e lote automático idem.
@@ -113,19 +113,40 @@ deixando entrega concluída indistinguível de cancelada na tabela.
 
 Evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-UX-01C.md`.
 
-## 3. Tarefa pronta — `PICK-01` (ou `UX-02`, ou `B2C-02`)
+### `B2C-02` + `B2C-02A` — `DONE` · tema escuro do painel
 
-Três IDs estão `READY`; escolher **um**.
+`DEC-02` foi decidida pelo Álvaro com **valores provisórios editáveis no admin**,
+o que destravou o preço v2. O painel também ganhou tema escuro.
+
+| Critério | Resultado |
+| --- | --- |
+| Preço com faixas de peso/tamanho e config server-side | ✅ 4 cenários conferidos em HTTP vivo |
+| Breakdown e versão persistidos no pedido | ✅ migration aditiva + rollback ensaiado |
+| Mudança de settings não altera pedido criado (`DEC-19`) | ✅ base alterada, pedido intacto |
+| Imediato > agendado validado na escrita | ✅ 400 nos dois casos inválidos |
+| Todo valor editável no admin (incl. multas) | ✅ 14 campos, salvos e auditados |
+| Tema escuro derivado por tokens | ✅ 0 reprovações de contraste em 11 telas × 2 temas |
+| Build, lint, testes e smoke | ✅ 70 testes; smoke 3× |
+
+Dois defeitos corrigidos no caminho (patch parcial de settings apagava valores;
+formulário não submetia por `step` inválido) e **um registrado sem correção**:
+o gráfico de pizza não renderiza setores (Recharts 3.9 + React 19), defeito
+pré-existente e fora do escopo.
+
+Evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-02-E-TEMA-ESCURO.md`.
+
+## 3. Tarefa pronta — `PICK-01` (ou `UX-02`)
 
 - **`PICK-01`** — `pickup_code` na coleta (`DEC-24`). A transição
   `AT_PICKUP → PICKED_UP` passa a exigir código válido **e** foto de prova do
-  prestador. A foto de prova é distinta da foto que o cliente manda na criação
-  (`B2C-05`). Exige migration, backend e app do motoboy.
-- **`UX-02`** — QA visual e de acessibilidade dos fluxos principais. A parte do
-  dashboard ficou coberta por `UX-01C`; o que resta depende de
-  **dispositivo/emulador**, que segue indisponível nesta máquina.
-- **`B2C-02`** — preço v2 versionado com breakdown; a estrutura está liberada,
-  mas os **valores finais** continuam atrás de `DEC-02`.
+  prestador (distinta da foto do cliente na criação). Exige migration, backend
+  e app do motoboy.
+- **`UX-02`** — QA visual e de acessibilidade dos fluxos. O dashboard já saiu em
+  `UX-01C` + tema escuro; o que resta exige **dispositivo/emulador**, ainda
+  indisponível nesta máquina. Inclui o gráfico de pizza quebrado.
+
+`SCHED-01` continua bloqueado, mas ficou mais perto: a tarifa dual e o admin
+dela já existem desde `B2C-02`; falta o cliente **escolher** o modo.
 
 ## 4. Pacotes do fluxo cliente↔prestador
 

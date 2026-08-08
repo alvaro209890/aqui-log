@@ -4,6 +4,34 @@ Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
 ## Fluxo cliente↔prestador nos planos — 2026-08-07
 
+## `DEC-02` + `B2C-02`: preço v2 e tema escuro — 2026-08-08
+
+- **`DEC-02` DECIDIDA** pelo Álvaro com valores **provisórios**, todos editáveis
+  no painel admin sem deploy: base R$ 7,00, mínimo R$ 9,00, plataforma 20%,
+  km imediato R$ 2,50 / agendado R$ 1,80, faixas de peso até 2/5/10/20 kg,
+  tamanho P/M/G, multa do prestador R$ 3,00 e cutoffs.
+- **Preço v2 (`B2C-02`/`B2C-02A`):** `base + km × tarifa_do_modo + peso +
+  tamanho`, com piso. `pricingVersion`, `pricingBreakdown` e `fulfillmentMode`
+  persistidos no pedido — mudar settings **não** altera pedido criado (`DEC-19`).
+  Migration aditiva `1785300000000`, revertida e reaplicada em teste.
+- **Settings do admin** ganharam 9 campos novos (tarifa dual, faixas de peso,
+  adicionais de tamanho, multas e cutoffs), com validação `DEC-19` na escrita.
+- **Tema escuro** do painel, derivado por tokens (regra 7 das diretrizes), com
+  alternador na `TopBar`, persistência e respeito ao `prefers-color-scheme`.
+  No escuro o laranja claro `#FB923C` assume o texto; `#C54B07` sumiria.
+- Correção: **patch parcial de settings apagava valores personalizados** —
+  o DTO chega com as chaves ausentes em `undefined` e elas sobrescreviam o
+  estado salvo; como `JSON.stringify` descarta `undefined`, a perda era
+  silenciosa. Também cegava a validação do `DEC-19`. Dois testes de regressão.
+- Correção: o formulário de configurações **não submetia** — `min=0.001` com
+  `step=0.5` invalida todo peso inteiro e o navegador bloqueia o submit inteiro
+  sem mensagem.
+- Pendência registrada: o gráfico de pizza não renderiza setores (Recharts 3.9
+  + React 19); pré-existente, reproduzido sem `Cell`, sem `label` e com as cores
+  originais.
+- Testes: backend 44 → **70**. Contraste AA: 0 reprovações em 11 telas × 2 temas.
+- Evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-02-E-TEMA-ESCURO.md`.
+
 ## `UX-01C`: identidade laranja no dashboard — 2026-08-08
 
 - `styles.css` ganha uma camada de tokens em `:root` e vira a **fonte única** de

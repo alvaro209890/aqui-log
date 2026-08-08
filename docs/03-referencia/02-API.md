@@ -57,7 +57,31 @@ Rotas protegidas: `Authorization: Bearer <accessToken>`
 | `POST` | `/deliveries/:id/rating` | Avaliação da entrega pelo cliente |
 | `GET` | `/deliveries/ratings` | Lista de avaliacoes (admin) |
 
-`POST /deliveries` calcula **priceCents** e **courierFeeCents** no servidor (km + base + % plataforma). Campos de preco no body sao ignorados.
+`POST /deliveries` calcula **priceCents** e **courierFeeCents** no servidor.
+Campos de preco no body sao **ignorados**.
+
+### Preço v2 (`B2C-02`, desde 2026-08-08)
+
+```text
+subtotal = base + km × tarifa_do_modo + adicional_peso + adicional_tamanho
+preço    = max(mínimo, subtotal)
+plataforma = preço × %;  prestador = preço − plataforma
+```
+
+A resposta traz `pricingVersion` (hoje `2`), `fulfillmentMode` e
+`pricingBreakdown` — a regra e os **valores usados** ficam congelados no pedido,
+então mudar as configurações **não** altera pedido já criado (`DEC-19`).
+Pedido anterior ao v2 tem `pricingVersion: null` e continua legível.
+
+Campos do `pricingBreakdown`: `version`, `fulfillmentMode`, `distanceKm`,
+`kmRateCents`, `baseFeeCents`, `distanceCents`, `weightKg`, `weightBandUpToKg`,
+`weightSurchargeCents`, `packageSize`, `sizeSurchargeCents`, `subtotalCents`,
+`minFeeCents`, `minFeeApplied` e `platformFeePercent`.
+
+Todos os valores vêm de `GET/PATCH /settings` (admin) e são editáveis sem
+deploy. `PATCH /settings` recusa com `400` se a tarifa/km do imediato não for
+**estritamente maior** que a do agendado (`DEC-19`) ou se duas faixas de peso
+repetirem o mesmo `upToKg`.
 
 ### Encomenda estruturada (`B2C-01`, obrigatória desde `B2C-05`)
 
@@ -118,12 +142,23 @@ Namespace Socket.IO: `/tracking`.
 
 ## Precificacao (env)
 
+Estes são apenas os **defaults de boot**: uma vez salvos pelo admin, os valores
+vivem em Redis e o env deixa de mandar. As faixas de peso e os adicionais de
+tamanho só existem em settings (não têm env).
+
 | Variavel | Default | Significado |
 | --- | --- | --- |
-| `PRICING_BASE_FEE_CENTS` | 1000 | Taxa base |
-| `PRICING_PER_KM_CENTS` | 500 | Por km (Haversine) |
+| `PRICING_BASE_FEE_CENTS` | 700 | Taxa base |
+| `PRICING_MIN_FEE_CENTS` | 900 | Piso |
 | `PRICING_PLATFORM_FEE_PERCENT` | 20 | % da plataforma sobre o total |
-| `PRICING_MIN_FEE_CENTS` | 800 | Piso |
+| `PRICING_PER_KM_CENTS` | 250 | Legado v1; fallback sem tarifa por modo |
+| `PRICING_PER_KM_IMMEDIATE_CENTS` | 250 | Por km no modo imediato (`DEC-19`: > agendado) |
+| `PRICING_PER_KM_SCHEDULED_CENTS` | 180 | Por km no modo agendado |
+| `PRICING_ABOVE_TOP_BAND_CENTS` | 1500 | Adicional acima da última faixa de peso |
+| `COURIER_CANCEL_FEE_CENTS` | 300 | Multa do prestador (ainda **não** cobrada) |
+| `CUSTOMER_CANCEL_FEE_CENTS` | 0 | Multa do cliente (ainda **não** cobrada) |
+| `COURIER_CANCEL_CUTOFF_IMMEDIATE` | 5 | Cutoff em minutos (imediato) |
+| `COURIER_CANCEL_CUTOFF_SCHEDULED` | 60 | Cutoff em minutos (agendado) |
 | `OFFER_TTL_SECONDS` | 120 | Validade da oferta |
 | `REDIS_URL` | redis://localhost:6379 | Locks e jobs |
 | `JWT_REFRESH_EXPIRES_DAYS` | 30 | Validade do refresh |

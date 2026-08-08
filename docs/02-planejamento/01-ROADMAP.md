@@ -4,7 +4,7 @@
 > **Status:** fonte de verdade para prioridade, dependências e ordem de execução
 > **Rodada atual:** `BASE-04` e `B2C-01B` fechados com evidência de runtime local
 > (migrations + rollback, health, smoke B2C vivo e QA de navegador do dashboard).
-> **Próximo pacote:** `PICK-01` (código de recolhimento), `UX-02` (QA visual) ou `B2C-02` (preço v2).
+> **Próximo pacote:** `PICK-01` (código de recolhimento) ou `UX-02` (QA visual).
 > **Produto principal:** cliente pessoa física → motoboy, sem intermediário no fluxo
 > **Regra operacional:** desenvolvimento e validação local primeiro; nenhuma cloud é ligada sem pedido explícito do Álvaro
 
@@ -120,10 +120,10 @@ valores finais de km continuam atrás de `DEC-05`/`DEC-02`.
 
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
-| B2C-02 | ▶️ | `B2C-01` ✅ | Preço com faixas de peso/tamanho e configuração server-side (valores finais atrás de `DEC-02`) |
-| B2C-02A | ⏳ | `B2C-02` | Persistir breakdown e versão da regra usada no pedido |
+| B2C-02 | ✅ | `B2C-01` ✅, `DEC-02` ✅ | Preço v2 com faixas de peso/tamanho, tarifa dual e configuração server-side editável no admin (2026-08-08) |
+| B2C-02A | ✅ | `B2C-02` | Breakdown e versão persistidos no pedido; congelamento provado (2026-08-08) |
 | B2C-02B | ⏳ | `B2C-02` | Prévia de preço antes da confirmação, sem confiar em valores enviados pelo app |
-| B2C-06 | ⏳ | `B2C-02` ou unificado, `DEC-19` | Dual `price_per_km_immediate` / `price_per_km_scheduled` + validação imediato > agendado |
+| B2C-06 | ⏳ | `SCHED-01` | Tarifa dual e validação imediato > agendado **já entregues** em `B2C-02`; falta o cliente escolher o modo |
 | SCHED-01 | ⏳ | `B2C-06`, `DEC-18`, `DEC-20` | Modo `SCHEDULED` individual, janelas e aceite antecipado |
 
 O preço de uma oferta aceita é imutável. Qualquer aumento posterior exige nova oferta e consentimento do cliente; não deve ser aplicado silenciosamente. Troca de modo exige novo pedido/recotação.
@@ -239,7 +239,7 @@ Esta trilha pode ocorrer em paralelo às Fases 1–4 quando houver autorização
 | UX-01 | ✅ | Tokens laranja e cores semânticas no `aqui_log_ui` | [diretrizes](../01-produto/02-DIRETRIZES-VISUAIS.md) |
 | UX-01A | ✅ | Aplicar tema no app cliente e cobrir por testes | [diretrizes](../01-produto/02-DIRETRIZES-VISUAIS.md) |
 | UX-01B | ✅ | Aplicar tema no app motoboy e cobrir por testes | [diretrizes](../01-produto/02-DIRETRIZES-VISUAIS.md) |
-| UX-01C | ✅ | Tokens laranja no dashboard, com QA de navegador e contraste AA medidos (2026-08-08) | Diretrizes visuais |
+| UX-01C | ✅ | Tokens laranja no dashboard + **tema claro/escuro**, com contraste AA medido nas 11 telas dos 2 temas (2026-08-08) | Diretrizes visuais |
 | UX-02 | ▶️ | Acessibilidade, estados, responsividade e QA visual dos fluxos; parte mobile exige dispositivo | Critérios do documento visual |
 
 ## 8. Registro de decisões pendentes

@@ -2,7 +2,7 @@
 
 > **Data de referência:** 2026-08-08
 > **Ambiente:** desenvolvimento local no PC `acer`; nada produtivo roda aqui.
-> **Baseline de código:** `f987e26` no início da sessão (`B2C-05` + `UX-01C`).
+> **Baseline de código:** `f987e26` no início da sessão (`B2C-05`, `UX-01C`, `B2C-02` + tema escuro).
 
 ## 1. Produto vigente
 
@@ -16,10 +16,10 @@ coluna `company_id`).
 
 | Superfície | Estado observado na última rodada técnica | Limitação aberta |
 | --- | --- | --- |
-| Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso**), ofertas, tracking, pricing básico, dashboard e storage local | — migrations revalidadas em banco vivo em 2026-08-08 |
+| Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso**), ofertas, tracking, **preço v2 versionado com breakdown congelado**, dashboard e storage local | — migrations revalidadas em banco vivo em 2026-08-08 |
 | App cliente Flutter | Cadastro/login, pedido estruturado **com foto obrigatória**, histórico e acompanhamento | QA recente em dispositivo/emulador pendente |
 | App motoboy Flutter | Cadastro, disponibilidade, oferta, coleta, prova, entrega e carteira básica | QA recente em dispositivo/emulador pendente |
-| Dashboard React | KPIs, entregas (+ categoria/tamanho/peso/cliente com QA de navegador feito), mapa, motoboys, usuários, auditoria, configurações e relatórios | **identidade laranja aplicada** (`UX-01C`); busca da `TopBar` continua decorativa (`UX-02`) |
+| Dashboard React | KPIs, entregas, mapa, motoboys, usuários, auditoria, **configurações completas de preço/multas** e relatórios; identidade laranja + **tema claro/escuro** | busca da `TopBar` decorativa; **gráfico de pizza não renderiza setores** (Recharts 3.9 + React 19) — ambos em `UX-02` |
 | Postgres/Redis | Containers `aqui-log-postgres` (5433) e `aqui-log-redis` (6379) ativos | banco de teste é descartável; nenhum dado tem valor |
 | Cloud | Scaffolds Render/Vercel/Firebase; alvos **decididos** (`DEC-25`) | nenhum projeto ou credencial conectado |
 
@@ -40,6 +40,20 @@ Executado no banco descartável `aqui_log_b2c05` com API em `PORT=3011`:
   no core.
 
 Documento de evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-05.md`.
+
+### `B2C-02` + tema escuro (esta rodada)
+
+Executado no banco descartável `aqui_log_b2c02` com API em `PORT=3011`:
+
+- 9 migrations, com a nova (`DeliveryPricingV2Fields`) revertida e reaplicada;
+- preço v2 conferido em 4 cenários de peso/tamanho em HTTP vivo;
+- congelamento provado: alterar a taxa base não mexeu em pedido já criado;
+- `DEC-19` recusa agendado ≥ imediato (`400`) na escrita de settings;
+- 14 campos editáveis no admin, salvos pela UI e auditados;
+- contraste AA: **0 reprovações** em 11 telas × 2 temas;
+- 70 testes, smoke 3×.
+
+Documento: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-02-E-TEMA-ESCURO.md`.
 
 ### `UX-01C` (esta rodada)
 
@@ -79,23 +93,23 @@ Evidência anterior (mobile, 2026-08-07):
 - [x] Exercitar rollback de migration aplicável em banco descartável.
 - [x] Fazer QA do dashboard no navegador (filtros B2C de `B2C-01B`).
 - [x] Rodar `flutter analyze`/`flutter test` após a mudança mobile de `B2C-05`.
+- [x] Aplicar e reverter a migration do preço v2 em banco descartável.
 - [ ] Gerar APKs atuais.
 - [ ] Fazer QA visual dos apps em emulador/dispositivo — pendente **e agora mais
       relevante**, porque `B2C-05` mudou a tela de novo pedido do app cliente.
 
 ## 5. Próximo passo
 
-`BASE-04`, `B2C-01B`, `B2C-05` e `UX-01C` estão `DONE`. A fila libera `PICK-01`
-(código de recolhimento), `UX-02` (QA visual dos fluxos — a parte mobile exige
-dispositivo/emulador) e `B2C-02` (preço v2, com valores finais atrás de
-`DEC-02`). Escolher um único ID, conforme o backlog.
+`BASE-04`, `B2C-01B`, `B2C-05`, `UX-01C` e `B2C-02` estão `DONE`. A fila libera
+`PICK-01` (código de recolhimento) e `UX-02` (QA visual — a parte mobile exige
+dispositivo/emulador, e inclui o gráfico de pizza quebrado). Escolher um único
+ID, conforme o backlog.
 
 ## 6. Bloqueios externos
 
 - Firebase/Render/Vercel: alvos decididos (`DEC-25`); ligar exige credenciais + `OPS-*`.
 - SMS: exige escolha de provedor e sandbox (`DEC-04`).
 - Pagamentos/PIX: exigem autorização explícita e gates `PAY-01/02` (`DEC-05`/`DEC-06`).
-- Valores finais de preço v2 / km dual: exigem `DEC-02`.
 - Cutoffs/taxa de cancelamento do prestador: `FLOW-DEC-01`.
 - Migração banco cloud Firestore: `OPS-DB-01`.
 
