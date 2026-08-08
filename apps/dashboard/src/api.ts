@@ -128,12 +128,35 @@ export interface AuditRecord {
   createdAt: string;
 }
 
+export interface WeightBand {
+  upToKg: number;
+  surchargeCents: number;
+}
+
+export interface SizeSurcharges {
+  SMALL: number;
+  MEDIUM: number;
+  LARGE: number;
+}
+
 export interface PlatformSettings {
   offerTtlSeconds: number;
   pricingBaseFeeCents: number;
+  /** Legado v1; fallback quando não há tarifa por modo. */
   pricingPerKmCents: number;
   pricingPlatformFeePercent: number;
   pricingMinFeeCents: number;
+  // B2C-02 / DEC-02
+  pricingPerKmImmediateCents: number;
+  pricingPerKmScheduledCents: number;
+  pricingWeightBands: WeightBand[];
+  pricingAboveTopBandCents: number;
+  pricingSizeSurchargeCents: SizeSurcharges;
+  // Multas e cutoffs (FLOW-DEC-01) — editáveis; cobrança ainda não implementada
+  courierCancelFeeCents: number;
+  courierCancelCutoffMinutesImmediate: number;
+  courierCancelCutoffMinutesScheduled: number;
+  customerCancelFeeCents: number;
 }
 
 export interface ReportRange {
