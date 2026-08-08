@@ -76,17 +76,21 @@ upload_proof() {
   local upload_url file_url
   upload_url="$(jq -er '.uploadUrl' <<<"$presign")"
   file_url="$(jq -er '.fileUrl' <<<"$presign")"
-  curl -fsS -X PUT "$upload_url" \
+  if ! curl -fsS -X PUT "$upload_url" \
     -H "Authorization: Bearer $courier_token" \
     -H "Content-Type: image/jpeg" \
-    --data-binary "fake-jpeg-$label-$RUN_ID" >/dev/null
+    --data-binary "fake-jpeg-$label-$RUN_ID" >/dev/null; then
+    printf 'Falha ao enviar a prova "%s" em %s.\n' "$label" "$upload_url" >&2
+    printf 'A URL de upload vem de PUBLIC_API_URL no servidor; ela precisa apontar para a mesma API de %s.\n' "$API_URL" >&2
+    return 1
+  fi
   printf '%s' "$file_url"
 }
 
-proof_pickup="$(upload_proof pickup)"
+proof_pickup="$(upload_proof pickup)" || exit 1
 api PATCH "/deliveries/$delivery_id/status" "$courier_token" "$(jq -nc --arg proofUrl "$proof_pickup" '{status:"PICKED_UP",proofUrl:$proofUrl}')" >/dev/null
 api PATCH "/deliveries/$delivery_id/status" "$courier_token" '{"status":"IN_TRANSIT"}' >/dev/null
-proof_delivery="$(upload_proof delivery)"
+proof_delivery="$(upload_proof delivery)" || exit 1
 api PATCH "/deliveries/$delivery_id/status" "$courier_token" "$(jq -nc --arg proofUrl "$proof_delivery" '{status:"DELIVERED",proofUrl:$proofUrl}')" >/dev/null
 
 api GET "/deliveries/$delivery_id/history" "$customer_token" | jq -e 'length >= 7' >/dev/null
