@@ -60,6 +60,11 @@ no dashboard. Novos pedidos sem os obrigatórios são **rejeitados** (HTTP 4xx).
 A flag `REQUIRE_PRODUCT_PHOTO` passa a refletir `DEC-01` (obrigatória para
 criação). Remoção do fallback de `notes` continua fora deste plano.
 
+> **Como ficou em `B2C-05` (2026-08-08):** essa flag nunca existiu no código. A
+> obrigatoriedade foi implementada direto no `CreateDeliveryDto`, sem chave de
+> ligar/desligar — `DEC-01` está decidida e não há caso de uso para desativá-la.
+> Se algum dia for preciso um modo permissivo, ele terá de ser criado do zero.
+
 ### 3.3 Fluxo de criação
 
 ```text
@@ -252,17 +257,18 @@ dupla se houver pedidos em voo.
 
 ## 11. Pacotes de implementação (ordem relativa)
 
-Baseline concluído em 2026-08-08; `B2C-05` é o primeiro pacote deste plano a ficar `READY`.
+Baseline concluído em 2026-08-08; `B2C-05` foi o primeiro pacote deste plano a
+fechar (`DONE`, mesma data) e liberou `PICK-01` para `READY`.
 
 | Ordem | ID | Entrega | Dependências |
 | ---: | --- | --- | --- |
 | ✅ | `BASE-04` | Baseline runtime | concluído 2026-08-08 |
 | ✅ | `B2C-01B` | Filtros dashboard B2C | concluído 2026-08-08 |
-| 1 | `B2C-05` | Obrigatoriedade foto + campos na criação | `B2C-01B` ✅, `DEC-01` |
+| 1 | `B2C-05` ✅ | Obrigatoriedade foto + campos na criação | `B2C-01B` ✅, `DEC-01` |
 | 3 | `B2C-06` | Preço dual km imediato/agendado + settings | `B2C-02` (ou unificar), `DEC-19`; valores `DEC-02` |
 | 4 | `SCHED-01` | Modo `SCHEDULED` individual + aceite antecipado | `B2C-06`, `DEC-18`, `DEC-20` |
 | 5 | `COUR-01` | Tela Em andamento / Agenda | `SCHED-01`, `DEC-21` |
-| 6 | `PICK-01` | `pickup_code` na coleta | `B2C-05`, `DEC-24` |
+| 6 | `PICK-01` ▶️ | `pickup_code` na coleta | `B2C-05` ✅, `DEC-24` ✅ |
 | 7 | `COUR-02` | Cancelamento prestador + taxa no ledger | `PAY-01`, `COUR-01`, `DEC-22` |
 | 8 | `PAY-01`… | Ledger + saldo sacável (modelo) | `DEC-23`, autorização `DEC-05` |
 

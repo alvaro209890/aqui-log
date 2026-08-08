@@ -4,7 +4,7 @@
 > **Status:** fonte de verdade para prioridade, dependências e ordem de execução
 > **Rodada atual:** `BASE-04` e `B2C-01B` fechados com evidência de runtime local
 > (migrations + rollback, health, smoke B2C vivo e QA de navegador do dashboard).
-> **Próximo pacote:** `B2C-05` (foto e campos obrigatórios) ou `UX-01C` (identidade).
+> **Próximo pacote:** `UX-01C` (identidade), `PICK-01` (código de recolhimento) ou `B2C-02` (preço v2).
 > **Produto principal:** cliente pessoa física → motoboy, sem intermediário no fluxo
 > **Regra operacional:** desenvolvimento e validação local primeiro; nenhuma cloud é ligada sem pedido explícito do Álvaro
 
@@ -100,7 +100,7 @@ Plano detalhado do fluxo: [PLANO_FLUXO_CLIENTE_PRESTADOR.md](planos/PLANO_FLUXO_
 | BASE-04 | ✅ | Validar o baseline em runtime local | 8 migrations em banco descartável + rollback ensaiado, health `db/redis ok`, smoke B2C aprovado 6× (2026-08-08) |
 
 `BASE-02` / `DEC-01`: a **obrigatoriedade de foto** foi decidida (2026-08-07). A
-ativação em código fica em `B2C-05` após `BASE-04`/`B2C-01B`. Cobrança real e
+ativação em código foi feita em `B2C-05` (2026-08-08). Cobrança real e
 valores finais de km continuam atrás de `DEC-05`/`DEC-02`.
 
 ### Fase 1 — fundação da encomenda
@@ -110,7 +110,7 @@ valores finais de km continuam atrás de `DEC-05`/`DEC-02`.
 | B2C-01 | ✅ | `BASE-03` | Colunas próprias para tipo, tamanho, peso, alcance e fotos; leitura compatível com `notes` legado |
 | B2C-01A | ✅ | `B2C-01` | Apps e core consomem campos próprios com fallback legado |
 | B2C-01B | ✅ | `BASE-03` | Quatro filtros B2C no painel, com QA de navegador e escopo por papel verificados em HTTP vivo (2026-08-08) |
-| B2C-05 | ▶️ | `B2C-01B` ✅, `DEC-01` | Obrigatoriedade de foto + peso/tipo/tamanho/endereços na criação; legados legíveis |
+| B2C-05 | ✅ | `B2C-01B` ✅, `DEC-01` | Obrigatoriedade de foto + peso/tipo/tamanho/endereços na criação, provada em HTTP vivo; legados legíveis (2026-08-08) |
 
 **Estratégia de migração:** mudança aditiva, leitura dupla durante a transição e remoção do parser legado somente em uma versão posterior, após medir que não existem pedidos antigos dependentes dele.
 
@@ -166,7 +166,7 @@ Nenhuma integração PIX/cartão entra nesta fase. O objetivo é provar a contab
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
 | COUR-01 | ⏳ | `SCHED-01`, `DEC-21` | App prestador: Em andamento + Agenda |
-| PICK-01 | ⏳ | `B2C-05`, `DEC-24` | `pickup_code` na transição de coleta (+ foto de prova) |
+| PICK-01 | ▶️ | `B2C-05` ✅, `DEC-24` ✅ | `pickup_code` na transição de coleta (+ foto de prova) |
 
 ### Fase 6 — prontidão operacional e publicação
 
@@ -250,7 +250,7 @@ O estado canônico de todas as decisões está em
 Para a fila próxima:
 
 - `BASE-04` e `B2C-01B` não dependem de decisão nova do dono;
-- `DEC-01` está **DECIDIDA** (foto obrigatória); ativação em código = `B2C-05`;
+- `DEC-01` está **DECIDIDA** (foto obrigatória) e **ativada em código** por `B2C-05`;
 - `DEC-18`…`DEC-24` estão **DECIDIDAS** (fluxo cliente↔prestador); valores em
   `DEC-02` / `FLOW-DEC-*` / `DEC-17` continuam pendentes;
 - `DEC-02` bloqueia os **valores finais** de `B2C-02`/`B2C-06` (estrutura liberada);
@@ -302,20 +302,24 @@ ser simplesmente omitida.
 
 ## 11. Próximo pacote recomendado
 
-`BASE-04` e `B2C-01B` fecharam em 2026-08-08 com evidência de runtime local. O
-próximo trabalho técnico é **`B2C-05 — foto e campos obrigatórios na criação`**
-(`DEC-01` já decidida), com **`UX-01C`** como alternativa autorizada se o Álvaro
-preferir tratar a identidade do painel antes.
+`BASE-04`, `B2C-01B` e `B2C-05` fecharam em 2026-08-08 com evidência de runtime
+local. Três IDs estão `READY`:
+
+- **`UX-01C`** — identidade laranja do painel, que continua verde;
+- **`PICK-01`** — `pickup_code` na coleta; promovido nesta rodada porque
+  `B2C-05` fechou e `DEC-24` já estava decidida;
+- **`B2C-02`** — preço v2 versionado, com os **valores finais** atrás de `DEC-02`.
 
 Ao retomar:
 
-1. escolher **um** ID — `B2C-05` **ou** `UX-01C` — e não misturar os dois;
-2. em `B2C-05`, obrigar foto/peso/tipo/tamanho/endereços apenas na **criação**;
-   pedido legado precisa continuar legível em apps e painel;
+1. escolher **um** ID e não misturar com os outros;
+2. em `PICK-01`, o código de recolhimento é distinto do `AQL-*` e a coleta exige
+   **código válido e foto de prova do prestador** (`DEC-24`); a foto de prova é
+   diferente da foto que o cliente manda na criação (`B2C-05`);
 3. manter `notes` como fallback de leitura;
 4. reproduzir o ambiente de teste com banco descartável, `PORT` livre e
    `PUBLIC_API_URL` alinhado à API — receita em
    `docs/03-referencia/03-DESENVOLVIMENTO.md`;
-5. **não** antecipar `B2C-06`…`PICK-01`, ledger, gateway ou cloud.
+5. **não** antecipar `B2C-06`, `SCHED-01`, `COUR-*`, ledger, gateway ou cloud.
 
 Não iniciar Firebase, deploy, gateway ou rota multi-pedido como parte desse pacote.

@@ -4,6 +4,24 @@ Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
 ## Fluxo cliente↔prestador nos planos — 2026-08-07
 
+## `B2C-05`: foto e campos obrigatórios na criação — 2026-08-08
+
+- `CreateDeliveryDto`: `productType`, `packageSize`, `weightKg` e
+  `productPhotoUrls` (≥ 1) deixam de ser opcionais (`DEC-01`, `DEC-18`).
+  Mensagens de erro passam a ser em português e específicas por campo.
+- Endereços e nome do destinatário ganham `@IsNotEmpty` com aparo de espaços:
+  `"   "` deixa de ser aceito como endereço.
+- App cliente: a foto vira obrigatória na tela de novo pedido — botão em
+  vermelho, mensagem inline e envio bloqueado antes de chamar a API.
+- `scripts/smoke-test.sh`: o cliente sobe a foto por `presign purpose=product`,
+  o pedido vai completo e um **assert negativo** garante que o payload legado é
+  recusado com `400` (validado invertendo a expectativa: `exit=1`).
+- Leitura de pedido legado **não** mudou: linha sem campos B2C continua abrindo
+  em lista, detalhe, histórico e visão de admin. Fallback de `notes` intacto.
+- Testes: backend 36 → **44**; app cliente 10 → **11**.
+- `PICK-01` promovido a `READY` (dependia de `B2C-05`; `DEC-24` já decidida).
+- Evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-05.md`.
+
 ## `BASE-04` e `B2C-01B` fechados com evidência de runtime — 2026-08-08
 
 - `BASE-04` `DONE`: banco descartável `aqui_log_base04`, 8 migrations sem

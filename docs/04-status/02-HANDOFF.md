@@ -1,73 +1,80 @@
 # Handoff vigente
 
-- **Data/hora:** 2026-08-08 (~15:20 BRT)
+- **Data/hora:** 2026-08-08 (~15:40 BRT)
 - **Agente:** Claude Code (Opus 5)
-- **Tarefa:** `BASE-04` (baseline em runtime local) + fechamento do QA de `B2C-01B`
-- **Branch/commit inicial:** `main` @ `b85d69f`
+- **Tarefa:** `B2C-05` — foto e campos obrigatórios na criação do pedido
+- **Branch/commit inicial:** `main` @ `f987e26`
 
 ## Resultado
 
-`BASE-04` e `B2C-01B` estão `DONE`, ambos com evidência executada.
+`B2C-05` está `DONE`, com evidência executada em runtime local.
 
-O baseline foi provado no banco descartável `aqui_log_base04`: 8 migrations sem
-`synchronize=true`, `RemoveCompanyModel` revertida e reaplicada, schema final
-conferido (sem `companies`, sem `company_id`, com os seis campos B2C em
-`deliveries`), health com Postgres e Redis `ok` e smoke B2C aprovado seis vezes
-com códigos distintos.
+A criação de pedido passa a exigir foto (≥ 1), tipo, tamanho, peso e os dois
+endereços (`DEC-01`, `DEC-18`). A obrigatoriedade vale **só para criação**:
+pedido legado sem esses campos continua legível em lista, detalhe, histórico e
+na visão de admin, e o fallback de `notes` não foi tocado.
 
-O QA de navegador do `B2C-01B` foi feito em Chrome real contra a API viva, com massa
-de 6 entregas B2C de 2 clientes + 4 entregas legadas sem campos B2C. Os quatro
-filtros, a combinação com `status`, o estado vazio, a paginação e o escopo por papel
-se comportaram como especificado.
+Dois detalhes que mereciam atenção e foram resolvidos:
 
-O pacote revelou um defeito real: o `scripts/smoke-test.sh` **aprovava** mesmo com o
-upload da prova falhando. Corrigido em commit próprio.
+1. `@IsNotEmpty` aceita `"   "` como preenchido. Sem aparar antes de validar, um
+   endereço só de espaços passaria pela nova obrigatoriedade. O DTO agora apara.
+2. Quando um campo obrigatório vem ausente, o `class-validator` dispara **todas**
+   as constraints dele. Sem mensagens próprias, o cliente recebia ruído em inglês
+   do tipo "weightKg must not be greater than 1000" para um peso que nem veio.
+   Todas as constraints da criação têm mensagem em português agora.
 
 ## Evidências
 
 | Verificação | Resultado |
 | --- | --- |
-| `pnpm db:migrate` em banco descartável | PASS — 8 migrations |
-| `migration:revert` + `migration:run` da última | PASS — schema final conferido |
-| `GET /api/v1/health` | PASS — `db: ok`, `redis: ok` |
-| `pnpm smoke` (6 execuções) | PASS — códigos distintos, sem replay |
-| smoke com `PUBLIC_API_URL` desalinhado (pós-fix) | FALHA esperada — `exit=1` com mensagem |
 | `pnpm build` | PASS (backend + dashboard) |
 | `pnpm lint` | PASS |
-| `pnpm test` | PASS — backend 10 suítes / 36 testes |
-| QA navegador dos filtros B2C | PASS — ver documento de evidência |
-| Escopo por papel em HTTP vivo | PASS — `CUSTOMER` ignora `customerId` alheio; 400/401 corretos |
-| `flutter analyze` / `flutter test` / `dart test` | N/A — nenhum arquivo Flutter/Dart tocado |
-| APK e QA em emulador/dispositivo | NÃO EXECUTADO |
+| `pnpm test` | PASS — backend 10 suítes / **44 testes** (eram 36) |
+| `pnpm smoke` (API `:3011`) | PASS — 5 execuções, códigos distintos |
+| smoke com expectativa invertida | FALHA esperada — `exit=1`; o assert negativo é vivo |
+| Rejeição de criação em HTTP vivo | PASS — 10 casos, todos `400` com mensagem em português |
+| Leitura de pedido legado | PASS — lista, detalhe, histórico e visão admin em `200` |
+| `flutter analyze` + `flutter test` (customer_app) | PASS — 11 testes (era 10) |
+| `flutter analyze` + `flutter test` (courier_app) | PASS — 7 testes |
+| `dart analyze` + `dart test` (aqui_log_core) | PASS — 6 testes |
+| `pnpm db:migrate` em banco descartável | PASS — 8 migrations |
+| APK e QA em emulador/dispositivo | **NÃO EXECUTADO** |
+| QA de navegador do dashboard | **NÃO EXECUTADO** — nenhum arquivo do dashboard mudou |
 
-Documento completo: `docs/04-status/entregas/2026-08-08-EVIDENCIA-BASE-04.md`.
+Documento completo: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-05.md`.
 
 ## Ambiente usado
 
-Banco descartável `aqui_log_base04` (container `aqui-log-postgres`, porta 5433),
-Redis em 6379, API em `PORT=3011` com `PUBLIC_API_URL` alinhado, dashboard em
-`vite --port 5199`. O `.env` **não** foi alterado; todos os overrides foram por
-variável de ambiente. Os processos de teste (API e Vite) foram encerrados.
+Banco descartável `aqui_log_b2c05` (container `aqui-log-postgres`, porta 5433),
+Redis em 6379, API em `PORT=3011` com `PUBLIC_API_URL` alinhado. O `.env` **não**
+foi alterado; todos os overrides foram por variável de ambiente. O processo da
+API de teste foi encerrado ao fim da sessão.
 
 ## Próximo
 
 Escolher **um** ID:
 
-1. `B2C-05` — foto e campos obrigatórios na criação (P0, `DEC-01` decidida); **ou**
-2. `UX-01C` — aplicar os tokens laranja no dashboard, que continua verde (P1).
+1. `UX-01C` — aplicar os tokens laranja no dashboard, que continua verde (P1); **ou**
+2. `PICK-01` — `pickup_code` na coleta (P1). Passou a `READY` nesta rodada:
+   dependia de `B2C-05`, agora `DONE`, e `DEC-24` já estava decidida; **ou**
+3. `B2C-02` — preço v2 versionado, com os valores finais atrás de `DEC-02`.
 
-Não misturar os dois. `B2C-02` também está `READY`, mas os valores finais de preço
-seguem atrás de `DEC-02`.
+Não misturar IDs na mesma sessão.
 
 ## Pendências herdadas
 
-- APK atual e QA visual em emulador/dispositivo continuam não executados.
-- Achados de UI para `UX-01C`/`UX-02`: busca decorativa na `TopBar` com placeholder
-  falando em "empresa" (vocabulário B2B removido) e ação "Assign" em inglês.
+- APK atual e QA visual em emulador/dispositivo continuam não executados — e
+  ficaram mais relevantes, porque `B2C-05` mudou a tela de novo pedido do app
+  cliente. A mudança está provada por teste de widget, não por uso real.
+- Achados de UI para `UX-01C`/`UX-02`: busca decorativa na `TopBar` com
+  placeholder falando em "empresa" (vocabulário B2B removido) e ação "Assign"
+  em inglês.
 - Cloud, SMS e pagamentos reais continuam atrás de credenciais e autorização.
 
 ## Mensagem de retomada
 
-> `BASE-04` e `B2C-01B` fechados com evidência de runtime local (migrations +
-> rollback, smoke vivo 6×, QA de navegador). O smoke ganhou uma correção: ele não
-> aprova mais com o upload de prova quebrado. Próximo: `B2C-05` ou `UX-01C`.
+> `B2C-05` fechado com evidência de runtime: criação de pedido agora exige foto,
+> tipo, tamanho, peso e endereços, com 10 casos negativos provados em HTTP vivo e
+> pedido legado ainda legível. Backend 44 testes, smoke 5× com upload de foto do
+> cliente e assert negativo. `PICK-01` virou `READY`. Próximo: `UX-01C`,
+> `PICK-01` ou `B2C-02`.

@@ -59,18 +59,31 @@ Rotas protegidas: `Authorization: Bearer <accessToken>`
 
 `POST /deliveries` calcula **priceCents** e **courierFeeCents** no servidor (km + base + % plataforma). Campos de preco no body sao ignorados.
 
-### Encomenda estruturada (`B2C-01`)
+### Encomenda estruturada (`B2C-01`, obrigatória desde `B2C-05`)
 
-Pedidos novos podem enviar os campos opcionais abaixo. `notes` passa a ser somente observacao livre; pedidos antigos que guardam a encomenda em `notes` continuam compativeis nos apps.
+Desde `B2C-05` (`DEC-01`/`DEC-18`, 2026-08-08) a descrição da encomenda é
+**obrigatória na criação**. `notes` continua sendo somente observação livre;
+pedidos antigos que guardam a encomenda em `notes` continuam legíveis nos apps
+e no dashboard — a obrigatoriedade vale para **criação**, nunca para leitura.
 
-| Campo JSON | Tipo/regra |
-| --- | --- |
-| `productType` | `DOCUMENT`, `FOOD`, `ELECTRONICS`, `FRAGILE`, `CLOTHING`, `MEDICINE` ou `OTHER` |
-| `packageSize` | `SMALL`, `MEDIUM` ou `LARGE` |
-| `weightKg` | numero maior que zero e menor ou igual a `1000`, com ate 3 casas decimais |
-| `deliveryScope` | `SAME_CITY` ou `OTHER_CITY` |
-| `productPhotoUrls` | array sem repeticoes, com no maximo 3 URLs emitidas pelo storage do Aqui Log |
-| `notes` | texto livre opcional, com no maximo 1000 caracteres |
+| Campo JSON | Obrigatório | Tipo/regra |
+| --- | --- | --- |
+| `pickupAddress` / `deliveryAddress` | sim | texto não vazio (espaços são aparados), até 500 caracteres |
+| `pickupLatitude`/`Longitude`, `deliveryLatitude`/`Longitude` | sim | coordenadas válidas |
+| `recipientName` | sim | texto não vazio, até 200 caracteres |
+| `recipientPhone` | sim | telefone BR |
+| `productType` | sim | `DOCUMENT`, `FOOD`, `ELECTRONICS`, `FRAGILE`, `CLOTHING`, `MEDICINE` ou `OTHER` |
+| `packageSize` | sim | `SMALL`, `MEDIUM` ou `LARGE` |
+| `weightKg` | sim | numero maior que zero e menor ou igual a `1000`, com ate 3 casas decimais |
+| `productPhotoUrls` | sim | array com 1 a 3 URLs, sem repeticoes, emitidas pelo storage do Aqui Log |
+| `deliveryScope` | não | `SAME_CITY` ou `OTHER_CITY` |
+| `notes` | não | texto livre, com no maximo 1000 caracteres |
+
+Faltando qualquer obrigatório, a API responde `400` com mensagens em português
+no array `message` — por exemplo `Envie ao menos uma foto da encomenda`,
+`Informe o tipo da encomenda`, `Informe o peso da encomenda em kg`. Uma URL de
+foto fora do storage da plataforma também é recusada com `400`
+(`productPhotoUrl deve apontar para o storage da plataforma`).
 
 Para foto de produto, `POST /storage/presign` aceita `purpose: "product"`. Essa finalidade e distinta das provas de coleta e entrega.
 

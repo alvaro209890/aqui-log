@@ -2,7 +2,7 @@
 
 > **Data de referência:** 2026-08-08
 > **Ambiente:** desenvolvimento local no PC `acer`; nada produtivo roda aqui.
-> **Baseline de código:** `b85d69f` no início desta sessão (`BASE-04` + QA de `B2C-01B`).
+> **Baseline de código:** `f987e26` no início desta sessão (`B2C-05`).
 
 ## 1. Produto vigente
 
@@ -16,14 +16,32 @@ coluna `company_id`).
 
 | Superfície | Estado observado na última rodada técnica | Limitação aberta |
 | --- | --- | --- |
-| Backend NestJS | Auth, cliente, entregas, ofertas, tracking, pricing básico, dashboard e storage local | — migrations revalidadas em banco vivo em 2026-08-08 |
-| App cliente Flutter | Cadastro/login, pedido estruturado, histórico e acompanhamento | QA recente em dispositivo/emulador pendente |
+| Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso**), ofertas, tracking, pricing básico, dashboard e storage local | — migrations revalidadas em banco vivo em 2026-08-08 |
+| App cliente Flutter | Cadastro/login, pedido estruturado **com foto obrigatória**, histórico e acompanhamento | QA recente em dispositivo/emulador pendente |
 | App motoboy Flutter | Cadastro, disponibilidade, oferta, coleta, prova, entrega e carteira básica | QA recente em dispositivo/emulador pendente |
 | Dashboard React | KPIs, entregas (+ categoria/tamanho/peso/cliente com QA de navegador feito), mapa, motoboys, usuários, auditoria, configurações e relatórios | identidade laranja pendente (`UX-01C`); busca da `TopBar` é decorativa |
 | Postgres/Redis | Containers `aqui-log-postgres` (5433) e `aqui-log-redis` (6379) ativos | banco de teste é descartável; nenhum dado tem valor |
 | Cloud | Scaffolds Render/Vercel/Firebase; alvos **decididos** (`DEC-25`) | nenhum projeto ou credencial conectado |
 
-## 3. Evidência da rodada técnica de 2026-08-08 (`BASE-04`)
+## 3. Evidência das rodadas técnicas de 2026-08-08
+
+### `B2C-05` (esta rodada)
+
+Executado no banco descartável `aqui_log_b2c05` com API em `PORT=3011`:
+
+- criação de pedido rejeita, com `400` e mensagem em português, a ausência de
+  foto, tipo, tamanho, peso e de cada endereço — 10 casos negativos em HTTP vivo;
+- endereço só com espaços deixou de passar (o DTO apara antes de validar);
+- pedido legado inserido direto no banco continua legível em lista, detalhe,
+  histórico e na visão de admin, e segue fora dos filtros de `B2C-01B`;
+- `pnpm build`, `pnpm lint` e `pnpm test` verdes (backend 10 suítes / 44 testes);
+- `pnpm smoke` aprovado 5×, agora com upload de foto do cliente e assert negativo;
+- `flutter analyze`/`flutter test` verdes nos dois apps e `dart analyze`/`dart test`
+  no core.
+
+Documento de evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-05.md`.
+
+### `BASE-04` e `B2C-01B` (rodada anterior)
 
 Executado no banco descartável `aqui_log_base04` com API em `PORT=3011`:
 
@@ -32,16 +50,13 @@ Executado no banco descartável `aqui_log_base04` com API em `PORT=3011`:
 - `RemoveCompanyModel` revertida e reaplicada; schema final conferido;
 - `/health` com `db: ok` e `redis: ok`;
 - smoke B2C ponta a ponta aprovado em 6 execuções, com códigos distintos;
-- `pnpm build`, `pnpm lint` e `pnpm test` verdes (backend 10 suítes / 36 testes);
 - QA do dashboard no navegador (Chrome real) cobrindo os quatro filtros B2C,
   combinação, estado vazio, paginação e escopo por papel.
 
 Documento de evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-BASE-04.md`.
 
 Evidência anterior (mobile, 2026-08-07):
-`docs/04-status/entregas/2026-08-07-ENTREGA-MOBILE-B2C.md` — core 6 testes,
-UI 2, app cliente 10, app motoboy 7. **Não** repetida nesta sessão; nenhum arquivo
-Flutter/Dart foi alterado.
+`docs/04-status/entregas/2026-08-07-ENTREGA-MOBILE-B2C.md`.
 
 ## 4. Validações ainda não comprovadas
 
@@ -51,15 +66,17 @@ Flutter/Dart foi alterado.
 - [x] Executar smoke B2C vivo após as migrations.
 - [x] Exercitar rollback de migration aplicável em banco descartável.
 - [x] Fazer QA do dashboard no navegador (filtros B2C de `B2C-01B`).
+- [x] Rodar `flutter analyze`/`flutter test` após a mudança mobile de `B2C-05`.
 - [ ] Gerar APKs atuais.
-- [ ] Fazer QA visual dos apps em emulador/dispositivo.
-- [ ] Rodar `flutter analyze`/`flutter test` novamente após a próxima mudança mobile.
+- [ ] Fazer QA visual dos apps em emulador/dispositivo — pendente **e agora mais
+      relevante**, porque `B2C-05` mudou a tela de novo pedido do app cliente.
 
 ## 5. Próximo passo
 
-`BASE-04` e `B2C-01B` estão `DONE`. A fila libera `UX-01C` (identidade do dashboard)
-e `B2C-05` (foto + campos obrigatórios na criação, `DEC-01` já decidida). Escolher
-um único ID, conforme o backlog.
+`BASE-04`, `B2C-01B` e `B2C-05` estão `DONE`. A fila libera `UX-01C` (identidade
+do dashboard), `PICK-01` (código de recolhimento, promovido a `READY` porque
+`B2C-05` fechou e `DEC-24` está decidida) e `B2C-02` (preço v2, com valores
+finais atrás de `DEC-02`). Escolher um único ID, conforme o backlog.
 
 ## 6. Bloqueios externos
 
