@@ -3,7 +3,7 @@
 - **Data/hora:** 2026-08-08 (~00:25 BRT)
 - **Agente:** Cursor Grok
 - **Tarefa:** `B2C-01B` fatia 4 — filtro por cliente
-- **Branch/commit:** `main` (a registrar)
+- **Branch/commit:** `main` @ `123067f`
 
 ## Resultado
 
