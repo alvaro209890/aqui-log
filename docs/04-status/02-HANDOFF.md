@@ -1,45 +1,47 @@
 # Handoff vigente
 
-- **Data/hora:** 2026-08-07 (noite)
+- **Data/hora:** 2026-08-08 (~00:05 BRT)
 - **Agente:** Cursor Grok
-- **Tarefa:** travar alvos de hospedagem (Render + Vercel + Firebase) nos planos
-- **Branch/commit:** `main` (commit desta sessão)
-- **Escopo autorizado:** documentação + blueprint comments; push `main`; atualizar Segundo Cérebro
+- **Tarefa:** `B2C-01B` fatia 1 — filtro `productType` no dashboard
+- **Branch/commit:** `main` (a registrar)
+- **Escopo autorizado:** fatia pequena bem feita; documentar; testar por código; push `main`; Segundo Cérebro
 
 ## Resultado
 
-Alvos cloud formalizados: backend **Render**, frontend **Vercel**, banco
-**Firebase Firestore** (`DEC-25`, `PLANO_HOSPEDAGEM.md`). Nada provisionado.
-`BASE-04` continua o único `READY`.
+Filtro de **categoria** (`productType`) ponta a ponta: API `GET /deliveries?productType=`,
+predicados unitários, select + coluna no `DeliveriesPage`. `B2C-01B` ficou
+`IN_PROGRESS` (não DONE). `BASE-04` permanece `READY` (não executado; Álvaro
+autorizou iniciar B2C-01B mesmo assim).
 
 ## Alterações
 
-- `docs/02-planejamento/planos/PLANO_HOSPEDAGEM.md` (novo)
-- `docs/03-referencia/04-ALVOS-DE-DEPLOY.md`, `01-ARQUITETURA.md`
-- `03-DECISOES.md` (`DEC-25`, `INV-02`/`INV-05`), roadmap, backlog, `AGENTS.md`
-- `infra/render.yaml` (comentários de alvo)
-- Segundo Cérebro: `02-projetos/aqui-log.md` + `06-changelog.md`
+- Backend: `deliveries.controller/service`, `dashboard-metrics` (+ spec)
+- Dashboard: `api.ts`, `DeliveriesPage.tsx`, README
+- Docs: API, backlog, roadmap, handoff, changelog, estado
 
 ## Evidências executadas
 
 | Verificação | Resultado | Observação |
 | --- | --- | --- |
-| Código de runtime | NÃO ALTERADO | só docs + comentário YAML |
-| Provisionamento cloud | NÃO EXECUTADO | sem credenciais / sem ligar contas |
-| Push GitHub `main` | a registrar no commit | |
+| `jest` dashboard-metrics | PASS | 12 testes |
+| `jest` backend completo | PASS | 33 testes |
+| `pnpm --filter backend build` | PASS | |
+| `pnpm --filter backend lint` | PASS | |
+| `pnpm --filter dashboard build` | PASS | |
+| `pnpm --filter dashboard lint` | PASS | tsc |
+| Smoke / QA navegador / Postgres vivo | NÃO EXECUTADO | sem API/DB nesta sessão |
 
-## Não feito e bloqueios
+## Não feito
 
-- Criar projetos Render/Vercel/Firebase.
-- Migrar TypeORM → Firestore (`OPS-DB-01`).
-- `BASE-04` ainda não executado.
+- Filtros `packageSize`, peso, cliente
+- `BASE-04`, QA visual no browser
+- Integração HTTP e2e do `productType`
 
 ## Próximo passo recomendado
 
-1. `BASE-04` — baseline local
-2. Só depois, com credenciais: `OPS-DB-01` → `OPS-02` → `OPS-03`
+1. Continuar `B2C-01B` fatia 2 (`packageSize`) **ou** executar `BASE-04` se quiser baseline de banco primeiro
+2. Não misturar com `UX-01C`
 
 ## Mensagem de retomada
 
-> Alvos cloud = Render + Vercel + Firebase (`DEC-25`). Dev ainda é Postgres.
-> Execute `BASE-04`. Não provisionar cloud sem pacote OPS e secrets.
+> `B2C-01B` parcial: só `productType`. Próxima fatia = tamanho ou peso. Ler backlog §3.

@@ -9,7 +9,7 @@
 | Ordem | ID | Estado | Prioridade | Resultado | Dependências/gates |
 | ---: | --- | --- | --- | --- | --- |
 | 1 | `BASE-04` | `READY` | P0 | Banco de teste migrado e smoke B2C vivo documentado | Docker/Postgres/Redis locais |
-| 2 | `B2C-01B` | `BLOCKED` | P0 | Dashboard filtra e relata encomendas B2C | concluir `BASE-04` |
+| 2 | `B2C-01B` | `IN_PROGRESS` | P0 | Dashboard filtra e relata encomendas B2C | Fatia 1 (`productType`) entregue; resto pendente. Autorizado pelo Álvaro sem esperar `BASE-04` DONE |
 | 3 | `UX-01C` | `BLOCKED` | P1 | Dashboard usa tokens laranja equivalentes | concluir `BASE-04`; não misturar com `B2C-01B` |
 | 4 | `UX-02` | `BLOCKED` | P1 | Fluxos principais passam por QA visual/acessibilidade | `UX-01C`, navegador e dispositivo/emulador |
 | 5 | `B2C-05` | `BLOCKED` | P0 | Foto + campos obrigatórios na criação | `B2C-01B`; `DEC-01` decidida |
@@ -72,32 +72,32 @@ Plano do fluxo novo: `docs/02-planejamento/planos/PLANO_FLUXO_CLIENTE_PRESTADOR.
 - [ ] Build, lint e testes Node passam.
 - [ ] Comandos, saídas observadas, data, ambiente e limitações ficam no handoff/changelog.
 
-## 3. Próxima tarefa — `B2C-01B`
+## 3. Próxima tarefa — `B2C-01B` (`IN_PROGRESS`)
 
 - **Objetivo:** tornar os campos B2C consultáveis no painel sem mudar o fluxo mobile.
 - **Plano:** `docs/02-planejamento/planos/PLANO_B2C.md` e
   `docs/02-planejamento/01-ROADMAP.md`.
-- **Dependência:** `BASE-04 = DONE`.
-- **Fora do escopo:** tema visual, preço v2, pagamentos, cloud e remoção do fallback legado.
+- **Nota:** Álvaro autorizou iniciar sem `BASE-04 = DONE` (2026-08-07), em fatias pequenas.
 
-### Passos
+### Progresso
 
-1. Congelar filtros e contrato de relatório: cliente, categoria, tamanho e faixa de peso.
-2. Especificar query params, paginação e combinação de filtros.
-3. Implementar backend com autorização admin e testes de integração.
-4. Implementar filtros/colunas no dashboard, incluindo vazio, loading e erro.
-5. Validar pedidos novos e legados sem expor dados pessoais indevidos.
-6. Rodar qualidade Node e QA real no navegador.
-7. Atualizar API, cobertura, backlog, handoff e changelog.
+| Fatia | Estado | Evidência |
+| --- | --- | --- |
+| `productType` (API + predicado + select/coluna dashboard) | ✅ | testes `dashboard-metrics` + build backend/dashboard |
+| `packageSize` | ⏳ | — |
+| faixa de peso | ⏳ | — |
+| filtro por cliente | ⏳ | — |
+| QA navegador | ⏳ | API local / browser não exercitados nesta fatia |
 
 ### Critérios de aceite
 
-- [ ] Cada filtro isolado e uma combinação relevante retornam o conjunto esperado.
-- [ ] Paginação mantém total e filtros.
-- [ ] Apenas papéis administrativos autorizados acessam os dados.
-- [ ] Pedido legado continua visível com fallback documentado.
-- [ ] Dashboard trata zero resultados, erro e carregamento.
-- [ ] Testes e QA do navegador têm evidência.
+- [x] Filtro isolado `productType` (e combo com `status` nos predicados puros)
+- [ ] Cada filtro restante (cliente, tamanho, peso) isolado e combinação relevante
+- [x] Paginação continua com o filtro `productType` (mesma `findAll` + page/limit)
+- [ ] Apenas papéis administrativos autorizados acessam os dados (inalterado; não revalidado em HTTP vivo)
+- [x] Pedido legado sem `productType` não entra no filtro de categoria (documentado + teste)
+- [x] Dashboard trata zero resultados / loading / erro (já existente; mantido)
+- [ ] QA do navegador com evidência
 
 ## 4. Pacotes do fluxo cliente↔prestador (ainda não `READY`)
 

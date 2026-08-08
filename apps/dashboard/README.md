@@ -26,7 +26,8 @@ própria registrada; build/lint não substituem QA real no navegador.
 
 ## Limites
 
-- Não implementar filtro B2C antes de `B2C-01B = READY`.
+- `B2C-01B` em progresso (autorizado parcialmente): filtro `productType` na lista
+  de entregas. Ainda faltam cliente, tamanho e faixa de peso.
 - Não misturar `B2C-01B` com o pacote visual `UX-01C`.
 - Ações administrativas usam comandos de domínio; não fazem update genérico.
 - `SUPPORT` não executa ação financeira, de pedido, frota ou lote.

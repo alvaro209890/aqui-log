@@ -31,6 +31,19 @@ Rotas protegidas: `Authorization: Bearer <accessToken>`
 | Metodo | Rota | Uso |
 | --- | --- | --- |
 | `POST/GET` | `/deliveries` | Cria ou lista conforme o perfil |
+
+### Query params de `GET /deliveries`
+
+| Param | Uso |
+| --- | --- |
+| `status` | Status da entrega |
+| `courier` | UUID do motoboy |
+| `date` | Dia de criação (`YYYY-MM-DD`) |
+| `productType` | Categoria B2C (`DOCUMENT`, `FOOD`, …). Valor inválido → `400`. Pedidos legados sem categoria **não** entram no filtro. Fatia `B2C-01B`. |
+| `page`, `limit` | Paginação |
+
+| Metodo | Rota | Uso |
+| --- | --- | --- |
 | `POST` | `/deliveries/:id/dispatch` | Despacho automatico por proximidade |
 | `PATCH` | `/deliveries/:id/assign` | Despacho manual administrativo |
 | `GET` | `/deliveries/offers/mine` | Ofertas pendentes do entregador |

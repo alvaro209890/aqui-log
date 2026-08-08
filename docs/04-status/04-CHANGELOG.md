@@ -4,7 +4,16 @@ Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
 ## Fluxo cliente↔prestador nos planos — 2026-08-07
 
+## B2C-01B fatia 1 (`productType`) — 2026-08-08
+
+- `GET /deliveries?productType=` com validação de catálogo (`400` se inválido).
+- Predicados puros + testes; dashboard: select Categoria + coluna na tabela.
+- Pedidos legados sem categoria não entram no filtro.
+- Evidência: backend 33 testes, builds/lints backend+dashboard verdes.
+- QA navegador / smoke vivo: não executados. `B2C-01B` permanece `IN_PROGRESS`.
+
 ## Hospedagem cloud travada — 2026-08-07
+
 
 - `DEC-25`: API **Render**, dashboard **Vercel**, banco **Firebase Firestore**
   (+ Storage/FCM). Plano `PLANO_HOSPEDAGEM.md`; `OPS-DB-01`/`OPS-02`/`OPS-03`.

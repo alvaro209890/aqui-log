@@ -50,10 +50,8 @@ Documento de evidência: `docs/04-status/entregas/2026-08-07-ENTREGA-MOBILE-B2C.
 
 ## 5. Próximo passo
 
-Executar somente `BASE-04`, descrito em
-`docs/02-planejamento/02-BACKLOG.md`. Depois da evidência verde, promover
-`B2C-01B` para `READY`. O fluxo cliente↔prestador (`B2C-05`…`PICK-01`) está
-**planejado** em `planos/PLANO_FLUXO_CLIENTE_PRESTADOR.md` — ainda sem código.
+`B2C-01B` está `IN_PROGRESS` (fatia `productType` entregue). Continuar fatias
+restantes **ou** executar `BASE-04` (ainda `READY`, não feito) para validar banco.
 
 ## 6. Bloqueios externos
 

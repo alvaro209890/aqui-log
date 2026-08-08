@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { api, type DeliveryRecord } from '../api';
+import {
+  api,
+  PRODUCT_TYPE_OPTIONS,
+  type DeliveryRecord,
+} from '../api';
 import { PaginationBar } from '../components/PaginationBar';
 import { StatusBadge } from '../components/StatusBadge';
 
@@ -16,12 +20,20 @@ const statuses = [
   'CANCELED',
 ];
 
+function productTypeLabel(value: string | null | undefined): string {
+  if (!value) return '—';
+  return (
+    PRODUCT_TYPE_OPTIONS.find((o) => o.value === value)?.label ?? value
+  );
+}
+
 export function DeliveriesPage({ token }: { token: string }) {
   const [items, setItems] = useState<DeliveryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
   const [courier, setCourier] = useState('');
   const [date, setDate] = useState('');
+  const [productType, setProductType] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -35,6 +47,7 @@ export function DeliveriesPage({ token }: { token: string }) {
         status: status || undefined,
         courier: courier || undefined,
         date: date || undefined,
+        productType: productType || undefined,
         page: p,
         limit: 20,
       })
@@ -85,6 +98,19 @@ export function DeliveriesPage({ token }: { token: string }) {
           </select>
         </label>
         <label>
+          Categoria
+          <select
+            value={productType}
+            onChange={(e) => setProductType(e.target.value)}
+          >
+            {PRODUCT_TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value || 'all-types'} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
           Entregador (ID)
           <input
             value={courier}
@@ -122,6 +148,7 @@ export function DeliveriesPage({ token }: { token: string }) {
               <thead>
                 <tr>
                   <th>CODIGO</th>
+                  <th>CATEGORIA</th>
                   <th>COLETA</th>
                   <th>ENTREGA</th>
                   <th>ENTREGADOR</th>
@@ -136,6 +163,7 @@ export function DeliveriesPage({ token }: { token: string }) {
                     <td>
                       <strong>{item.code}</strong>
                     </td>
+                    <td>{productTypeLabel(item.productType)}</td>
                     <td>{item.pickupAddress}</td>
                     <td>{item.deliveryAddress}</td>
                     <td>{item.courierId?.slice(0, 8) ?? '—'}</td>

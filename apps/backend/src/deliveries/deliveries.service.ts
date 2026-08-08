@@ -37,6 +37,7 @@ import { assertDeliveryTransition, distanceInKm } from './delivery-rules';
 import {
   AssignCourierDto,
   CreateDeliveryDto,
+  PRODUCT_TYPES,
   RateDeliveryDto,
   UpdateDeliveryStatusDto,
 } from './dto/delivery.dto';
@@ -140,6 +141,7 @@ export class DeliveriesService {
       status?: string;
       courier?: string;
       date?: string;
+      productType?: string;
       page?: string;
       limit?: string;
     } = {},
@@ -176,6 +178,16 @@ export class DeliveriesService {
     if (filters.date) {
       const day = filters.date.slice(0, 10);
       qb.andWhere('delivery.created_at::date = :day::date', { day });
+    }
+    if (filters.productType) {
+      if (!(PRODUCT_TYPES as readonly string[]).includes(filters.productType)) {
+        throw new BadRequestException(
+          `productType invalido. Use: ${PRODUCT_TYPES.join(', ')}`,
+        );
+      }
+      qb.andWhere('delivery.productType = :productType', {
+        productType: filters.productType,
+      });
     }
 
     if (filters.page != null || filters.limit != null) {

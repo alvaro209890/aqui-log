@@ -109,7 +109,7 @@ valores finais de km continuam atrás de `DEC-05`/`DEC-02`.
 | --- | --- | --- | --- |
 | B2C-01 | ✅ | `BASE-03` | Colunas próprias para tipo, tamanho, peso, alcance e fotos; leitura compatível com `notes` legado |
 | B2C-01A | ✅ | `B2C-01` | Apps e core consomem campos próprios com fallback legado |
-| B2C-01B | ⏳ | `BASE-04` | Dashboard filtra/relata por cliente, categoria, tamanho e peso |
+| B2C-01B | ▶️ parcial | `BASE-04` (pulado com autorização) | Fatia 1: filtro `productType` na lista admin; faltam tamanho/peso/cliente |
 | B2C-05 | ⏳ | `B2C-01B`, `DEC-01` | Obrigatoriedade de foto + peso/tipo/tamanho/endereços na criação; legados legíveis |
 
 **Estratégia de migração:** mudança aditiva, leitura dupla durante a transição e remoção do parser legado somente em uma versão posterior, após medir que não existem pedidos antigos dependentes dele.

@@ -64,6 +64,10 @@ export interface DeliveryRecord {
   status: string;
   priceCents?: number;
   createdAt: string;
+  /** Categoria B2C; ausente/null em pedidos legados. */
+  productType?: string | null;
+  packageSize?: string | null;
+  weightKg?: number | null;
 }
 
 export interface CourierRecord {
@@ -153,9 +157,22 @@ export type DeliveryFilters = {
   status?: string;
   courier?: string;
   date?: string;
+  /** Filtro B2C-01B (fatia 1): categoria da encomenda. */
+  productType?: string;
   page?: number;
   limit?: number;
 };
+
+export const PRODUCT_TYPE_OPTIONS = [
+  { value: '', label: 'Todas' },
+  { value: 'DOCUMENT', label: 'Documento' },
+  { value: 'FOOD', label: 'Alimento' },
+  { value: 'ELECTRONICS', label: 'Eletronico' },
+  { value: 'FRAGILE', label: 'Fragil' },
+  { value: 'CLOTHING', label: 'Roupas' },
+  { value: 'MEDICINE', label: 'Medicamento' },
+  { value: 'OTHER', label: 'Outro' },
+] as const;
 
 async function request<T>(
   path: string,

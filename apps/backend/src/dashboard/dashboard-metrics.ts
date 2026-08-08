@@ -244,12 +244,15 @@ export type DeliveryFilterInput = {
   status?: string;
   courier?: string;
   date?: string;
+  /** Categoria da encomenda B2C (`product_type`). */
+  productType?: string;
 };
 
 export type FilterableDelivery = {
   status: string;
   courierId: string | null;
   createdAt: Date | string;
+  productType?: string | null;
 };
 
 /** Pure filter predicates for unit testing without HTTP/DB. */
@@ -268,6 +271,9 @@ export function matchesDeliveryFilters(
         ? delivery.createdAt.slice(0, 10)
         : delivery.createdAt.toISOString().slice(0, 10);
     if (created !== day) return false;
+  }
+  if (filters.productType) {
+    if (delivery.productType !== filters.productType) return false;
   }
   return true;
 }

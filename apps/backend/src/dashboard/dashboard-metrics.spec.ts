@@ -183,23 +183,32 @@ describe('dashboard-metrics', () => {
         status: 'DELIVERED',
         courierId: 'k1',
         createdAt: '2026-07-15T10:00:00.000Z',
+        productType: 'FOOD',
       },
       {
         status: 'REQUESTED',
         courierId: null,
         createdAt: '2026-07-14T10:00:00.000Z',
+        productType: null,
       },
       {
         status: 'DELIVERED',
         courierId: 'k2',
         createdAt: new Date('2026-07-15T18:00:00.000Z'),
+        productType: 'DOCUMENT',
+      },
+      {
+        status: 'OFFERED',
+        courierId: null,
+        createdAt: '2026-07-15T12:00:00.000Z',
+        productType: 'FOOD',
       },
     ];
 
     it('filters by status courier and date', () => {
       expect(filterDeliveries(items, { status: 'DELIVERED' })).toHaveLength(2);
       expect(filterDeliveries(items, { courier: 'k1' })).toHaveLength(1);
-      expect(filterDeliveries(items, { date: '2026-07-15' })).toHaveLength(2);
+      expect(filterDeliveries(items, { date: '2026-07-15' })).toHaveLength(3);
       expect(
         filterDeliveries(items, {
           status: 'DELIVERED',
@@ -208,8 +217,30 @@ describe('dashboard-metrics', () => {
       ).toHaveLength(2);
     });
 
+    it('filters by productType alone and combined with status', () => {
+      expect(filterDeliveries(items, { productType: 'FOOD' })).toHaveLength(2);
+      expect(filterDeliveries(items, { productType: 'DOCUMENT' })).toHaveLength(
+        1,
+      );
+      expect(
+        filterDeliveries(items, {
+          productType: 'FOOD',
+          status: 'DELIVERED',
+        }),
+      ).toHaveLength(1);
+      // legado sem productType nao entra no filtro de categoria
+      expect(
+        filterDeliveries(items, { productType: 'FOOD' }).every(
+          (d) => d.productType === 'FOOD',
+        ),
+      ).toBe(true);
+    });
+
     it('matchesDeliveryFilters rejects non-matching rows', () => {
       expect(matchesDeliveryFilters(items[0], { status: 'CANCELED' })).toBe(
+        false,
+      );
+      expect(matchesDeliveryFilters(items[1], { productType: 'FOOD' })).toBe(
         false,
       );
     });
