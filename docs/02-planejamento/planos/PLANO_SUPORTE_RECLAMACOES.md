@@ -1,8 +1,11 @@
 # Plano — Suporte e reclamações ("o lado legal")
 
-> **Criado:** 2026-08-07 · **Papel:** especificação subordinada ao `ROADMAP.md`
+> **Criado:** 2026-08-07 · **Papel:** especificação subordinada ao
+> [roadmap](../01-ROADMAP.md)
 > **Abrange:** `SUP-01` a `SUP-05`
-> **Dependências:** `PLANO_CONFIANCA_E_PRECO.md` (B2C-03 avaliação mútua), `PLANO_PAGAMENTOS.md` (PAY-01 ledger/estorno), `PLANO_LOTE_MULTI_PEDIDO.md` (LOT-01/02, lote), `PLANO_FROTA_DASHBOARD.md` (FROTA-01), `PLANO_ADMIN.md` (painel admin)
+> **Dependências:** [confiança/preço](PLANO_CONFIANCA_E_PRECO.md),
+> [pagamentos](PLANO_PAGAMENTOS.md), [lote](PLANO_LOTE_MULTI_PEDIDO.md),
+> [frota](PLANO_FROTA_DASHBOARD.md) e [admin](PLANO_ADMIN.md).
 > **Não autoriza:** gateway, SMS pago, WhatsApp, cloud, payout real
 
 ## 1. Filosofia: reclamação é parte do produto
@@ -126,14 +129,16 @@ botão rápido → perguntas dinâmicas (1–3) → evidência exigida (se houve
 4. Se veredito = reembolso/desconto: dispara estorno **idempotente** no ledger (`§6`) + push de confirmação + botão "ver como foi calculado".
 5. Grava `ticket_verdicts` e alimenta métricas e índices.
 
-**Tabela de vereditos (valores v1, parametrizáveis por feature flag):**
+**Tabela de vereditos proposta:** toda automação financeira pós-coleta permanece
+bloqueada até `DEC-13`, `DEC-16` e `PAY-01`. Enquanto esses gates estiverem
+pendentes, o comportamento vigente é análise humana sem estorno automático.
 
 | Cenário | Condição | Veredito automático |
 |---|---|---|
 | Entrega comprovada dentro da janela (+15 min) | dossiê completo | `ENCERRADO_SEM_RESSARCIMENTO` + timeline enviada |
 | Atraso > 45 min além da janela | pedido entregue | reembolso de 50% do `price_cents`, teto R$ 30 **ou** crédito 20% na próxima (cliente escolhe) — herda o espírito de `D-R13` |
 | Atraso 15–45 min | pedido entregue | **nota de confiança**: crédito automático de 10% (teto R$ 10) sem pedir — "a gente se adiantou, seu pedido atrasou X min" |
-| Pedido nunca entregue (`FAILED`/`CANCELED` pós-coleta) | dossiê confirma | reembolso integral ≤ R$ 50; acima → humano |
+| Pedido nunca entregue após coleta | dossiê confirma | `BLOQUEADO_DEC_13`: análise humana; teto ainda não decidido |
 | Veio errado/danificado, valor do pedido ≤ R$ 50 | fotos do cliente | reembolso integral ≤ R$ 50 ou nova entrega grátis (cliente escolhe) |
 | Veio errado/danificado, > R$ 50 | — | `EM_ANÁLISE` humano |
 | Cobrança divergente | diferença ≤ R$ 50 | estorno da diferença |
@@ -145,7 +150,8 @@ botão rápido → perguntas dinâmicas (1–3) → evidência exigida (se houve
 - Nota de confiança não consome o limite acima (é proativo, não pedido).
 - Assédio e segurança nunca passam pelo juiz rápido.
 - Todo veredito automático tem **botão de contestação**; contestação vira `ESCALADO` com dossiê anexado.
-- **Estorno pós-coleta:** automático apenas até teto (R$ 30); acima disso, humano com SLA — alinhado ao `PLANO_LOTE_MULTI_PEDIDO.md` R6.3.
+- **Estorno pós-coleta:** análise humana enquanto `DEC-13` estiver pendente. O teto
+  de R$ 30 é somente recomendação, não regra vigente.
 
 ## 4. Modelo de dados
 
@@ -238,7 +244,8 @@ Timers rodam em job; atraso de SLA emite alerta no painel (ver §7) e conta para
 
 ## 7. Painel do admin para suporte
 
-Referência de estrutura geral e permissões: `PLANO_ADMIN.md`. Papel `SUPPORT` (leitura/escrita em tickets; sem acesso financeiro além do estorno regrado; estorno manual acima do teto só `ADMIN`).
+Referência: [plano admin](PLANO_ADMIN.md). `SUPPORT` lê/escreve tickets, mas não
+executa estorno, alteração de pedido, ação de frota ou penalização.
 
 | Área | Conteúdo |
 |---|---|
@@ -248,7 +255,8 @@ Referência de estrutura geral e permissões: `PLANO_ADMIN.md`. Papel `SUPPORT` 
 | **Alertas** | SLA estourando, reincidência de motoboy/cliente, `FROTA-01` transformando alerta operacional em sugestão de ticket (ex.: motoboy parado 30 min em `AT_PICKUP` → botão "criar ticket de coleta") |
 | **Extrato do suporte** | total estornado/dia, custo médio por ticket, NPS de resolução |
 
-Permissões: acesso a tickets é **separado** de "ver frota" e de "ver entregas" (mesma lógica de `canAccess` do `PLANO_FROTA_DASHBOARD.md`); tudo auditado em `ticket_events`.
+Permissões: tickets, frota e entregas são permissões separadas; ver o
+[plano de frota](PLANO_FROTA_DASHBOARD.md). Tudo é auditado em `ticket_events`.
 
 ## 8. Comunicação com o cliente
 
@@ -287,7 +295,7 @@ Alimenta o mesmo pipeline de relatórios do dashboard (`B2C-01B`) e os guardrail
 | Caso | Resolução |
 |---|---|
 | **Reclamação falsa** | dossiê completo contra + reincidência → análise manual, fraude flag, reembolso automático desligado por 90 dias (§6) |
-| **Cliente nunca busca o pedido** (não recebe na parada) | motoboy registra `CLIENTE_AUSENTE` (foto + 10 min); reoferta/redespacho conforme `R7`; se cliente sumiu, ticket de motoboy → taxa de nova tentativa (decisão pendente do `PLANO_LOTE_MULTI_PEDIDO.md` §12 #7) decide quem paga |
+| **Cliente nunca busca o pedido** | motoboy registra `CLIENTE_AUSENTE`; taxa e custeio dependem de `LOT-DEC-07` |
 | **Reembolso em pedido agrupado/lote** | estorno **só da fatia** alocada em `trip_quotes`; demais pedidos e repasses intactos (§6); viagem re-sequenciada sem tocar o resto; verificação do `trip_stops` e do `eta_forecast` |
 | **Reclamação depois de 30 dias** | fora do prazo (§2) → rejeitada com explicação automática; aceita só por exceção do admin (fraude de motoboy conhecida) |
 | **Entrega não concluída** (`FAILED`) | status vira reembolso automático na hora (se elegível) + pedido re-oferecido ou cancelado sem custo (`D-R13`); motoboy não é punido se dossiê mostrar motivo alheio |
@@ -307,22 +315,24 @@ Alimenta o mesmo pipeline de relatórios do dashboard (`B2C-01B`) e os guardrail
 | `SUP-01` | **Fundação de dados e dossiê** | `B2C-01` (campos de encomenda), telemetria atual | schema `tickets/ticket_messages/ticket_attachments/ticket_events/ticket_verdicts/delivery_dossiers`; coletor de dossiê a partir dos eventos existentes (timestamps server-side); abertura pelo app do cliente (botões por tipo + perguntas + prazos); ack < 5 s; fila simples no dashboard |
 | `SUP-02` | **Auto-resolução guiada + juiz rápido** | `SUP-01`, `B2C-02` (preço v2 p/ vereditos), **`PAY-01`** (estorno idempotente) | árvores de auto-resolução (§3.2); motor de vereditos + tabela parametrizável (§3.3); nota de confiança; estorno via ledger com idempotência; triagem em 3 níveis; painel de vereditos e contestações |
 | `SUP-03` | **Reclamação do motoboy + reputação** | `SUP-02`, **`B2C-03`** (avaliação mútua) | tipos do motoboy (§2.2); proteção por dossiê no índice de pontualidade/confiabilidade; `courier_metrics` com confiabilidade; fraude flags e limites por cliente (§6) |
-| `SUP-04` | **Painel de suporte completo** | `SUP-02/03`, `PLANO_ADMIN.md` (papéis/permissões) | fila com prioridade e SLA, chat, decisões em lote, extrato do suporte, bloqueio temporário, ligação com alertas **`FROTA-01`** |
+| `SUP-04` | **Painel de suporte completo** | `SUP-02`, `SUP-03`, `ADMIN-06` | fila, SLA, chat, extrato, bloqueio e integração `FROTA-01` |
 | `SUP-05` | **Comunicação de fora do app** | `SUP-04`, `B2C-04` (SMS) / provider de WhatsApp (decisão) | SMS fallback e WhatsApp (se aprovado) em todos os templates (§8); pesquisa NPS automatizada |
 
 **Vínculos com o roadmap:** `SUP-01` entra depois de `B2C-01B` (dashboard B2C) e pode rodar em paralelo com `DISP-*`; `SUP-02` é **bloqueado por `PAY-01`** (sem ledger, sem estorno automático); `SUP-03` depende de `B2C-03`; `SUP-04` ganha muito com `FROTA-01`; reclamações de lote só funcionam plenamente após `LOT-01/02` (antes disso, ticket de lote cai em `OUTRO` com tratamento manual). Nada deste plano autoriza cloud, gateway, SMS pago ou WhatsApp.
 
-**Definition of Done:** mesma regra do roadmap — migrations aditivas reversíveis, autorização por papel testada, unitários de regras puras (vereditos, SLAs, dedupe), integração de estorno com ledger idempotente, `pnpm build/lint/test/smoke` verdes, fluxo real exercitado (abrir → dossiê → veredito → estorno → NPS), `MVP_COVERAGE.md` e changelog atualizados.
+**Definition of Done:** segue o [roadmap](../01-ROADMAP.md), com migrations,
+autorização por papel, regras puras, ledger idempotente, qualidade, fluxo real e
+atualização de estado/cobertura/handoff/changelog.
 
 ## Decisões pendentes
 
 | # | Decisão | Recomendação |
 |---|---|---|
-| S-1 | Prazos de reclamação (48 h dano/erro, 72 h atraso, 7 d cobrança) | validar com piloto |
-| S-2 | Tetos do juiz rápido (R$ 50 reembolso, R$ 30/50% atraso, R$ 10 nota, R$ 100/mês) | começar conservador; subir com dados |
-| S-3 | Percentuais da nota de confiança (10/20%) | parametrizável; medir efeito na reincidência |
-| S-4 | Limites de fraude (3/30d, 5/60d, 90 d de desligamento) | confirmar com dono |
-| S-5 | WhatsApp como canal (provider + custo) | só após `B2C-04` e OPS-02 |
-| S-6 | Taxa de nova tentativa por ausência do cliente (herdado de `PLANO_LOTE_MULTI_PEDIDO` §12 #7) | decidir junto — afeta `CLIENTE_AUSENTE` |
-| S-7 | Janela de contestação do payout (48–72 h) e retenção percentual | definir com `PAY-02` |
-| S-8 | SLA humano noturno/fim de semana (horário comercial + backlog com prazo prometido) | confirmar cobertura do suporte |
+| `SUP-DEC-01` | Prazos de reclamação | validar com piloto |
+| `SUP-DEC-02` (`DEC-16`) | Tetos do juiz rápido | começar conservador; subir com dados |
+| `SUP-DEC-03` | Percentuais da nota de confiança | parametrizável; medir reincidência |
+| `SUP-DEC-04` | Limites de fraude | confirmar com dono |
+| `SUP-DEC-05` | WhatsApp como canal | só após `B2C-04` e `OPS-02` |
+| `SUP-DEC-06` (`LOT-DEC-07`) | Taxa de nova tentativa por ausência | decidir junto |
+| `SUP-DEC-07` (`DEC-17`) | Janela de contestação do payout | definir com `PAY-02` |
+| `SUP-DEC-08` | SLA humano noturno/fim de semana | confirmar cobertura |

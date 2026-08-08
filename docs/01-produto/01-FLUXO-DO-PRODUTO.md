@@ -1,6 +1,7 @@
 # FLUXO_APP.md — O app Aqui Log explicado de ponta a ponta
 
-> **Data:** 2026-08-07 · **Público:** qualquer pessoa (incluindo o dono) · **Fontes:** `PLANO_B2C.md`, `PLANO_LOTE_MULTI_PEDIDO.md`, `PLANO_FROTA_DASHBOARD.md`, `PLANO_CONFIANCA_E_PRECO.md`, `PLANO_PAGAMENTOS.md`, `PLANO_ADMIN.md`, `PLANO_SUPORTE_RECLAMACOES.md`
+> **Data:** 2026-08-07 · **Público:** qualquer pessoa. **Fontes:** roadmap,
+> decisões e planos em [`02-planejamento/`](../02-planejamento/).
 > **Como ler:** se você quer só entender o que funciona HOJE, leia as seções 1–4 e pule direto para a 10. Se quer entender o desenho completo (incluindo o que está planejado), leia tudo em ordem.
 
 ---
@@ -70,11 +71,14 @@ Regra de ouro: **o Sistema é o árbitro**. Ele não decide se a entrega acontec
 - **O que faz:** nota de 1 a 5 + comentário opcional.
 - **Regras:** só após `DELIVERED`, só quem participou daquela entrega, uma avaliação por entrega.
 - *Planejado:* avaliação **mútua** — o motoboy também avalia o cliente (nota do cliente afeta a fila de quem aceita servir). Em lote, a tela mostra o contexto ("lote de N pacotes") e avaliações de entregas com atraso sistêmico passam por revisão leve.
-- **Reclamar:** logo após a avaliação aparece "Algo deu errado?" com botões rápidos por tipo (atrasou, não chegou, veio danificado, veio errado, motorista não respeitou, cobrança, outro). Detalhes no `PLANO_SUPORTE_RECLAMACOES.md`.
+- **Reclamar:** logo após a avaliação aparece "Algo deu errado?" com botões rápidos.
+  Detalhes no [plano de suporte](../02-planejamento/planos/PLANO_SUPORTE_RECLAMACOES.md).
 
 ### Passo 7 — Reclamar / cancelar
 - **Cancelar pedido:** antes do motoboy aceitar é livre (e devolve 100% do dinheiro no futuro); depois de aceito, entra em regra configurável; depois da coleta, vira análise do admin (ver seção 9).
-- **Reclamação:** abertura recebe confirmação em < 5 s; o sistema tenta **auto-resolução guiada** (botões: cancelar sem custo / desconto / aguardar) e depois o **juiz rápido** (vereditos automáticos com reembolso até teto via ledger). Só o que escapa vai para o admin/suporte com SLA. Detalhes em `PLANO_SUPORTE_RECLAMACOES.md`.
+- **Reclamação planejada:** abertura recebe confirmação, auto-resolução guiada e,
+  somente após `PAY-01`, `DEC-13` e `DEC-16`, juiz rápido financeiro. Enquanto os
+  gates estiverem pendentes, casos pós-coleta vão para análise humana.
 
 ```
 CADASTRO → PEDIR → PREÇO → ACOMPANHAR → RECEBER → AVALIAR → RECLAMAR/CANCELAR
@@ -154,7 +158,7 @@ CADASTRO → APROVAÇÃO → DISPONÍVEL → OFERTA → ACEITE (individual ou LO
 - **Métricas:** contadores em tempo real (online, ocioso, em viagem, sem sinal, entregas, em atraso).
 - **Privacidade:** posição exata só é exposta **durante viagem ativa**; ocioso aparece coarsificado (nunca a casa do motoboy), acesso é por permissão própria ("ver frota") e fica registrado em audit log.
 
-### Passo 3 — Controlar quase tudo pelo painel (planejado, `PLANO_ADMIN.md`)
+### Passo 3 — Controlar quase tudo pelo painel ([planejado](../02-planejamento/planos/PLANO_ADMIN.md))
 - **Pedidos:** mudar status (motivo obrigatório), cancelar, redespachar, reatribuir motoboy, ajustar preço (com auditoria e consentimento do cliente).
 - **Motoboys:** aprovar, suspender, reativar, editar capacidade.
 - **Clientes:** suspender, reativar, reembolsar via ledger.
@@ -218,7 +222,7 @@ DRAFT ──montar lote──► PROPOSED ──aceite atômico──► ACCEPTE
 | `IN_PROGRESS` | ≥ 1 coletado (`PICKED_UP`/`IN_TRANSIT`); demais `AT_PICKUP` ou pendentes |
 | `COMPLETED` | todos `DELIVERED` |
 | `PARTIALLY_COMPLETED` | ≥ 1 `DELIVERED` e ≥ 1 `CANCELED`/`FAILED`/`REMOVED_FROM_TRIP` |
-| `CANCELED` | não concluídos voltam a `REQUESTED` (fila) |
+| `CANCELED` | não coletados voltam à fila; coletados exigem devolução/transferência |
 
 Um job de **reconciliação** procura divergências entre viagem e pedidos — os dois nunca divergem silenciosamente, e qualquer mudança de janela/sequência vira evento de auditoria.
 
@@ -244,9 +248,9 @@ NONE ──pedido confirmado──► RESERVED ──entrega concluída──►
 | **ETAs e rota** | Recalculados a cada evento; divergência > 5 min vira `ETA_UPDATED` + notificação ao cliente. Sequenciador usa rota ótima para ≤ 4 paradas, heurística acima. | 📐 |
 | **Anti-atraso** | `AT_RISK` quando ETA passa do fim da janela → push com 3 opções; sem resposta em 120 s e não coletado → oferece redespacho. | 📐 |
 | **Redespacho** | Pedido → `REQUESTED` → nova oferta; cliente avisado quando novo motoboy aceita. | ✅ básico / 📐 anéis de raio (`DISP-01/03`) |
-| **Reserva por delivery** | `SETNX` no Redis: o pedido reservado para um lote nunca coexiste com oferta individual; checado em TODOS os caminhos de aceite. | 📐 |
+| **Reserva por delivery** | Restrição/transação no PostgreSQL é a autoridade; Redis pode acelerar sem substituir a consistência do banco. | 📐 |
 | **Reserva de dinheiro** | Bloqueio atômico do saldo na confirmação; liberação em cancelamento/expiração; liquidação idempotente em `DELIVERED`. | 📐 `PAY-01` |
-| **Alertas de frota (A-1..A-7)** | Atraso, parado fora da parada, desvio de rota, sem sinal, não recolhido, bateria — níveis amarelo/vermelho com dedup. | 📐 |
+| **Alertas `FROTA-ALERTA-01..07`** | Atraso, parada, desvio, sem sinal, não recolhido e bateria, com dedup. | 📐 |
 | **Reconciliação** | Job compara viagem × pedidos; webhook/ledger reconciliado com gateway (futuro). | 📐 |
 | **Índice de pontualidade** | 30 dias, tolerância 15 min; afeta prioridade de fila e elegibilidade a blocos; **não** corta pagamento; atrasos com causa registrada são excluídos. | 📐 |
 | **Suporte: auto-resolução + juiz rápido** | Abertura < 5 s; árvores de auto-resolução; vereditos automáticos (reembolso ≤ teto, nota de confiança) via ledger idempotente; dossiê automático decide improcedência. | 📐 `SUP-01/02` |
@@ -258,7 +262,7 @@ NONE ──pedido confirmado──► RESERVED ──entrega concluída──►
 | Aceitar ou recusar oferta (individual ou lote) | Motoboy — o sistema só oferece |
 | Aprovar motoboy | Admin |
 | Cancelar/reofertar pedido não recolhido (sugerido pelo alerta) | Admin |
-| Disputa de cancelamento **após coleta** acima do teto | Admin/suporte (automático só até R$ 30 pós-coleta) |
+| Disputa/cancelamento **após coleta** | Análise humana até `DEC-13`; nada automático |
 | Desistência do motoboy **após** a 1ª coleta | Só com autorização de suporte |
 | Aumento de preço | Nunca silencioso — nova proposta com motivo + consentimento do cliente |
 | Ack de alerta de frota | Admin/suporte, auditado |
@@ -266,7 +270,7 @@ NONE ──pedido confirmado──► RESERVED ──entrega concluída──►
 
 ---
 
-## 8. Cadeia do dinheiro (conforme `PLANO_PAGAMENTOS.md`)
+## 8. Cadeia do dinheiro (conforme o [plano de pagamentos](../02-planejamento/planos/PLANO_PAGAMENTOS.md))
 
 Primeiro, os conceitos — eles parecem sinônimos, mas não são:
 
@@ -310,7 +314,8 @@ O ledger é **imutável**: cada evento financeiro gera lançamentos que somam ze
 - Cada pacote tem **fatia própria** de preço e repasse (`trip_quotes`).
 - Cliente **nunca paga acima** do preço individual já mostrado.
 - Fallback para corrida individual reutiliza o **preço congelado original** (nunca maior), com auditoria de motivo.
-- Estorno da fatia cancelada mantém o preço dos demais — a diferença vira custo/margem da plataforma, com **piso de repasse** por viagem para evitar margem negativa (decisão pendente do `PLANO_LOTE_MULTI_PEDIDO.md`).
+- Estorno da fatia cancelada mantém o preço dos demais; piso de repasse e quem
+  absorve a diferença dependem de `LOT-DEC-08`.
 
 ---
 
@@ -320,7 +325,7 @@ O ledger é **imutável**: cada evento financeiro gera lançamentos que somam ze
 |---|---|---|---|---|
 | **Cliente cancela** (antes do aceite) | `CANCELED`; libera 100% da reserva (futuro) | toca "cancelar" | — | vê no log |
 | **Cliente cancela** (aceito, antes da coleta) | tira do lote, re-sequencia, estorno parcial por fatia | cancela (regra/taxa configurável) | perde a corrida; compensação conforme regra | — |
-| **Cliente cancela** (após coleta) | estorno automático até teto R$ 30; acima, bloqueia e registra para análise | abre o pedido | devolve/repassa conforme política | **analisa e decide** acima do teto |
+| **Cliente cancela após coleta** | abre devolução/transferência e análise humana (`DEC-13` pendente) | abre o pedido | mantém custódia até concluir fluxo | analisa e decide |
 | **Motoboy desiste** (antes da 1ª coleta) | pedido volta à fila (`REQUESTED`), redespacha; registra no índice de confiabilidade | vê novo motoboy quando aceitar | desiste sem penalidade dura | — |
 | **Motoboy desiste** (após 1ª coleta) | **exige autorização de suporte**; orquestra devolução | é avisado | solicita via suporte | **autoriza/recusa** |
 | **Atraso** | recalcula ETA, notifica, `AT_RISK`, oferece 3 opções ao motoboy; 120 s sem resposta → redespacho (se não coletado); > 45 min → oferece cancelamento sem custo ao cliente | pode cancelar sem custo | segue/pula/reordena; se já coletou, registra `late_delivery` e segue | vê alerta vermelho + pedido atrasado na frota |
@@ -334,7 +339,7 @@ O ledger é **imutável**: cada evento financeiro gera lançamentos que somam ze
 
 ## 10. O que já existe, o que está em design e o que é futuro
 
-### ✅ Funcional HOJE (MVP B2C, rodando)
+### ✅ Implementado no MVP B2C
 
 | Item | Detalhe |
 |---|---|
@@ -349,7 +354,7 @@ O ledger é **imutável**: cada evento financeiro gera lançamentos que somam ze
 | Avaliação | Cliente avalia a entrega (1–5 + comentário), só após `DELIVERED` |
 | Carteira do motoboy | Crédito interno + extrato (não é dinheiro real) |
 | Dashboard base | Mapa Leaflet com pinos e linhas, relatórios, auditoria |
-| Backend B2B legado | Continua suportado por compatibilidade, mas o produto é o B2C |
+| Pedidos históricos | Continuam legíveis pelo fallback de `notes`; o modelo B2B foi removido |
 
 ### 📐 Em design (aprovado, documentado — SEM código ainda)
 
@@ -357,7 +362,7 @@ O ledger é **imutável**: cada evento financeiro gera lançamentos que somam ze
 |---|---|
 | `LOT-01` | Aceite de lote pelo motoboy: multi-select, pré-vet, aceite atômico all-or-nothing, máx. 3 pedidos, reserva por delivery, regras anti-atraso D-R1..D-R13 |
 | `LOT-02` | Blocos agendados intermunicipais (candidatura, janelas, reserva de capacidade, índice de pontualidade, deadhead no preço) |
-| `FROTA-01/02` | Mapa de frota no dashboard: pinos por estado derivado, coleta recolhida ✓, trilha, alertas A-1..A-7 com ack, lista e métricas |
+| `FROTA-01/02` | Mapa de frota: pinos, coleta, trilha, `FROTA-ALERTA-01..07`, lista e métricas |
 | `ADMIN-01..07` | Painel admin com controle total: pedidos, motoboys, clientes, viagens, financeiro, configurações, notificações — tudo com confirmação dupla + auditoria |
 | `SUP-01..05` | Suporte e reclamações: dossiê automático ("prova reversa"), auto-resolução guiada, juiz rápido, nota de confiança, fila admin com SLA |
 | `B2C-02` | Preço v2 com breakdown, prévia e cotação com validade |

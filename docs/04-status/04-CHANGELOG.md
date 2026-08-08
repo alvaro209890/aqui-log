@@ -2,6 +2,16 @@
 
 Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
+## Organização documental para agentes — 2026-08-07
+
+- Documentação separada em governança, produto, planejamento, referência, estado e arquivo.
+- Criados `AGENTS.md`, índice, backlog único, registro de decisões, estado atual,
+  handoff substituível, fluxo numerado, checklist e templates.
+- Próximo item normalizado para `BASE-04`; `B2C-01B` aguarda validação do baseline.
+- Contradições removidas: B2B residual, reversão de `DELIVERED`, custódia pós-coleta,
+  IDs colidentes e Redis como autoridade única de reserva.
+- Sessão somente documental: nenhum teste de aplicação ou runtime foi executado.
+
 ## B2C-01 e identidade mobile — 2026-08-07
 
 - Encomenda estruturada em colunas proprias, com migration aditiva e rollback coberto por teste.

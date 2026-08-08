@@ -1,17 +1,28 @@
-# aqui_log_entregador
+# App do motoboy — Aqui Log
 
-A new Flutter project.
+Aplicativo Flutter do prestador (`COURIER`). Leia [`AGENTS.md`](../../AGENTS.md)
+e o [estado atual](../../docs/04-status/01-ESTADO-ATUAL.md) antes de editar.
 
-## Getting Started
+## Fluxos existentes
 
-This project is a starting point for a Flutter application.
+- cadastro/login, perfil e disponibilidade;
+- ofertas, aceite/recusa e entregas em andamento;
+- coleta, prova, trânsito e entrega;
+- carteira básica e tema laranja compartilhado.
 
-A few resources to get you started if this is your first Flutter project:
+## Comandos
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```bash
+cd apps/courier_app
+flutter pub get
+flutter analyze
+flutter test
+flutter run
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Invariantes
+
+- Aceite respeita lock/transação do servidor; UI não presume sucesso.
+- Custódia após coleta nunca some por cancelamento/redespacho.
+- Identidade do heartbeat vem do JWT/socket, não de `courierId` confiado no payload.
+- GPS, câmera e prova exigem QA em emulador/dispositivo; teste de widget não basta.

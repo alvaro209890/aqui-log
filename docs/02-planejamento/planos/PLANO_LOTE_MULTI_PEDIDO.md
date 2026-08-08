@@ -25,9 +25,9 @@ Dois movimentos convivem:
 | # | Decisão | Consequência |
 |---|---|---|
 | D-1 | Motoboy pode aceitar **vários pedidos juntos** (lote) | Novo fluxo de aceite atômico multi-delivery |
-| D-2 | Lotes **agendados intermunicipais** (vários pedidos de um município para outro) | `scheduled_at` + janelas + blocos agendados |
+| D-2 | Lotes **agendados intermunicipais** (vários pedidos de um município para outro) | reutilizar `scheduled_at` existente + novas janelas/blocos |
 | D-3 | Lógica **anti-atraso** obrigatória (folgas, ETAs, alertas, redespacho) | Regras verificáveis (seção 7) |
-| D-4 | Dashboard web **monitora** localização dos prestadores, coleta de cada pedido e trajeto em viagem | Novo plano `PLANO_FROTA_DASHBOARD.md` |
+| D-4 | Dashboard monitora localização, coleta e trajeto | [Plano de frota](PLANO_FROTA_DASHBOARD.md) |
 
 ## 3. Vocabulário e invariantes
 
@@ -65,14 +65,16 @@ Invariantes (herdados + novos):
 - R1.3. Pré-vet falho → motivo específico (ex.: "peso total excede a capacidade da moto") e envio bloqueado. Pré-vet ok → resumo: sequência sugerida (com mapa), km, tempo, peso/volume somado, repasse total.
 - R1.4. Aceite **atômico**: todos os pedidos passam juntos para `ACCEPTED` ou nenhum. Row locks (`SELECT ... FOR UPDATE`) nos deliveries + chave de idempotência `(courierId, deliveryIds)`.
 - R1.5. Composição congelada no aceite: snapshot de pedidos, paradas, preços e repasses (`composition_snapshot` em `trips`).
-- R1.6. Limite piloto: **máx. 3 pedidos por lote** (parametrizável; bloco agendado intermunicipal pode ter teto próprio — decisão pendente 9).
+- R1.6. Limite piloto: **máx. 3 pedidos por lote** (parametrizável; teto
+  intermunicipal depende de `LOT-DEC-04`).
 - R1.7. Seleção local revalidada a cada 30 s; pedido que saiu do estado elegível sai do lote com aviso.
 - R1.8. Nenhum item com restrição incompatível com o veículo do motoboy.
 
 ### 4.2 Blocos agendados intermunicipais
 
 - R2.1. Pedidos com `scheduled_at` futuro e destino em município diferente da coleta são elegíveis a **blocos agendados**, publicados por (origem, destino, dia): "Cuiabá → Rondonópolis, 3 pedidos, coleta 07h–08h, entrega até 12h, repasse R$ 84".
-- R2.2. Motoboy **se candidata** ao bloco (`CANDIDATE`) ou recebe pré-alocação para confirmação (decisão pendente 4). Confirmação segue o aceite atômico.
+- R2.2. Motoboy **se candidata** ao bloco (`CANDIDATE`) ou recebe pré-alocação
+  para confirmação (`LOT-DEC-02`). Confirmação segue o aceite atômico.
 - R2.3. Blocos têm janelas obrigatórias (coleta e entrega) definidas na publicação.
 - R2.4. Um motoboy só tem um bloco agendado ativo por faixa de tempo (sem sobreposição de janelas sem folga mínima).
 
@@ -84,7 +86,8 @@ Invariantes (herdados + novos):
 
 ### 4.4 Capacidade
 
-- R4.1. `couriers` ganham `capacity_kg`, `capacity_volume_l`, `max_packages` por veículo, recolhidos no cadastro/habilitação (decisão pendente 13).
+- R4.1. `couriers` ganham `capacity_kg`, `capacity_volume_l`, `max_packages` por
+  veículo, conforme `LOT-DEC-13`.
 - R4.2. Banda verde ≤ 80%; 80–100% exige confirmação explícita extra; > 100% bloqueado.
 - R4.3. Nenhum lote com soma > capacidade é aceitável (invariante duro).
 - R4.4. Carga corrente **cresce na coleta e decresce na entrega**, revalidada a cada parada (regra corrigida 2026-08-07: versão anterior estava invertida e viraria teste errado).
@@ -92,7 +95,8 @@ Invariantes (herdados + novos):
 ### 4.5 Anti-atraso (comportamento)
 
 - R5.1. Sequenciador do servidor: coletas por janela mais cedo; entregas respeitando coleta-antes-entrega. TSP exaustivo para ≤ 4 paradas; acima disso, heurística com janela (teto intermunicipal pode gerar até 12 paradas — exaustivo explodiria). Reordenação manual do motoboy é sempre revalidada.
-- R5.1A. **Deadhead intermunicipal:** viagem de retorno vazio precisa entrar no cálculo de preço/repasse (custo do trecho de volta), senão nenhum motoboy aceita bloco. O sequenciador estima distância ida+volta; decisão pendente 17 define a fórmula.
+- R5.1A. **Deadhead intermunicipal:** o retorno vazio entra no cálculo; a fórmula
+  depende de `LOT-DEC-17` (`DEC-15`).
 - R5.2. A cada evento (chegada, coleta, entrega, cancelamento, GPS), ETAs recalculados; divergência > 5 min gera `eta_updated` (auditável) e notifica cliente.
 - R5.3. Parada com ETA além do fim da janela → `AT_RISK` + push ao motoboy com 3 opções (seguir, pular, reordenar); cliente avisado com nova estimativa.
 - R5.4. Sem resposta em 120 s e pedido não coletado → redespacho oferecido. Já coletado → registra `late_delivery` e segue (política suave).
@@ -103,20 +107,29 @@ Invariantes (herdados + novos):
 
 - R6.1. Falha em um pedido não afeta os demais: parada `FAILED` com motivo + prova, viagem re-sequenciada.
 - R6.2. Falha antes da coleta → pedido volta à fila (`REMOVED_FROM_TRIP` → `REQUESTED`) e re-despacha como individual.
-- R6.3. Cancelamento do cliente: pedido sai da viagem, re-sequenciamento, cliente não paga o trecho cancelado (alocação de preço por delivery permite estorno parcial). **Estorno por fase** (fecha a divergência com `PLANO_PAGAMENTOS.md`):
+- R6.3. Cancelamento do cliente: pedido sai da viagem, re-sequenciamento e alocação
+  por delivery. Política financeira segue o [plano de pagamentos](PLANO_PAGAMENTOS.md):
   - coleta **não ocorrida** → estorno automático da fatia (`trip_quotes`);
-  - coleta **ocorrida** → automático apenas até teto de valor (R$ 30); acima disso, análise humana com SLA;
-  - motoboy recebe compensação parcial de deslocamento se cancelamento após coleta (decisão pendente 5).
-- R6.4. Cancelamento da viagem inteira → pedidos não concluídos voltam à fila com evento de auditoria.
+  - coleta **ocorrida** → análise humana até `DEC-13` ser decidida; automação e
+    qualquer teto são apenas proposta, nunca regra executável;
+  - compensação ao motoboy após coleta depende de `LOT-DEC-05`.
+- R6.4. Cancelamento da viagem inteira → somente pedidos ainda não coletados voltam
+  à fila. Pacotes sob custódia permanecem ativos e exigem devolução ou transferência
+  registrada antes de encerrar a viagem.
 - R7.1. Desistência antes da 1ª coleta: sem penalidade dura, registrada e afeta índice de confiabilidade.
-- R7.2. Desistência após 1ª coleta: só com autorização de suporte; devolução/repasso conforme política (decisão pendente 6).
-- R7.3. Redespacho: pedido → `REQUESTED`, nova oferta; viagem re-sequenciada; cliente recebe push quando novo motoboy aceita.
+- R7.2. Desistência após 1ª coleta: só com autorização de suporte; devolução e
+  repasse dependem de `LOT-DEC-06`.
+- R7.3. Redespacho antes da coleta: pedido → `REQUESTED`, nova oferta e viagem
+  re-sequenciada. Após coleta, transferência exige prova de custódia entre motoboys;
+  o pedido nunca volta sozinho a `REQUESTED`.
 
 ### 4.7 Comunicação com o cliente
 
 - R8.1. Cliente vê no app: confirmação do lote, **espera de agrupamento** (5–15 min com linguagem clara: "buscando motoboy para otimizar sua entrega"), janelas prometidas, ajustes de ETA (delta > 5 min), **"seu pacote está a N paradas de você"**, status da própria parada, aviso de chegada, e — em falha/redespacho — a informação de que o pacote foi transferido para outro motoboy.
 - R8.2. Cliente **nunca paga acima** do preço individual já apresentado sem nova confirmação.
-- R8.3. Atraso inevitável: nova janela estimada + opção de cancelar sem custo se atraso > 45 min além da janela.
+- R8.3. Atraso inevitável: nova janela estimada + opção de cancelar sem custo se
+  atraso > 45 min além da janela. Após coleta, “cancelar” inicia devolução/transferência,
+  sem apagar a custódia corrente.
 - R8.4. **Privacidade cruzada:** cliente rastreia só o próprio pacote (ETA/status, "a N paradas de você"); nunca vê coordenadas/endereço de paradas de terceiros.
 
 ## 5. Modelo de domínio
@@ -132,16 +145,14 @@ Invariantes (herdados + novos):
 | `trip_quotes` | preço do cliente, repasse do motoboy, **alocação por delivery** (fatia de preço e repasse por pacote), economia e versão do algoritmo |
 | `scheduled_lots` | origem/destino município, dia, janelas, teto de pedidos, status `PUBLISHED/CLAIMED/ASSIGNED/EXECUTED/EXPIRED` |
 | `courier_metrics` | agregado diário de pontualidade/confiabilidade (alimentado por job) |
-| `courier_positions` | histórico de posição (amostragem) — ver `PLANO_FROTA_DASHBOARD.md` |
+| `courier_positions` | histórico amostrado — ver [frota](PLANO_FROTA_DASHBOARD.md) |
 
 ### Alterações em tabelas existentes
 
 ```
 deliveries   + trip_id (índice, nullable)
              + pickup_window_start/end, delivery_window_start/end
-             + scheduled_at, promised_delivery_at
-             + status_delta: REQUESTED | OFFERED | ACCEPTED | AT_PICKUP | PICKED_UP
-               | IN_TRANSIT | DELIVERED | CANCELED | FAILED | REMOVED_FROM_TRIP | REDISPATCHED
+             + promised_delivery_at
              + failure_reason, eta_forecast (jsonb), at_risk_at
 
 couriers     + capacity_kg, capacity_volume_l, max_packages
@@ -163,14 +174,16 @@ DRAFT ──monta lote──► PROPOSED ──aceite atômico──► ACCEPTED
 CANCELED              (expira) ──► CANCELED ──────────┴──► (pedidos restantes → fila)
 ```
 
-**Pedido dentro da viagem** (estados legados preservados):
+**Pedido dentro da viagem:** `DeliveryStatus` existente permanece inalterado.
+`FAILED` e `REMOVED` pertencem à associação `trip_stop_deliveries`; redespacho é
+evento, não novo estado global.
 
 ```
 REQUESTED ─► OFFERED ─► ACCEPTED ─► AT_PICKUP ─► PICKED_UP ─► IN_TRANSIT ─► DELIVERED
    │  ▲          │            │            ▲            │             ▲
    │  │redespacho│            │falha coleta│            │falha entrega│
    ▼  │          ▼            ▼            │            ▼             │
-CANCELED   REMOVED_FROM_TRIP ─► REDISPATCHED ─► REQUESTED   FAILED
+CANCELED                    REQUESTED (somente antes da coleta)
 ```
 
 **Mapeamento trip → delivery** (evita divergência de estado):
@@ -180,8 +193,8 @@ CANCELED   REMOVED_FROM_TRIP ─► REDISPATCHED ─► REQUESTED   FAILED
 | `ACCEPTED` | todos `ACCEPTED` |
 | `IN_PROGRESS` | ≥1 coletado (`PICKED_UP`/`IN_TRANSIT`), demais `AT_PICKUP` ou pendentes |
 | `COMPLETED` | todos `DELIVERED` |
-| `PARTIALLY_COMPLETED` | ≥1 `DELIVERED` e ≥1 `CANCELED`/`FAILED`/`REMOVED_FROM_TRIP` |
-| `CANCELED` | não concluídos → `REQUESTED` (volta à fila) |
+| `PARTIALLY_COMPLETED` | ≥1 `DELIVERED` e ≥1 associação `FAILED`/`REMOVED` |
+| `CANCELED` | não coletados → `REQUESTED`; coletados → devolução/transferência registrada |
 
 Job de reconciliação detecta divergência trip × delivery. Qualquer mudança de janela/sequência é evento em `trip_events`, nunca update mudo.
 
@@ -209,7 +222,9 @@ Aceitar um lote exige D-R1, D-R2, D-R5, D-R10 e D-R11 simultaneamente — qualqu
 
 ## 8. Concorrência e consistência
 
-- **Reserva global por delivery:** `SETNX` no Redis no momento em que o pedido entra na janela de lote; checada em **todos** os caminhos de aceite (individual e lote). Rodada de lote e oferta individual nunca coexistem para o mesmo delivery. TTL da reserva alinhado ao fim da janela de agrupamento (decisão pendente 3).
+- **Reserva global por delivery:** restrição/transação no PostgreSQL é a autoridade
+  contra dupla oferta. Redis pode acelerar a disputa com `SETNX`, mas falha ou TTL
+  expirado nunca libera um pedido que segue reservado no banco.
 - **Aceite all-or-nothing:** transação com lock em todos os `delivery_id` do lote, revalidando estados e expiração dentro da transação. Perdedor recebe "lote indisponível" e seleção local é revalidada.
 - **TTL de oferta de lote** com job de expiração (lote órfão nunca fica pendurado).
 - **Capacidade reservada:** motoboy com bloco agendado aceito tem capacidade reservada (Redis com TTL até a execução) para não aceitar corrida que exceda a carga.
@@ -218,10 +233,10 @@ Aceitar um lote exige D-R1, D-R2, D-R5, D-R10 e D-R11 simultaneamente — qualqu
 
 ## 9. Compatibilidade e legado
 
-- Agrupador/lote restrito a `customer_id != null` (B2C) + flag de opt-in; B2B nunca entra em lote no piloto (decisão pendente 14).
+- Agrupador/lote restrito ao produto B2C (`customer_id != null`) + flag de opt-in.
 - Avaliação permanece **por delivery** (regra atual intacta); cliente avalia só o próprio pacote.
 - Liquidação contábil por delivery usando a alocação de `trip_quotes`; lançamentos de "viagem" apenas para custo/margem internos.
-- `courier:location` (tracking atual) precisa ser **desacoplado de `deliveryId`** — ver `PLANO_FROTA_DASHBOARD.md`.
+- `courier:location` precisa ser desacoplado de `deliveryId` — ver [frota](PLANO_FROTA_DASHBOARD.md).
 
 ## 10. Fases
 
@@ -264,7 +279,7 @@ Medir por período operacional representativo: pedidos por hora/região, pares e
 
 ### `FROTA-01` e `FROTA-02`
 
-Monitoramento de frota no dashboard — ver `docs/PLANO_FROTA_DASHBOARD.md`.
+Monitoramento de frota no dashboard — ver o [plano de frota](PLANO_FROTA_DASHBOARD.md).
 
 ## 11. Métricas de sucesso e guardrails
 
@@ -278,25 +293,25 @@ Monitoramento de frota no dashboard — ver `docs/PLANO_FROTA_DASHBOARD.md`.
 
 ## 12. Decisões pendentes
 
-1. Modelo de despacho: lote manual convive com auto-dispatch individual? (recomendação: convive; o mesmo pedido nunca está nas duas filas ao mesmo tempo)
-2. Bloco agendado: candidatura livre ou pré-alocação com confirmação? (recomendação: publicação + candidatura com ranking por pontualidade)
-3. Janela de espera para agrupar: quanto tempo o pedido fica "segurado" antes de virar corrida individual? (recomendação: 5–15 min, cliente avisado no pedido)
-4. Limite por lote: 3 para tudo ou teto maior para intermunicipal agendado (ex.: 6)?
-5. Cancelamento pós-coleta: compensação de deslocamento ao motoboy (fórmula? % do repasse ou fixo por km)?
-6. Desistência pós-coleta: fluxo de devolução (hub/remetente?) e quem custeia.
-7. Falha por ausência do cliente: taxa de nova tentativa? Quem paga?
-8. Quem absorve a diferença quando cliente cancela de lote aceito e demais mantêm desconto (recomendação: plataforma, medindo como custo)?
-9. Tolerâncias D-R1..D-R13 (10/15/45 min, 120 s, 15 min, 45 min) — confirmar.
-10. Penalidades: índice de pontualidade só prioridade de fila na v1? (recomendação: sim)
-11. Preço do cliente: desconto por lote na v1 ou cliente paga individual e lote vira vantagem de fila? (recomendação: individual na v1, desconto depois)
-12. Repasse do motoboy: soma simples ou tabela de incentivo por lote?
-13. Capacidade do motoboy: quem cadastra (motoboy + aprovação admin?) e o que o agrupador faz com motoboy sem perfil?
-14. B2B legado: lote é B2C-only no piloto? (recomendação: sim)
-15. Onde começa o piloto (região/município de maior densidade) e critérios de sucesso/abort (p95 atraso, cancelamentos, aceite de lotes).
-16. Regras e gatilhos de `TRIP-00` (quem decide os limiares e o que acontece se o gate não fechar).
-17. **Deadhead intermunicipal:** como o trecho de retorno entra no preço do cliente e no repasse do motoboy (percentual sobre km ida+volta? tarifa mínima por município?).
-18. **Avaliação em lote:** flag `trip_id` na tela de avaliação + contexto "lote de N pacotes"; avaliações de entregas com evento `LATE` sistêmico passam por revisão leve (evita punir motoboy por decisão do sequenciador e vingança cruzada na avaliação mútua).
-19. **Fraude de auto-entrega:** correlação cliente-novo × motoboy-novo × mesmo dispositivo/IP na criação + teto de estorno por conta antes de telefone verificado (`B2C-04`).
+- `LOT-DEC-01` (`DEC-08`) — convivência entre lote manual e auto-dispatch.
+- `LOT-DEC-02` (`DEC-09`) — candidatura livre ou pré-alocação.
+- `LOT-DEC-03` (`DEC-10`) — janela de espera antes da corrida individual.
+- `LOT-DEC-04` — teto por lote urbano/intermunicipal.
+- `LOT-DEC-05` — compensação de deslocamento após cancelamento pós-coleta.
+- `LOT-DEC-06` — devolução/transferência e custeio após desistência pós-coleta.
+- `LOT-DEC-07` — taxa de nova tentativa por ausência do cliente.
+- `LOT-DEC-08` — quem absorve diferença financeira de cancelamento parcial.
+- `LOT-DEC-09` (`DEC-11`) — tolerâncias D-R1..D-R13.
+- `LOT-DEC-10` — efeito do índice de pontualidade na v1.
+- `LOT-DEC-11` — desconto de lote para o cliente.
+- `LOT-DEC-12` — fórmula de repasse do motoboy.
+- `LOT-DEC-13` — cadastro/aprovação de capacidade.
+- `LOT-DEC-14` — encerrada: produto B2C-only.
+- `LOT-DEC-15` — região e critérios de sucesso/abort do piloto.
+- `LOT-DEC-16` — limiares econômicos de `TRIP-00`.
+- `LOT-DEC-17` (`DEC-15`) — fórmula de deadhead intermunicipal.
+- `LOT-DEC-18` — contexto e revisão de avaliação em lote.
+- `LOT-DEC-19` — controles contra fraude de autoentrega.
 
 ## 13. Fora de escopo inicial
 

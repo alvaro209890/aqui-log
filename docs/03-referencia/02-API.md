@@ -38,7 +38,7 @@ Rotas protegidas: `Authorization: Bearer <accessToken>`
 | `PATCH` | `/deliveries/offers/:offerId/reject` | Recusa e devolve ao despacho |
 | `PATCH` | `/deliveries/:id/status` | Avanca estado ou cancela |
 | `GET` | `/deliveries/:id/history` | Historico cronologico |
-| `POST` | `/deliveries/:id/rating` | Avaliacao pela empresa |
+| `POST` | `/deliveries/:id/rating` | Avaliação da entrega pelo cliente |
 | `GET` | `/deliveries/ratings` | Lista de avaliacoes (admin) |
 
 `POST /deliveries` calcula **priceCents** e **courierFeeCents** no servidor (km + base + % plataforma). Campos de preco no body sao ignorados.

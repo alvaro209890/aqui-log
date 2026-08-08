@@ -1,23 +1,24 @@
 # Aqui Log
 
-Plataforma B2C de logistica urbana: cliente, motoboy, despacho e operacao em tempo real.
-## Documentacao principal
+Plataforma B2C de logística urbana: cliente, motoboy, despacho e operação em tempo real.
+
+> Agentes de IA: comecem por [`AGENTS.md`](AGENTS.md) e pelo
+> [índice da documentação](docs/README.md). Não executem planos históricos.
+
+## Documentação principal
 
 | Doc | Conteudo |
 | --- | --- |
-| [ROADMAP](docs/ROADMAP.md) | **Fila executiva B2C, dependencias, gates e criterios de conclusao** |
-| [HANDOFF](docs/HANDOFF.md) | **Continuidade para outro agente** |
-| [PLANO_B2C](docs/PLANO_B2C.md) | Estado funcional e visao do produto cliente para motoboy |
-| [PLANO_CONFIANCA_E_PRECO](docs/PLANO_CONFIANCA_E_PRECO.md) | Encomenda estruturada, preco v2, confianca e reoferta |
-| [PLANO_PAGAMENTOS](docs/PLANO_PAGAMENTOS.md) | Ledger, reserva, estorno e futuro PIX |
-| [PLANO_LOTE_MULTI_PEDIDO](docs/PLANO_LOTE_MULTI_PEDIDO.md) | Descoberta antes de rotas multi-pedido |
-| [DIRETRIZES_VISUAIS](docs/DIRETRIZES_VISUAIS.md) | Tema laranja inspirado no AquiResolve; mobile implementado, dashboard pendente |
-| [ENTREGA MOBILE B2C 2026-08-07](docs/ENTREGA_MOBILE_B2C_2026-08-07.md) | Escopo, contrato, testes, limites e continuidade desta entrega |
-| [DEPLOY_TARGETS](docs/DEPLOY_TARGETS.md) | Render / Vercel / Firebase (estrutura) |
-| [MVP_COVERAGE](docs/MVP_COVERAGE.md) | O que esta funcional vs planejado |
-| [DEVELOPMENT](docs/DEVELOPMENT.md) | Ambiente local |
-| [API](docs/API.md) | Endpoints |
-| [CHANGELOG_SPRINTS](docs/CHANGELOG_SPRINTS.md) | Historico resumido |
+| [Estado atual](docs/04-status/01-ESTADO-ATUAL.md) | **Fatos observados, evidências e lacunas de validação** |
+| [Backlog](docs/02-planejamento/02-BACKLOG.md) | **Única fila executável por agentes** |
+| [Roadmap](docs/02-planejamento/01-ROADMAP.md) | Prioridades, dependências, gates e decisões |
+| [Handoff vigente](docs/04-status/02-HANDOFF.md) | Continuidade da última sessão |
+| [Planos detalhados](docs/02-planejamento/planos/) | Requisitos de B2C, preço, pagamentos, lote, frota, admin e suporte |
+| [Fluxo do produto](docs/01-produto/01-FLUXO-DO-PRODUTO.md) | Jornadas, estados e cadeia do dinheiro |
+| [Desenvolvimento local](docs/03-referencia/03-DESENVOLVIMENTO.md) | Ambiente, comandos e portas |
+| [API](docs/03-referencia/02-API.md) | Endpoints e contratos existentes |
+| [Alvos de deploy](docs/03-referencia/04-ALVOS-DE-DEPLOY.md) | Render/Vercel/Firebase, somente scaffold |
+| [Changelog](docs/04-status/04-CHANGELOG.md) | Histórico resumido |
 
 ## Entregue (piloto local)
 
@@ -25,7 +26,8 @@ Plataforma B2C de logistica urbana: cliente, motoboy, despacho e operacao em tem
 - Dashboard React (KPIs, mapa, gestao users/audit/settings, acoes operacionais)
 - Apps Flutter cliente B2C + entregador (mapa OSM, prova, GPS e identidade laranja compartilhada)
 - Encomenda B2C estruturada na API (`productType`, `packageSize`, `weightKg`, `deliveryScope`, `productPhotoUrls`) com fallback para pedidos antigos em `notes`
-- Postgres + Redis (Docker Compose), smoke ponta a ponta, CI
+- Postgres + Redis via Docker Compose, script de smoke e CI. O runtime local atual
+  ainda precisa da revalidação `BASE-04` descrita no backlog.
 
 ## Alvo cloud (estrutura apenas — nao vinculado)
 
@@ -35,7 +37,7 @@ Dashboard    → Vercel   (vercel.json)
 Storage/Push → Firebase (infra/firebase + stubs Nest)
 ```
 
-Nenhum projeto/credencial esta conectado. Ver [HANDOFF](docs/HANDOFF.md).
+Nenhum projeto/credencial está conectado. Ver o [estado atual](docs/04-status/01-ESTADO-ATUAL.md).
 
 ## Estrutura do monorepo
 
@@ -58,10 +60,10 @@ docs/
 
 ## Primeira execucao
 
-Detalhes em [Desenvolvimento](docs/DEVELOPMENT.md).
+Detalhes em [Desenvolvimento](docs/03-referencia/03-DESENVOLVIMENTO.md).
 
 ```bash
-cp .env.example .env
+test -f .env || cp .env.example .env
 pnpm install
 docker compose --env-file .env -f infra/docker-compose.yml up -d
 pnpm db:migrate

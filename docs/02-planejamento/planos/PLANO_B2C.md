@@ -3,8 +3,10 @@
 > **Status geral:** ✅ **MVP B2C funcional** (2026-08-04) — fluxo cliente → motoboy
 > rodando de ponta a ponta, sem empresa no meio. Próximas fases planejadas abaixo.
 > **Data de criação:** 2026-08-03 · **Última atualização:** 2026-08-07
-> **Planos derivados:** `PLANO_PAGAMENTOS.md` · `PLANO_LOTE_MULTI_PEDIDO.md` · `PLANO_CONFIANCA_E_PRECO.md`
-> **Prioridade e ordem de execução:** `ROADMAP.md` é a fonte de verdade; este documento descreve o domínio e o estado funcional.
+> **Planos derivados:** [pagamentos](PLANO_PAGAMENTOS.md) ·
+> [lote](PLANO_LOTE_MULTI_PEDIDO.md) ·
+> [confiança e preço](PLANO_CONFIANCA_E_PRECO.md).
+> **Prioridade:** o [roadmap](../01-ROADMAP.md) é a fonte de verdade.
 
 ---
 
@@ -21,8 +23,8 @@ O Aqui Log deixou de ser B2B (empresa cria entrega, admin despacha) e virou
 | Publicação para motoboys (auto-dispatch) | ✅ sem admin no meio |
 | Motoboy vê a encomenda e aceita/recusa | ✅ app motoboy |
 | Acompanhamento/avaliação | ✅ lista/detalhe + rating |
-| Pagamento do cliente | 🟠 pendente → `PLANO_PAGAMENTOS.md` |
-| Rota multi-pedido (lote) | ⏳ futuro → `PLANO_LOTE_MULTI_PEDIDO.md` |
+| Pagamento do cliente | 🟠 pendente → [pagamentos](PLANO_PAGAMENTOS.md) |
+| Rota multi-pedido (lote) | ⏳ futuro → [lote](PLANO_LOTE_MULTI_PEDIDO.md) |
 
 ---
 
@@ -65,8 +67,8 @@ o app nunca envia valor.
 | Camada | Item | Estado |
 |---|---|---|
 | **DB** | Tabela `customers` + `users.customer_id` + role `CUSTOMER` no enum | ✅ migrations `1785000000000/1` |
-| **DB** | `deliveries.company_id` opcional + `deliveries.customer_id` | ✅ |
-| **DB** | `ratings.company_id` opcional + `ratings.customer_id` | ✅ |
+| **DB** | `deliveries.customer_id`; coluna `company_id` removida | ✅ código; migration em banco vivo pendente |
+| **DB** | `ratings.customer_id`; coluna `company_id` removida | ✅ código; migration em banco vivo pendente |
 | **API** | `POST /auth/register/customer` (auto-aprovado, auto-login) | ✅ |
 | **DB/API** | Campos próprios de encomenda + migration aditiva `1785100000000` | ✅ código/testes; aplicação em banco pendente |
 | **API** | `POST /deliveries` por cliente (campos próprios; `notes` livre; preço server-side) | ✅ |
@@ -119,23 +121,26 @@ continuam legíveis por `OrderMeta.fromNotes`, sem backfill textual arriscado.
 
 | Ordem | ID | Entrega vertical | Gate/Dependência | Doc |
 |---|---|---|---|---|
-| 1 | `B2C-01B` | Gestão de clientes e relatórios por categoria/tamanho/peso | `B2C-01` entregue | `ROADMAP.md` |
-| 3 | `B2C-02` | Preço v2 com breakdown/versionamento e prévia | `B2C-01`, `DEC-02` para valores finais | `PLANO_CONFIANCA_E_PRECO.md` §3 |
-| 4 | `B2C-03` | Avaliação mútua por papel | migração de ratings legados | `PLANO_CONFIANCA_E_PRECO.md` §4 |
-| 5 | `DISP-01/03` | Reoferta por anéis, aviso e telemetria | `B2C-02`, `DEC-03` | `PLANO_CONFIANCA_E_PRECO.md` §6 |
-| 6 | `PAY-01` | Ledger interno, reserva e estorno, sem gateway | autorização explícita + preço v2 | `PLANO_PAGAMENTOS.md` |
-| 7 | `B2C-04` | Validação SMS | provedor/sandbox | `PLANO_CONFIANCA_E_PRECO.md` §5 |
-| 8 | `OPS-*` | Endurecimento e eventual publicação | gates operacionais + pedido explícito | `ROADMAP.md` |
-| 9 | `TRIP-00` | Medir viabilidade do agrupamento automático de pedidos | telemetria e operação estável | `PLANO_LOTE_MULTI_PEDIDO.md` |
-| 10 | `LOT-01/02` | **Lote multi-pedido pelo motoboy** (aceite de vários juntos, blocos agendados intermunicipais) e anti-atraso | decisão do dono 2026-08-07; sem código ainda | `PLANO_LOTE_MULTI_PEDIDO.md` |
-| 11 | `FROTA-01/02` | **Dashboard monitora frota**: localização dos prestadores, coleta recolhida ou não, trajeto em viagem | decisão do dono 2026-08-07; sem código ainda | `PLANO_FROTA_DASHBOARD.md` |
-| 12 | `ADMIN-01..07` | **Painel admin com controle máximo**: pedidos, motoboys, clientes, lotes, financeiro, configurações | decisão do dono 2026-08-07; sem código ainda | `PLANO_ADMIN.md` |
-| 13 | `SUP-01..05` | **Suporte/reclamações**: dossiê automático, auto-resolução, juiz rápido, nota de confiança | decisão do dono 2026-08-07; sem código ainda | `PLANO_SUPORTE_RECLAMACOES.md` |
-| — | Guia didático | Lógica do app ponta a ponta explicada | pronto (doc) | `FLUXO_APP.md` |
+| 1 | `BASE-04` | Aplicar migrations e provar o smoke em runtime local | Postgres/Redis descartáveis | backlog |
+| 2 | `B2C-01B` | Gestão de clientes e relatórios por categoria/tamanho/peso | `BASE-04` | roadmap |
+| 3 | `B2C-02` | Preço v2 com breakdown/versionamento e prévia | `B2C-01B`, `DEC-02` para valores finais | plano de confiança e preço §3 |
+| 4 | `B2C-03` | Avaliação mútua por papel | migração de ratings legados | plano de confiança e preço §4 |
+| 5 | `DISP-01/03` | Reoferta por anéis, aviso e telemetria | `B2C-02`, `DEC-03` | plano de confiança e preço §6 |
+| 6 | `PAY-01` | Ledger interno, reserva e estorno, sem gateway | autorização explícita + preço v2 | plano de pagamentos |
+| 7 | `B2C-04` | Validação SMS | provedor/sandbox | plano de confiança e preço §5 |
+| 8 | `OPS-*` | Endurecimento e eventual publicação | gates operacionais + pedido explícito | roadmap |
+| 9 | `TRIP-00` | Medir viabilidade do agrupamento automático de pedidos | telemetria e operação estável | plano de lote |
+| 10 | `LOT-01/02` | **Lote multi-pedido pelo motoboy** (aceite de vários juntos, blocos agendados intermunicipais) e anti-atraso | decisão do dono 2026-08-07; sem código ainda | plano de lote |
+| 11 | `FROTA-01/02` | **Dashboard monitora frota**: localização dos prestadores, coleta recolhida ou não, trajeto em viagem | decisão do dono 2026-08-07; sem código ainda | plano de frota |
+| 12 | `ADMIN-01..07` | **Painel admin com controle máximo**: pedidos, motoboys, clientes, lotes, financeiro, configurações | decisão do dono 2026-08-07; sem código ainda | plano admin |
+| 13 | `SUP-01..05` | **Suporte/reclamações**: dossiê automático, auto-resolução, juiz rápido, nota de confiança | decisão do dono 2026-08-07; sem código ainda | plano de suporte |
+| — | Guia didático | Lógica do app ponta a ponta explicada | pronto | [fluxo](../../01-produto/01-FLUXO-DO-PRODUTO.md) |
 
-Trilha paralela, quando autorizada: `UX-01/02`, identidade laranja e QA visual conforme `DIRETRIZES_VISUAIS.md`.
+Trilha paralela: `UX-01/02`, conforme as
+[diretrizes visuais](../../01-produto/02-DIRETRIZES-VISUAIS.md).
 
-Regra de ouro: **nada de cloud, gateway ou rota multi-pedido operacional** sem cumprir o gate correspondente no `ROADMAP.md`.
+Regra de ouro: **nada de cloud, gateway ou rota multi-pedido operacional** sem o
+gate correspondente no [roadmap](../01-ROADMAP.md).
 
 ---
 

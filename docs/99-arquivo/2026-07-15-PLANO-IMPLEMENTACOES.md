@@ -1,5 +1,7 @@
 # AquiLog — Plano de Próximas Implementações
 
+> **HISTÓRICO — NÃO EXECUTAR.** Preserve apenas como registro de julho de 2026.
+
 > [!WARNING]
 > **DOCUMENTO HISTÓRICO — NÃO EXECUTAR COMO PLANO ATUAL.** Este arquivo retrata o
 > estado de 15/07/2026, antes das Sprints 1–3 e do pivot B2C. Os itens de dashboard
@@ -198,7 +200,7 @@ lib/
 cd /home/acer/Documentos/aqui-log
 docker compose --env-file .env -f infra/docker-compose.yml up -d  # Postgres + Redis
 pnpm db:migrate
-pnpm db:admin            # admin@aquilog.com.br / admin123
+pnpm db:admin            # credenciais definidas no .env local
 pnpm dev:api             # Backend porta 3001
 pnpm dev:dashboard       # Frontend porta 5173
 

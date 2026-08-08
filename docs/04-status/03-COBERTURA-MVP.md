@@ -4,7 +4,8 @@ Legenda: **funcional** = fluxo exercitado pela API/smoke test ou painel/apps; **
 
 > **Produto desde 2026-08-04:** B2C cliente → motoboy. **Em 2026-08-07 o modelo
 > empresa/B2B foi removido** (código, rotas e colunas). A seção abaixo é registro
-> histórico do estado de julho/2026. A fila de execução vigente está em `ROADMAP.md`.
+> histórico do estado de julho/2026. A fila vigente está em
+> `docs/02-planejamento/02-BACKLOG.md`.
 
 ## Empresa (removida em 2026-08-07)
 
@@ -50,7 +51,7 @@ cliente e admin**.
 | Mapa em tempo real | Funcional | Leaflet + WebSocket no painel |
 | Financeiro, relatorios e avaliacoes | Funcional basico | Paginas Finance, Reports, Ratings |
 | Alertas / notificacoes | Funcional basico | Pagina Alerts + badge no topbar |
-| Permissoes | Funcional basico | Seis perfis; permissoes granulares futuras |
+| Permissões | Funcional básico | Cinco roles técnicas; permissões granulares futuras |
 | Motor de despacho | Funcional MVP | Proximidade, disponibilidade e exclusao de recusas |
 | API publica e integracoes | Planejado | ERP, e-commerce e marketplaces ficam para fase futura |
 | IA, BI, calor, roteirizacao e agrupamento | Planejado | Explicitamente fora do MVP estrutural |
@@ -104,7 +105,8 @@ cliente e admin**.
 
 - Blueprint Render + Vercel (sem projetos conectados)
 - Scaffold Firebase (rules/examples + Nest stubs; `FIREBASE_ENABLED=false`)
-- Documentacao: `docs/DEPLOY_TARGETS.md`, `docs/HANDOFF.md`, `docs/CHANGELOG_SPRINTS.md`
+- Documentação original reorganizada em `docs/03-referencia/`, `docs/04-status/`
+  e `docs/99-arquivo/` em 2026-08-07.
 - Runtime local continua Postgres + Redis + storage filesystem
 
 ## B2C — Fase App Cliente (2026-08-04) — marco histórico anterior ao backend B2C
@@ -114,7 +116,7 @@ cliente e admin**.
 - Metadados da encomenda serializados no campo `notes` (`lib/order_meta.dart`) — `notes` exposto no `DeliverySummary` do `aqui_log_core`
 - Abas: Inicio · Pedir · Entregas · Perfil; lista/detalhe mostram a encomenda parseada (com foto)
 - `flutter analyze` limpo; `flutter test` 9/9 (round-trip OrderMeta incluso)
-- APK release gerado; plano B2C e pendentes: `docs/PLANO_B2C.md`
+- APK release gerado; registro histórico anterior ao contrato B2C atual.
 
 ## B2C — Backend funcional (2026-08-04, 2ª rodada) ✅
 

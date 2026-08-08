@@ -48,5 +48,6 @@ REQUESTED → OFFERED → ACCEPTED → AT_PICKUP → PICKED_UP → IN_TRANSIT �
 - HTTP usa JWT, papéis, validacao de DTO, Helmet, CORS e limite global de requisicoes.
 - Socket.IO exige o JWT no `auth.token` ou cabecalho `Authorization` e valida o vinculo com a entrega.
 - URLs de documentos/comprovantes sao apenas metadados nesta fase; o upload privado e a verificacao de malware ainda precisam de um provedor de objetos.
-- Redis ainda nao participa do despacho; concorrencia elevada exigira lock/fila antes de producao.
+- Redis participa de locks de aceite, jobs, cache e configurações; PostgreSQL
+  continua sendo a fonte de verdade do domínio.
 - API publica, pagamentos reais e integracoes externas permanecem fora do MVP atual.

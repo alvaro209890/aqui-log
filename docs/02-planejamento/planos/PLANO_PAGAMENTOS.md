@@ -164,13 +164,13 @@ Pagar.me pode ser avaliado por já existir experiência no AquiResolve, mas isso
 
 ## 8. Decisões pendentes
 
-1. Autorizar ou não `PAY-01` no próximo ciclo.
-2. Política de cancelamento após aceite e após coleta.
-3. Recarga mínima e saldo máximo.
-4. Gateway PIX e conta comercial que será usada.
-5. Quem assume taxas e devoluções.
-6. Quando o crédito do motoboy se torna sacável.
-7. Necessidade fiscal/contábil antes do piloto pago.
+- `PAY-DEC-01` (`DEC-05`) — autorizar ou não `PAY-01` no próximo ciclo.
+- `PAY-DEC-02` (`DEC-13`) — política de cancelamento após aceite/coleta.
+- `PAY-DEC-03` — recarga mínima e saldo máximo.
+- `PAY-DEC-04` (`DEC-06`) — gateway PIX e conta comercial.
+- `PAY-DEC-05` — quem assume taxas e devoluções.
+- `PAY-DEC-06` (`DEC-17`) — quando o crédito do motoboy se torna sacável.
+- `PAY-DEC-07` — necessidade fiscal/contábil antes do piloto pago.
 
 ## 9. Fora de escopo inicial
 

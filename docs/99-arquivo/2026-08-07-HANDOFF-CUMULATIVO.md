@@ -1,5 +1,8 @@
 # HANDOFF — Continuidade para o próximo agente
 
+> **HISTÓRICO — NÃO EXECUTAR.** Handoff cumulativo substituído por
+> `docs/04-status/02-HANDOFF.md`; contém estados antigos e contraditórios.
+
 ## Atualização de produto — 2026-08-07 (somente documentação, 2ª rodada)
 
 O Álvaro decidiu mais duas capacidades novas, **apenas em plano (nenhum código nesta rodada)**:

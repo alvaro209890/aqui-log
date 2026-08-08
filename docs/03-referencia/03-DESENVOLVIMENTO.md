@@ -21,7 +21,7 @@ Encerre e abra a sessao depois de entrar no grupo `docker`.
 ## Inicializacao
 
 ```bash
-cp .env.example .env
+test -f .env || cp .env.example .env
 pnpm install
 docker compose --env-file .env -f infra/docker-compose.yml up -d
 pnpm db:migrate
@@ -56,7 +56,8 @@ O script em `scripts/smoke-test.sh` cobre registro, aprovacao, despacho, aceite,
 
 Timezone padrao: `America/Sao_Paulo` (`APP_TIMEZONE`).
 
-Continuidade multi-agente e alvos cloud: [HANDOFF](./HANDOFF.md), [DEPLOY_TARGETS](./DEPLOY_TARGETS.md).
+Continuidade multiagente e alvos cloud: [handoff vigente](../04-status/02-HANDOFF.md)
+e [alvos de deploy](./04-ALVOS-DE-DEPLOY.md).
 
 ## Banco
 

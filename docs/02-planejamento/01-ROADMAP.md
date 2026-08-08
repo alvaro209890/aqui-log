@@ -2,9 +2,8 @@
 
 > **Atualizado:** 2026-08-07
 > **Status:** fonte de verdade para prioridade, dependências e ordem de execução
-> **Rodada atual:** decisão de produto — motoboy aceita lote multi-pedido (inclusive
-> agendado intermunicipal) e dashboard monitora a frota. **Somente documentação**:
-> `PLANO_LOTE_MULTI_PEDIDO.md` e `PLANO_FROTA_DASHBOARD.md` atualizados/novos; nada de código.
+> **Rodada atual:** reorganização e normalização do planejamento para execução por
+> agentes. **Somente documentação; nenhum código ou runtime foi alterado.**
 > **Produto principal:** cliente pessoa física → motoboy, sem intermediário no fluxo
 > **Regra operacional:** desenvolvimento e validação local primeiro; nenhuma cloud é ligada sem pedido explícito do Álvaro
 
@@ -24,29 +23,28 @@ cliente cadastra → descreve encomenda → recebe preço do servidor → cria p
 
 | Documento | Papel | Pode definir prioridade? |
 | --- | --- | --- |
-| `ROADMAP.md` | Ordem executiva, dependências, gates e Definition of Done | **Sim — fonte principal** |
-| `PLANO_B2C.md` | Estado funcional e visão do domínio B2C | Não; segue este roadmap |
-| `PLANO_CONFIANCA_E_PRECO.md` | Especificação de encomenda, preço, avaliações, SMS e oferta | Não; detalha `B2C-01` a `B2C-04` |
-| `DIRETRIZES_VISUAIS.md` | Paleta e regras da futura identidade laranja | Não; detalha `UX-01` |
-| `PLANO_PAGAMENTOS.md` | Ledger, reserva, estorno e gateway | Não; detalha `PAY-01` e `PAY-02` |
-| `PLANO_LOTE_MULTI_PEDIDO.md` | Lote multi-pedido (motoboy), blocos agendados intermunicipais, anti-atraso, agrupamento automático | Não; detalha `LOT-01/02` e `TRIP-00/01/02` |
-| `PLANO_FROTA_DASHBOARD.md` | Monitoramento de frota em tempo real no dashboard web | Não; detalha `FROTA-01/02` |
-| `PLANO_ADMIN.md` | Painel admin com controle operacional total (pedidos, motoboys, clientes, lotes, financeiro, configurações) | Não; detalha `ADMIN-01..07` |
-| `PLANO_SUPORTE_RECLAMACOES.md` | Suporte e reclamações com dossiê automático, auto-resolução e juiz rápido | Não; detalha `SUP-01..05` |
-| `FLUXO_APP.md` | Guia didático do fluxo completo do app (jornadas, estados, dinheiro, quem faz o quê) | Não |
-| `MVP_COVERAGE.md` | Evidência do que existe e limitações atuais | Não |
-| `CHANGELOG_SPRINTS.md` / `SESSAO_IMPLEMENTACAO.md` | Histórico das entregas anteriores | Não |
-| `PLANO_IMPLEMENTACOES.md` | Plano histórico de julho de 2026 | **Não executar** |
+| [Roadmap](01-ROADMAP.md) | Ordem executiva, dependências, gates e Definition of Done | **Sim — fonte principal** |
+| [Plano B2C](planos/PLANO_B2C.md) | Estado funcional e visão do domínio B2C | Não; segue este roadmap |
+| [Confiança e preço](planos/PLANO_CONFIANCA_E_PRECO.md) | Encomenda, preço, avaliações, SMS e oferta | Não; detalha `B2C-01..04` |
+| [Diretrizes visuais](../01-produto/02-DIRETRIZES-VISUAIS.md) | Paleta e identidade laranja | Não; detalha `UX-01` |
+| [Pagamentos](planos/PLANO_PAGAMENTOS.md) | Ledger, reserva, estorno e gateway | Não; detalha `PAY-01/02` |
+| [Lote](planos/PLANO_LOTE_MULTI_PEDIDO.md) | Lote, blocos, anti-atraso e agrupamento | Não; detalha `LOT-*`/`TRIP-*` |
+| [Frota](planos/PLANO_FROTA_DASHBOARD.md) | Monitoramento de frota | Não; detalha `FROTA-01/02` |
+| [Admin](planos/PLANO_ADMIN.md) | Painel operacional | Não; detalha `ADMIN-01..07` |
+| [Suporte](planos/PLANO_SUPORTE_RECLAMACOES.md) | Reclamações e dossiê | Não; detalha `SUP-01..05` |
+| [Fluxo do produto](../01-produto/01-FLUXO-DO-PRODUTO.md) | Jornadas, estados e dinheiro | Não |
+| [Cobertura](../04-status/03-COBERTURA-MVP.md) | Evidência e limitações | Não |
+| [Arquivo histórico](../99-arquivo/README.md) | Entregas e instruções superadas | **Não executar** |
 
 ## 3. Legenda de status
 
-| Símbolo | Significado |
-| --- | --- |
-| ✅ | Entregue e anteriormente validado |
-| ▶️ | Próximo trabalho pronto para execução |
-| ⏸️ | Depende de decisão, credencial ou autorização externa |
-| ⏳ | Planejado, mas bloqueado por uma fase anterior |
-| 🔬 | Descoberta/medição antes de autorizar implementação |
+| Símbolo | Estado do backlog | Significado |
+| --- | --- | --- |
+| ✅ | `DONE` | Entregue com evidência registrada |
+| ▶️ | `READY` | Próximo trabalho pronto para execução |
+| ⏸️ | `BLOCKED` | Depende de decisão, credencial ou autorização externa |
+| ⏳ | `BLOCKED` | Depende de outro ID ainda não concluído |
+| 🔬 | `BLOCKED` | Exige descoberta/medição antes da implementação |
 
 ## 4. Decisões vigentes
 
@@ -85,8 +83,9 @@ cliente cadastra → descreve encomenda → recebe preço do servidor → cria p
 | ID | Status | Entrega | Saída obrigatória |
 | --- | --- | --- | --- |
 | BASE-01 | ✅ | MVP B2C ponta a ponta | Smoke e testes anteriores documentados em `PLANO_B2C.md` |
-| BASE-02 | ▶️ | Fechar decisões mínimas de produto | Registrar respostas de `DEC-01` a `DEC-03` na seção 8 |
-| BASE-03 | ▶️ | Congelar contratos antes de migrar dados | DTO, resposta da API, compatibilidade e rollback descritos em `PLANO_CONFIANCA_E_PRECO.md` |
+| BASE-02 | ⏸️ | Fechar decisões mínimas de produto | Álvaro registra respostas de `DEC-01` a `DEC-03` na seção 8 |
+| BASE-03 | ✅ | Congelar contratos aditivos de `B2C-01` | DTO, resposta, compatibilidade e rollback implementados/documentados |
+| BASE-04 | ▶️ | Validar o baseline em runtime local | Migrations atuais aplicadas em banco descartável, health e smoke B2C registrados |
 
 `BASE-02` não impede preparar código aditivo, mas impede ativar obrigatoriedade de foto, aumento de preço ou cobrança.
 
@@ -96,7 +95,7 @@ cliente cadastra → descreve encomenda → recebe preço do servidor → cria p
 | --- | --- | --- | --- |
 | B2C-01 | ✅ | `BASE-03` | Colunas próprias para tipo, tamanho, peso, alcance e fotos; leitura compatível com `notes` legado |
 | B2C-01A | ✅ | `B2C-01` | Apps e core consomem campos próprios com fallback legado |
-| B2C-01B | ▶️ | `B2C-01` | Dashboard filtra/relata por cliente, categoria, tamanho e peso |
+| B2C-01B | ⏳ | `BASE-04` | Dashboard filtra/relata por cliente, categoria, tamanho e peso |
 
 **Estratégia de migração:** mudança aditiva, leitura dupla durante a transição e remoção do parser legado somente em uma versão posterior, após medir que não existem pedidos antigos dependentes dele.
 
@@ -148,9 +147,9 @@ Nenhuma integração PIX/cartão entra nesta fase. O objetivo é provar a contab
 
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
-| OPS-01 | ⏳ | Fases 1–4 | FKs, índices, logs estruturados, auditoria, retenção, backup e restauração testada |
+| OPS-01 | ⏳ | `B2C-01B`, `B2C-02B`, `B2C-03A`, `DISP-03` | FKs, índices, logs, auditoria, retenção, backup e restauração testada |
 | OPS-02 | ⏸️ | Pedido explícito + credenciais | Firebase Storage e FCM reais, mantendo fallback local |
-| OPS-03 | ⏸️ | Pedido explícito + `OPS-01/02` | Deploy Render/Vercel e smoke público |
+| OPS-03 | ⏸️ | Pedido explícito, `OPS-01`, `OPS-02` | Deploy Render/Vercel e smoke público |
 | PAY-02 | ⏸️ | Gateway escolhido + `PAY-01` | PIX por gateway, webhook assinado e reconciliação |
 
 Build verde não comprova deploy. `OPS-03` só fecha com health real, fluxo B2C público, upload privado e push em dispositivo/emulador.
@@ -166,12 +165,12 @@ continua atrás de `TRIP-00`.
 
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
-| LOT-01 | ⏳ | Fases 1–4 | Aceite de lote manual: schema `trips/trip_stops/trip_quotes`, pré-vet, aceite atômico all-or-nothing, reserva por delivery, regras anti-atraso D-R1..D-R13 |
+| LOT-01 | ⏳ | `B2C-01B`, `B2C-02B`, `B2C-03A`, `DISP-03`, `DEC-10`, `DEC-11` | Aceite de lote manual, reserva e anti-atraso |
 | LOT-02 | ⏳ | `LOT-01` | Blocos agendados intermunicipais (`scheduled_lots`, candidatura, reserva de capacidade) |
-| FROTA-01 | ⏳ | Heartbeat desacoplado de `deliveryId` | Mapa de frota no dashboard: pinos por estado, coleta recolhida ou não, trilha real, lista, alertas A-1..A-7 |
-| FROTA-02 | ⏳ | `FROTA-01`, `TRIP-01` (flag) | Progresso de viagem multi-parada no dashboard (`/trips/:id/stops`) |
+| FROTA-01 | ⏳ | `DISP-03`, `DEC-12`, `DEC-14` | Desacoplar heartbeat; mapa, trilha, lista e `FROTA-ALERTA-01..07` |
+| FROTA-02 | ⏳ | `FROTA-01`, `LOT-01` | Progresso de viagem multi-parada no dashboard (`/trips/:id/stops`) |
 | TRIP-00 | 🔬 | Telemetria `DISP-03` + operação estável | Medir densidade de pedidos compatíveis, desvio e economia potencial — gate do **agrupamento automático** |
-| TRIP-01 | ⏳ | Gate econômico aprovado | Modelo de viagens e agrupador em shadow mode, sem afetar ofertas reais |
+| TRIP-01 | ⏳ | `TRIP-00` aprovado com limiares registrados | Modelo de viagens e agrupador em shadow mode, sem afetar ofertas reais |
 | TRIP-02 | ⏳ | `TRIP-01` validado | Piloto com no máximo 3 pedidos, capacidade e prova por pacote |
 
 Não implementar CRUD/telas de rota do agrupamento automático antes de `TRIP-00`
@@ -188,18 +187,18 @@ legal": dossiê automático, auto-resolução e juiz rápido). Ambos estão em d
 | --- | --- | --- | --- |
 | ADMIN-01 | ⏳ | `B2C-01B` | Fundação do painel: ações com motivo obrigatório, audit log completo, matriz de permissões, confirmação dupla |
 | ADMIN-02 | ⏳ | `ADMIN-01` | Comandos de domínio: status manual, cancelar (guard), redespachar, reatribuir, aprovar/suspender motoboy, suspender cliente |
-| ADMIN-03 | ⏳ | `PAY-01`, `PAY-01A/B` | Financeiro admin: ledger, crédito/estorno manual com gate, relatórios |
-| ADMIN-04 | ⏳ | `FROTA-01/02` | Frota no painel: mapa, ack de alertas, ações forçadas |
-| ADMIN-05 | ⏳ | `LOT-01/02` | Viagens e lotes no painel: reordenar paradas, remover/cancelar lote, intervenção |
-| ADMIN-06 | ⏳ | `ADMIN-02/03`, `SUP-01..03` | Reclamações/suporte no painel: fila, SLA, estorno, penalização |
+| ADMIN-03 | ⏳ | `PAY-01`, `PAY-01A`, `PAY-01B` | Financeiro admin: ledger, crédito/estorno manual com gate, relatórios |
+| ADMIN-04 | ⏳ | `FROTA-01`, `FROTA-02` | Frota no painel: mapa, ack de alertas, ações forçadas |
+| ADMIN-05 | ⏳ | `LOT-01`, `LOT-02` | Viagens e lotes no painel: reordenar paradas, remover/cancelar lote, intervenção |
+| ADMIN-06 | ⏳ | `ADMIN-02`, `ADMIN-03`, `SUP-01`, `SUP-02`, `SUP-03` | Reclamações/suporte no painel: fila, SLA, estorno, penalização |
 | ADMIN-07 | ⏳ | `B2C-02`, `B2C-03` | Configurações versionadas, notificações, moderação de avaliações |
 | SUP-01 | ⏳ | `B2C-01` + telemetria | Fundação de suporte: schema tickets, dossiê automático ("prova reversa"), abertura no app, ack < 5 s |
-| SUP-02 | ⏳ | `SUP-01`, `B2C-02`, `PAY-01` | Auto-resolução guiada + juiz rápido + nota de confiança + triagem em 3 níveis |
+| SUP-02 | ⏳ | `SUP-01`, `B2C-02`, `PAY-01`, `DEC-13`, `DEC-16` | Auto-resolução guiada + juiz rápido + nota de confiança + triagem em 3 níveis |
 | SUP-03 | ⏳ | `SUP-02`, `B2C-03` | Reclamação do motoboy + reputação por dossiê + fraude flags |
-| SUP-04 | ⏳ | `SUP-02/03`, `ADMIN` | Painel de suporte completo (fila, SLA, decisões em lote) |
+| SUP-04 | ⏳ | `SUP-02`, `SUP-03`, `ADMIN-06` | Painel de suporte completo (fila, SLA, decisões em lote) |
 | SUP-05 | ⏳ | `SUP-04`, `B2C-04` | SMS fallback / WhatsApp, NPS automatizado |
 
-Guia didático de referência (lógica do app ponta a ponta): `docs/FLUXO_APP.md`.
+Guia didático: [fluxo do produto](../01-produto/01-FLUXO-DO-PRODUTO.md).
 
 ## 7. Trilha paralela de experiência
 
@@ -207,35 +206,24 @@ Esta trilha pode ocorrer em paralelo às Fases 1–4 quando houver autorização
 
 | ID | Status | Entrega | Referência |
 | --- | --- | --- | --- |
-| UX-01 | ✅ | Tokens laranja e cores semânticas no `aqui_log_ui` | `DIRETRIZES_VISUAIS.md` |
-| UX-01A | ✅ | Aplicar tema no app cliente e cobrir por testes | `DIRETRIZES_VISUAIS.md` |
-| UX-01B | ✅ | Aplicar tema no app motoboy e cobrir por testes | `DIRETRIZES_VISUAIS.md` |
-| UX-01C | ▶️ | Aplicar os tokens equivalentes no dashboard | `DIRETRIZES_VISUAIS.md` |
-| UX-02 | ▶️ | Acessibilidade, estados, responsividade e QA visual em dispositivo | Critérios do documento visual |
+| UX-01 | ✅ | Tokens laranja e cores semânticas no `aqui_log_ui` | [diretrizes](../01-produto/02-DIRETRIZES-VISUAIS.md) |
+| UX-01A | ✅ | Aplicar tema no app cliente e cobrir por testes | [diretrizes](../01-produto/02-DIRETRIZES-VISUAIS.md) |
+| UX-01B | ✅ | Aplicar tema no app motoboy e cobrir por testes | [diretrizes](../01-produto/02-DIRETRIZES-VISUAIS.md) |
+| UX-01C | ⏳ | Aplicar os tokens equivalentes no dashboard após `BASE-04` | Diretrizes visuais |
+| UX-02 | ⏳ | Acessibilidade, estados, responsividade e QA visual após `UX-01C` | Critérios do documento visual |
 
 ## 8. Registro de decisões pendentes
 
-| ID | Decisão necessária | Recomendação | Bloqueia |
-| --- | --- | --- | --- |
-| DEC-01 | Foto da encomenda obrigatória? | Sim para publicar oferta; feature flag desligada durante migração | Ativação final de `B2C-01` |
-| DEC-02 | Faixas e adicionais de peso/tamanho | Configuração server-side versionada; definir valores com dados do piloto | Valores de `B2C-02`, não sua estrutura |
-| DEC-03 | Sem aceite: aumentar preço, ampliar raio ou cancelar? | Ampliar raio com limite, avisar cliente e exigir consentimento para qualquer aumento | `DISP-01/02` |
-| DEC-04 | Provedor de SMS | Escolher por custo, cobertura BR, webhook e sandbox | `B2C-04` |
-| DEC-05 | Iniciar carteira interna sem gateway? | Sim, mas somente após autorização explícita de pagamentos | `PAY-01` |
-| DEC-06 | Gateway PIX | Avaliar Pagar.me, Asaas e Mercado Pago com sandbox/webhooks | `PAY-02` |
-| DEC-07 | Rota compartilhada automática ou opt-in? | Opt-in no primeiro piloto | `TRIP-02` |
-| DEC-08 | Lote multi-pedido manual: despacho convive com auto-dispatch individual? | Convivem; o mesmo pedido nunca está nas duas filas ao mesmo tempo (reserva por delivery) | `LOT-01` |
-| DEC-09 | Bloco agendado intermunicipal: candidatura livre ou pré-alocação? | Publicar + candidatura com ranking por pontualidade | `LOT-02` |
-| DEC-10 | Janela de espera para agrupar antes de virar corrida individual | 5–15 min, cliente avisado no pedido | `LOT-01` |
-| DEC-11 | Tolerâncias anti-atraso (folgas 10/15/45 min, timeout 120 s, atraso 15 min, cancelamento grátis 45 min) | Valores v1 propostos; confirmar | `LOT-01` |
-| DEC-12 | Mapa de frota: retenção da trilha e exposição só em viagens ativas | crua 7 d / agregada 30 d / diária 90 d; LGPD | `FROTA-01` |
-| DEC-13 | Estorno pós-coleta: automático até teto ou sempre humano? | Automático até R$ 30; acima, análise humana com SLA (fecha divergência com `PLANO_PAGAMENTOS.md`) | `SUP-02`, `LOT-01` |
-| DEC-14 | Pino ocioso no mapa de frota (LGPD) | Coarsificado (raio ~500 m) na zona operacional; oculto fora dela | `FROTA-01` |
-| DEC-15 | Deadhead intermunicipal: como o retorno entra no preço/repasse | Percentual sobre km ida+volta ou tarifa mínima por município | `LOT-02` |
-| DEC-16 | Tetos do juiz rápido de suporte (R$ 50 reembolso, R$ 100/mês por cliente) | Começar conservador; subir com dados | `SUP-02` |
-| DEC-17 | Payout do motoboy com janela de contestação/clawback | Buffer 48–72 h antes do payout (futuro `PAY-02`) | `PAY-02` |
+O estado canônico de todas as decisões está em
+[`03-DECISOES.md`](03-DECISOES.md). Esta seção não duplica recomendações ou status.
 
-Toda decisão fechada deve registrar data, autor e consequência nos planos afetados.
+Para a fila próxima:
+
+- `BASE-04` e `B2C-01B` não dependem de decisão nova do dono;
+- `DEC-01` bloqueia somente tornar foto obrigatória;
+- `DEC-02` bloqueia os valores finais de `B2C-02`;
+- `DEC-03` bloqueia `DISP-01/02`;
+- cloud, SMS e pagamentos continuam atrás de autorização explícita.
 
 ## 9. Definition of Done comum
 
@@ -249,8 +237,12 @@ Uma fase só pode mudar para ✅ quando cumprir o que for aplicável:
 - `flutter analyze` e `flutter test` nos dois apps e testes do `aqui_log_core`;
 - fluxo real exercitado, incluindo pelo menos um erro/rollback relevante;
 - validação visual em app/painel quando houver UI;
-- `MVP_COVERAGE.md`, `HANDOFF.md` e changelog atualizados com evidência;
+- estado atual, cobertura, handoff e changelog atualizados com evidência;
 - estado comunicado corretamente como local, validado, commitado, enviado ou publicado.
+
+Toda evidência registra comando/inspeção, resultado observado, data, ambiente e
+commit. Uma etapa não aplicável deve ser marcada `N/A` com justificativa; não pode
+ser simplesmente omitida.
 
 ## 10. Riscos controlados pelo plano
 
@@ -260,7 +252,7 @@ Uma fase só pode mudar para ✅ quando cumprir o que for aplicável:
 | Divergir preço entre app, oferta e cobrança | Servidor único, breakdown persistido e versão da regra |
 | Crédito/estorno duplicado | Ledger imutável, chave idempotente e transação de banco |
 | Reoferta infinita | Limite de anéis/rodadas e estado terminal recuperável |
-| Misturar cor de marca com status | Tokens semânticos e QA conforme `DIRETRIZES_VISUAIS.md` |
+| Misturar cor de marca com status | Tokens semânticos e QA conforme as [diretrizes visuais](../01-produto/02-DIRETRIZES-VISUAIS.md) |
 | Ligar cloud cedo demais | Gates `OPS-02/03` dependem de pedido explícito e credenciais |
 | Construir rota multi-pedido sem densidade | Gate de descoberta `TRIP-00` antes de código operacional |
 | Dupla oferta do mesmo pedido (individual × lote) | Reserva global por `delivery_id` + aceite atômico com locks |
@@ -274,13 +266,14 @@ Uma fase só pode mudar para ✅ quando cumprir o que for aplicável:
 
 ## 11. Próximo pacote recomendado
 
-Próximo trabalho técnico: **`B2C-01B — filtros e relatórios B2C no dashboard`**.
+Próximo trabalho técnico: **`BASE-04 — validar migrations e smoke B2C em runtime local`**.
 
 Ao retomar:
 
-1. aplicar a migration `1785100000000-DeliveryPackageFields` em banco de teste e executar o smoke vivo;
-2. adicionar filtros/relatórios por cliente, categoria, tamanho e peso no dashboard;
-3. manter `notes` como fallback de leitura e foto opcional até `DEC-01` ser confirmada;
-4. concluir `UX-01C/UX-02` com dashboard laranja e QA visual em dispositivo.
+1. usar banco descartável e aplicar `1785100000000-DeliveryPackageFields` e
+   `1785200000000-RemoveCompanyModel`;
+2. executar health, smoke B2C vivo e verificações de build/lint/test;
+3. registrar toda evidência e promover `B2C-01B` para `READY` somente se o baseline passar;
+4. manter `notes` como fallback de leitura e foto opcional até `DEC-01` ser confirmada.
 
 Não iniciar Firebase, deploy, gateway ou rota multi-pedido como parte desse pacote.

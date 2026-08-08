@@ -1,5 +1,7 @@
 # Prompt para Agente — Implementar AquiLog
 
+> **HISTÓRICO — NÃO EXECUTAR.** Este prompt já foi consumido e contém escopo superado.
+
 > [!WARNING]
 > **PROMPT HISTÓRICO — NÃO EXECUTAR.** As entregas abaixo foram concluídas em
 > julho de 2026 e o produto migrou para B2C em agosto. Este arquivo também contém
@@ -85,7 +87,7 @@ Usar os pacotes compartilhados: `package:aqui_log_core/aqui_log_core.dart` e `pa
 - Rodar `pnpm test` — todos passando
 - Rodar `pnpm smoke` — "Smoke test aprovado" no final
 - Flutter: `flutter analyze` + `flutter test` em cada app
-- Testar login: `admin@aquilog.com.br` / `admin123` na porta 3001
+- Testar login com as credenciais definidas no `.env` local, na porta 3001
 
 ## 📝 Documentação
 - Atualizar `docs/MVP_COVERAGE.md` marcando features como "Funcional"

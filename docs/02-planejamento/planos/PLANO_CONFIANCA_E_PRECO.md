@@ -1,7 +1,7 @@
 # Plano técnico — Encomenda, confiança, preço e oferta
 
 > **Atualizado:** 2026-08-07
-> **Papel:** especificação subordinada ao `ROADMAP.md`
+> **Papel:** especificação subordinada ao [roadmap](../01-ROADMAP.md)
 > **Abrange:** `B2C-01` a `B2C-04` e `DISP-01` a `DISP-03`
 > **Não autoriza:** gateway, SMS pago, cloud ou aumento automático de preço
 > **Estado de `B2C-01`:** schema/API/core/apps implementados em 2026-08-07; dashboard e execução da migration em banco de teste permanecem no próximo pacote
@@ -77,7 +77,8 @@ Recomendação: exigir ao menos uma foto antes de publicar uma oferta, com `REQU
 - pedido legado abre nos dois apps e dashboard;
 - peso inválido, catálogo inválido e URL não permitida são recusados;
 - cliente só altera/cria dados do próprio pedido nos estados permitidos;
-- smoke B2C e B2B legado permanecem verdes.
+- smoke B2C permanece verde para pedido novo e pedido histórico lido pelo fallback
+  de `notes`; o modelo B2B removido não faz parte do aceite.
 
 ## 3. `B2C-02` — preço v2
 

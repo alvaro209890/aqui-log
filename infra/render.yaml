@@ -3,7 +3,7 @@
 # Uso previsto:
 #   - API NestJS  → Render (Web Service)
 #   - Dashboard   → Vercel
-#   - Dados/prod  → Firebase (Storage + FCM; Firestore opcional — ver docs/DEPLOY_TARGETS.md)
+#   - Dados/prod  → Firebase (Storage + FCM; ver docs/03-referencia/04-ALVOS-DE-DEPLOY.md)
 #
 # Este arquivo é ESTRUTURA. Não contém secrets, IDs de projeto nem
 # integração ativa. O próximo agente deve preencher após criar os projetos.

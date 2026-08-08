@@ -44,7 +44,8 @@ Catálogos:
 - `packageSize`: `SMALL`, `MEDIUM`, `LARGE`;
 - `deliveryScope`: `SAME_CITY`, `OTHER_CITY`.
 
-Todos os novos campos são opcionais durante a transição. Isso preserva B2B e pedidos B2C antigos.
+Todos os novos campos são opcionais durante a transição. Isso preserva pedidos
+B2C antigos pelo fallback de `notes`; o modelo empresa/B2B foi removido depois.
 
 ## Evidência executada
 

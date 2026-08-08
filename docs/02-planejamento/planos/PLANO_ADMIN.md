@@ -2,9 +2,9 @@
 
 > **Atualizado:** 2026-08-07
 > **Status:** design aprovado para planejamento (sem implementar ainda — documentação apenas)
-> **Documentos base:** `ROADMAP.md` (ordem e gates), `PLANO_B2C.md` (estado B2C),
-> `PLANO_LOTE_MULTI_PEDIDO.md` (lotes/viagens), `PLANO_FROTA_DASHBOARD.md` (frota),
-> `PLANO_PAGAMENTOS.md` (ledger/financeiro), `PLANO_SUPORTE_RECLAMACOES.md` (suporte)
+> **Documentos base:** [roadmap](../01-ROADMAP.md), [B2C](PLANO_B2C.md),
+> [lotes](PLANO_LOTE_MULTI_PEDIDO.md), [frota](PLANO_FROTA_DASHBOARD.md),
+> [pagamentos](PLANO_PAGAMENTOS.md) e [suporte](PLANO_SUPORTE_RECLAMACOES.md).
 > **Objetivo:** o dono consegue operar e corrigir quase tudo pelo painel, sem depender de dev.
 > **Roadmap:** `ADMIN-01` … `ADMIN-07` (seção 6), dependentes de `B2C-01B`, `FROTA-01/02`, `LOT-01/02`, `PAY-01`.
 
@@ -41,7 +41,8 @@
   - Redespachar (pedido volta a `REQUESTED` e re-entra no auto-dispatch);
   - Reatribuir motoboy manualmente (selecionar courier, validar capacidade/posição; motivo);
   - Ajustar preço **com auditoria e gate** (item 4): gera nova versão de preço + evento `price_adjustment`, cliente é notificado e precisa consentir (regra do roadmap: preço congelado no aceite não muda silenciosamente);
-  - Reverter status por engano (ex.: `DELIVERED → IN_TRANSIT`) com motivo, apenas `SUPER_ADMIN/ADMIN`.
+  - Corrigir erro operacional por comando compensatório, ticket e evento auditado;
+    `DELIVERED` é terminal e nunca volta para `IN_TRANSIT`.
 - **Ações com confirmação dupla:** cancelar, redespachar, reatribuir, ajustar preço, qualquer reversão de status. Alterações de status simples: confirmação única + motivo.
 
 ### 2.3 Motoboys — `CouriersPage` + `UsersPage`
@@ -67,12 +68,14 @@
 
 ### 2.5 Frota em tempo real — novo, herda `FROTA-01/02`
 
-Referência completa: `docs/PLANO_FROTA_DASHBOARD.md`. No painel admin:
+Referência completa: [plano de frota](PLANO_FROTA_DASHBOARD.md). No painel admin:
 
-- **Mostra:** mapa operacional (pinos por estado derivado, selo de coleta recolhida, trilha real × prevista — exata só em viagem ativa —, ETA/atraso), lista de prestadores ordenável com badge "sem sinal", painel de alertas A-1..A-7 com severidade e ack, contadores em tempo real. Tudo restrito à permissão "ver frota" (distinta de "ver entrega").
+- **Mostra:** mapa operacional, lista, coleta, trilha e alertas
+  `FROTA-ALERTA-01..07`. Tudo restrito à permissão "ver frota".
 - **Permite fazer:**
   - Ack de alerta (auditado, registra quem e quando);
-  - Forçar ação sugerida pelos alertas: "cancelar e reofertar" pedido não recolhido (A-5; passa pelos guards — só ≤ `AT_PICKUP`), contatar motoboy (gera notificação manual, item 2.12), reordenar parada (v2, via `LOT`/`trip:event:reorder` quando `TRIP` existir);
+  - Forçar ação sugerida por `FROTA-ALERTA-05` para pedido não recolhido,
+    sempre pelos guards; suporte não executa essa ação;
   - Ver trilha histórica do dia com retenção LGPD.
 - **Ações com confirmação dupla:** ack de alerta vermelho com mais de 15 min, cancelar/reofertar via alerta.
 
@@ -81,14 +84,16 @@ Referência completa: `docs/PLANO_FROTA_DASHBOARD.md`. No painel admin:
 - **Mostra:** lista de viagens/lotes (estado, motoboy, nº de pedidos, origem/destino, janelas, ETAs por parada, progresso, alertas `AT_RISK`/`LATE`), detalhe com paradas numeradas `PICKUP/DELIVERY`, `trip_events`, `composition_snapshot` (composição congelada no aceite), valores e repasses por pacote (`trip_quotes`).
 - **Permite fazer:**
   - Reordenar paradas (o servidor roda o sequenciador e revalida os invariantes: coleta antes de entrega, janelas, folgas D-R1..D-R3 — e registra evento `reorder`);
-  - Remover pedido do lote (→ `REMOVED_FROM_TRIP` → `REQUESTED`, re-sequenciamento, efeito financeiro exibido antes);
-  - Cancelar lote inteiro (pedidos não concluídos voltam à fila com evento de auditoria);
+  - Remover pedido ainda não coletado do lote (associação marcada como removida,
+    pedido volta a `REQUESTED`, re-sequenciamento e efeito financeiro exibido antes);
+  - Cancelar lote inteiro: somente pedidos sem coleta voltam à fila; itens sob
+    custódia exigem devolução ou transferência registrada antes de qualquer encerramento;
   - Intervenção geral com **motivo obrigatório** (desistência pós-coleta, desvio, falha) — libera ações de suporte previstas em `PLANO_LOTE_MULTI_PEDIDO.md` R6/R7.
 - **Ações com confirmação dupla:** remover pedido do lote, cancelar lote, qualquer intervenção em viagem `IN_PROGRESS`.
 
 ### 2.7 Reclamações e suporte — módulo novo
 
-A especificação completa do fluxo está em `PLANO_SUPORTE_RECLAMACOES.md`. Aqui, a superfície no admin:
+A especificação completa está no [plano de suporte](PLANO_SUPORTE_RECLAMACOES.md).
 
 - **Mostra:** fila de reclamações (aberta/em análise/resolvida/estornada) com prioridade (P1 vermelho) e SLA restante (barra), detalhe com pedido, partes, conversa, **dossiê completo** (timeline com fotos/GPS/horários), veredito automático sugerido, histórico financeiro; painel de métricas (tempo de resposta, resolução, recorrência por motoboy/cliente, custo médio por ticket).
 - **Permite fazer:**
@@ -101,7 +106,7 @@ A especificação completa do fluxo está em `PLANO_SUPORTE_RECLAMACOES.md`. Aqu
   - Escalar para `SUPER_ADMIN`.
 - **Ações com confirmação dupla:** estorno, penalizar motoboy, resolver com desfecho financeiro, bloqueio.
 
-### 2.8 Financeiro — `FinancePage`, evolui com `PAY-01/01A/01B`
+### 2.8 Financeiro — `FinancePage`, evolui com `PAY-01`, `PAY-01A` e `PAY-01B`
 
 - **Mostra:** ledger (imutável, com saldo por conta, extrato por participante), saldos disponível/reservado de clientes e motoboys, transações com chave idempotente e status, reservas por pedido (RESERVED/SETTLED/RELEASED), pendências de liquidação, relatórios exportáveis (receita, repasses, estornos, por período/categoria/região), conciliação (gateway vazio até `PAY-02`).
 - **Permite fazer:**
@@ -124,8 +129,8 @@ A especificação completa do fluxo está em `PLANO_SUPORTE_RECLAMACOES.md`. Aqu
   - Feature flags (foto obrigatória `DEC-01`, lote, avaliação mútua, módulo de frota);
   - Preços e faixas de peso/tamanho (`B2C-02`: base, por km, %, faixas) com **prévia do efeito** e versão da regra;
   - Tolerâncias anti-atraso D-R1..D-R13 (folgas 10/15/45 min, timeout 120 s, tolerância 15 min, cancelamento grátis 45 min);
-  - Limiares de alerta A-1..A-7 (amarelo/vermelho, tempos de "sem sinal");
-  - Limites de lote (`max_packages`, teto intermunicipal — decisão pendente 4 do transporte) e janela de agrupamento (5–15 min, `DEC-10`);
+  - Limiares `FROTA-ALERTA-01..07` (amarelo/vermelho, tempos de "sem sinal");
+  - Limites de lote (`LOT-DEC-04`) e janela de agrupamento (`DEC-10`);
   - Suporte: tetos do juiz rápido (reembolso R$ 50, atraso R$ 30, nota R$ 10, limite mensal R$ 100), prazos de reclamação, limites de fraude;
   - Canais/limites de notificação e reoferta (anéis de raio `DISP-01`);
   - Toda mudança salva uma versão nova; **rollback de 1 clique** restaura a anterior.
@@ -149,39 +154,37 @@ A especificação completa do fluxo está em `PLANO_SUPORTE_RECLAMACOES.md`. Aqu
 
 Legenda: ✅ pode · 🟡 pode com confirmação dupla · 🚫 não pode · 🔒 gate financeiro extra (senha/OTP ou papel)
 
-| Ação | SUPER_ADMIN | ADMIN | SUPPORT | OPS |
-|---|---|---|---|---|
-| Ver KPIs / relatórios | ✅ | ✅ | ✅ | ✅ |
-| Listar/detalhar pedido | ✅ | ✅ | ✅ | ✅ |
-| Alterar status simples de pedido | ✅ | 🟡 | 🟡 (nunca para `DELIVERED`) | 🚫 |
-| Cancelar pedido (≤ `AT_PICKUP`) | 🟡 | 🟡 | 🚫 | 🚫 |
-| Redespachar / reatribuir motoboy | 🟡 | 🟡 | 🚫 | 🚫 |
-| Ajustar preço de pedido | 🔒🟡 | 🔒🟡 | 🚫 | 🚫 |
-| Aprovar/rejeitar motoboy | ✅ | 🟡 | 🚫 | 🚫 |
-| Suspender/reativar motoboy | 🟡 | 🟡 | 🚫 | 🚫 |
-| Editar capacidade do motoboy | ✅ | 🟡 | 🚫 | 🚫 |
-| Suspender/banir cliente | 🟡 | 🟡 | 🚫 | 🚫 |
-| Reembolso manual ao cliente | 🔒🟡 | 🚫 | 🚫 | 🚫 |
-| Ver frota em tempo real | ✅ | ✅ | ✅ (somente leitura) | ✅ |
-| Ack de alerta de frota | ✅ | ✅ | 🟡 | ✅ |
-| Cancelar/reofertar via alerta (A-5) | 🟡 | 🟡 | 🚫 | 🚫 |
-| Ver viagens/lotes | ✅ | ✅ | ✅ | ✅ |
-| Reordenar paradas de lote | ✅ | 🟡 | 🚫 | 🚫 |
-| Remover pedido do lote / cancelar lote | 🟡 | 🟡 | 🚫 | 🚫 |
-| Intervenção em viagem com motivo | 🟡 | 🟡 | 🟡 | 🚫 |
-| Atender/responder reclamação | ✅ | ✅ | ✅ | 🚫 |
-| Estornar por reclamação | 🔒🟡 | 🔒🟡 | 🚫 | 🚫 |
-| Penalizar motoboy | 🟡 | 🟡 | 🟡 | 🚫 |
-| Crédito/estorno manual no ledger | 🔒🟡 | 🚫 | 🚫 | 🚫 |
-| Exportar relatórios financeiros | ✅ | ✅ | 🚫 | 🚫 |
-| Remover avaliação | 🟡 | 🟡 | 🟡 | 🚫 |
-| Editar configurações (preços/tolerâncias) | 🟡 | 🟡 | 🚫 | 🚫 |
-| Rollback de configuração | 🟡 | 🚫 | 🚫 | 🚫 |
-| Criar usuário do painel / atribuir papel | 🟡 | 🚫 | 🚫 | 🚫 |
-| Ver log de auditoria | ✅ | ✅ | ✅ | 🚫 |
-| Disparo manual de notificação | 🟡 | 🟡 | 🟡 | 🚫 |
+| Ação | SUPER_ADMIN | ADMIN | SUPPORT |
+|---|---|---|---|
+| Ver KPIs / relatórios | ✅ | ✅ | ✅ |
+| Listar/detalhar pedido | ✅ | ✅ | ✅ |
+| Alterar status não terminal | ✅ | 🟡 | 🚫 |
+| Cancelar pedido antes da coleta | 🟡 | 🟡 | 🚫 |
+| Redespachar / reatribuir motoboy | 🟡 | 🟡 | 🚫 |
+| Ajustar preço de pedido | 🔒🟡 | 🔒🟡 | 🚫 |
+| Aprovar/rejeitar/suspender motoboy | ✅ | 🟡 | 🚫 |
+| Suspender/banir cliente | 🟡 | 🟡 | 🚫 |
+| Reembolso manual ao cliente | 🔒🟡 | 🚫 | 🚫 |
+| Ver frota em tempo real | ✅ | ✅ | ✅ somente leitura |
+| Ack de alerta de frota | ✅ | ✅ | 🚫 |
+| Cancelar/reofertar via alerta | 🟡 | 🟡 | 🚫 |
+| Ver viagens/lotes | ✅ | ✅ | ✅ somente leitura |
+| Reordenar/remover/cancelar lote | 🟡 | 🟡 | 🚫 |
+| Atender/responder reclamação | ✅ | ✅ | ✅ |
+| Estornar por reclamação | 🔒🟡 | 🔒🟡 | 🚫 |
+| Penalizar motoboy | 🟡 | 🟡 | 🚫 |
+| Crédito/estorno manual no ledger | 🔒🟡 | 🚫 | 🚫 |
+| Exportar relatórios financeiros | ✅ | ✅ | 🚫 |
+| Remover avaliação | 🟡 | 🟡 | 🚫 |
+| Editar configurações | 🟡 | 🟡 | 🚫 |
+| Criar usuário / atribuir papel | 🟡 | 🚫 | 🚫 |
+| Ver log de auditoria | ✅ | ✅ | ✅ |
+| Disparo manual de notificação | 🟡 | 🟡 | 🟡 |
 
-Regras da matriz: papéis são **cumulativos por permissão granular** (um `ADMIN` pode receber só "ver frota" sem "editar pedido"); `SUPPORT` nunca mexe em valores sem que a operação passe pelo tipo `refund` com motivo e **nunca cancela/reembolsa sozinho**; `OPS` enxerga operação, nunca finança e nunca escrita de estado.
+Regras da matriz: existem somente os papéis técnicos atuais. `SUPPORT` pode atuar
+em tickets e consultar o contexto mínimo, mas não altera pedido, frota, lote ou
+dinheiro. Toda ampliação de permissão exige tarefa própria, migration/seed quando
+aplicável e testes de autorização.
 
 ---
 
@@ -193,7 +196,8 @@ Regras da matriz: papéis são **cumulativos por permissão granular** (um `ADMI
 4. **Estado sempre via serviço de domínio:** o painel não possui endpoint de "update genérico"; cada ação mapeia para um comando de domínio que valida a máquina de estados. Impossível criar estado ilegal via UI. Guards: cancelar exige ≤ `AT_PICKUP` (pós-coleta só com fluxo de devolução), reordenar revalida D-R1..D-R13.
 5. **LGPD:** visualização de CPF/telefone/documento é mascarada por padrão (revela com justificativa auditada, opcional v1); posição de frota exata só em viagem ativa (ocioso coarsificado); exportação de dados pessoais registrada; retenção: auditoria 2 anos, trilha de posição conforme `FROTA` (crua 7 d / agregada 30 d / diária 90 d), logs de acesso sensível 1 ano.
 6. **Idempotência e replay:** botões enviam chave de operação; duplo clique ou retry não duplicam lançamento nem evento.
-7. **Nem tudo se desfaz:** reverter `DELIVERED` é restrito a `SUPER_ADMIN/ADMIN` e exige justificativa; remoções físicas não existem — sempre marca de estado (soft).
+7. **Estado terminal não se desfaz:** `DELIVERED` e `CANCELED` não são revertidos.
+   Correções usam evento compensatório, ticket e transação reversa quando houver dinheiro.
 
 ---
 
@@ -207,7 +211,7 @@ Regras da matriz: papéis são **cumulativos por permissão granular** (um `ADMI
 - **Aprovação em lote de cadastros sem revisão individual** (documentos exigem olho humano).
 - **Mensagens em nome do cliente ou do motoboy sem histórico.**
 
-**Fora para v2:** banir com retenção de documentos, edição de cadastro com justificativa digital, reordenação de paradas em voo, reconciliação automática com gateway (`PAY-02`), suporte ao cliente final (chat público), penalidades financeiras reais, agrupamento automático operacional (`TRIP-01/02`), páginas para B2B legado.
+**Fora para v2:** banir com retenção de documentos, edição de cadastro com justificativa digital, reordenação de paradas em voo, reconciliação automática com gateway (`PAY-02`), suporte ao cliente final (chat público), penalidades financeiras reais e agrupamento automático operacional (`TRIP-01/02`).
 
 ---
 
@@ -217,8 +221,8 @@ Regras da matriz: papéis são **cumulativos por permissão granular** (um `ADMI
 |---|---|---|---|
 | `ADMIN-01` | Fundação do painel | `B2C-01B` (filtros B2C) | Framework de ações com motivo obrigatório + `audit_logs` completo + matriz de permissões real no backend + modo "confirmação dupla". Todas as páginas existentes passam a registrar auditoria. |
 | `ADMIN-02` | Pedidos, motoboys, clientes | `ADMIN-01` | Comandos de domínio: mudança de status manual, cancelar (guard ≤ `AT_PICKUP`), redespachar, reatribuir, aprovar/suspender/rejeitar motoboy, suspender/banir cliente, edição de cadastro auditada. |
-| `ADMIN-03` | Financeiro admin | `PAY-01` (ledger), `PAY-01A/B` | Ledger no painel, crédito manual de teste (`PAY-01B`), estorno manual reverso, gate 🔒, relatórios e conciliação interna. |
-| `ADMIN-04` | Frota no painel | `FROTA-01`, depois `FROTA-02` | Páginas Frota/Alertas integradas à permissão "ver frota", ack auditado, ações forçadas do alerta A-5; progresso multi-parada atrás de flag com `FROTA-02`. |
+| `ADMIN-03` | Financeiro admin | `PAY-01`, `PAY-01A`, `PAY-01B` | Ledger no painel, crédito manual de teste, estorno reverso, gate 🔒, relatórios e conciliação interna. |
+| `ADMIN-04` | Frota no painel | `FROTA-01`, depois `FROTA-02` | Páginas Frota/Alertas, ack auditado e ações de `FROTA-ALERTA-05`; progresso multi-parada com `FROTA-02`. |
 | `ADMIN-05` | Viagens e lotes | `LOT-01`, depois `LOT-02` | Ver/reordenar paradas (revalidando invariantes), remover pedido do lote, cancelar lote, intervenção com motivo; blocos agendados após `LOT-02`. |
 | `ADMIN-06` | Reclamações/suporte | `ADMIN-02`, `ADMIN-03`, `SUP-01..03` | Fila, atribuição, resposta, resolução, estorno e penalização (fluxo detalhado em `PLANO_SUPORTE_RECLAMACOES.md`). |
 | `ADMIN-07` | Configurações, notificações, avaliações | `B2C-02` (preços v2), `B2C-03` (avaliação mútua) | Editor de `app_settings` versionado com rollback, templates e disparos manuais, moderação de avaliações. |
@@ -231,9 +235,9 @@ Cada fase fecha com: testes de autorização por papel, teste de confirmação d
 
 | # | Decisão | Recomendação |
 |---|---|---|
-| A-1 | Gate 🔒 usa OTP ou senha do operador? | OTP no celular do `SUPER_ADMIN` (v1: reautenticação simples) |
-| A-2 | Quem tem papel `SUPER_ADMIN`? | Somente o dono; jamais múltiplas pessoas sem registro |
-| A-3 | Retenção do `audit_logs` | 2 anos; exportação trimestral |
-| A-4 | SUPPORT pode alterar status simples de pedido? | Sim, mas nunca para `DELIVERED` |
-| A-5 | Edição de cadastro de cliente exige prova? | Sim, documento/print anexado ao evento de auditoria |
-| A-6 | Quem cancela pedido pós-coleta (fluxo de devolução)? | Só `SUPER_ADMIN/ADMIN`, com devolução registrada |
+| `ADMIN-DEC-01` | Gate 🔒 usa OTP ou senha do operador? | OTP no celular do `SUPER_ADMIN` (v1: reautenticação simples) |
+| `ADMIN-DEC-02` | Quem tem papel `SUPER_ADMIN`? | Somente o dono; jamais múltiplas pessoas sem registro |
+| `ADMIN-DEC-03` | Retenção do `audit_logs` | 2 anos; exportação trimestral |
+| `ADMIN-DEC-04` | SUPPORT pode alterar status simples de pedido? | Não; suporte atua em tickets e consulta contexto |
+| `ADMIN-DEC-05` | Edição de cadastro de cliente exige prova? | Sim, documento/print anexado ao evento de auditoria |
+| `ADMIN-DEC-06` | Quem cancela pedido pós-coleta? | Só `SUPER_ADMIN/ADMIN`, após devolução/transferência registrada |
