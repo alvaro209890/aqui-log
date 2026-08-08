@@ -2,6 +2,17 @@
 
 Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
+## Fluxo cliente↔prestador nos planos — 2026-08-07
+
+- Novo plano `PLANO_FLUXO_CLIENTE_PRESTADOR.md` com modos IMMEDIATE/SCHEDULED,
+  km dual, aceite antecipado, Agenda, taxa de cancelamento no saldo do prestador,
+  saldo sacável e `pickup_code`.
+- Decisões `DEC-01` e `DEC-18`…`DEC-24` registradas como `DECIDIDA`.
+- Roadmap/backlog ganharam IDs `B2C-05`, `B2C-06`, `SCHED-01`, `COUR-01/02`, `PICK-01`.
+- Contradições removidas: foto “opcional até decidir”, “desistência sem penalidade
+  dura”, preço único por km, ausência de código de recolhimento.
+- Sessão somente documental; `BASE-04` continua o próximo trabalho técnico.
+
 ## Organização documental para agentes — 2026-08-07
 
 - Documentação separada em governança, produto, planejamento, referência, estado e arquivo.

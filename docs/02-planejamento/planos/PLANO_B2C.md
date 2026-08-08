@@ -5,7 +5,8 @@
 > **Data de criação:** 2026-08-03 · **Última atualização:** 2026-08-07
 > **Planos derivados:** [pagamentos](PLANO_PAGAMENTOS.md) ·
 > [lote](PLANO_LOTE_MULTI_PEDIDO.md) ·
-> [confiança e preço](PLANO_CONFIANCA_E_PRECO.md).
+> [confiança e preço](PLANO_CONFIANCA_E_PRECO.md) ·
+> [fluxo cliente↔prestador](PLANO_FLUXO_CLIENTE_PRESTADOR.md).
 > **Prioridade:** o [roadmap](../01-ROADMAP.md) é a fonte de verdade.
 
 ---
@@ -106,7 +107,7 @@ continuam legíveis por `OrderMeta.fromNotes`, sem backfill textual arriscado.
 
 | Gate | Tema | Recomendação | Consequência |
 |---|---|---|---|
-| `DEC-01` | Foto do produto | Obrigatória antes de publicar oferta; feature flag desligada durante a migração | Não bloqueia schema aditivo, bloqueia ativação da regra |
+| `DEC-01` | Foto do produto | **DECIDIDA** (2026-08-07): obrigatória na criação; legados legíveis | Ativação em código: `B2C-05` |
 | `DEC-02` | Faixas de peso/tamanho | Configuração server-side versionada; valores definidos com dados do piloto | Estrutura pode avançar, valores finais não |
 | `DEC-03` | Oferta sem aceite | Ampliar raio com limite, avisar cliente e pedir consentimento para aumento | Bloqueia a estratégia de reoferta |
 | `DEC-04` | Validação de telefone | Código SMS com provider adapter, TTL e rate limit | Gate para cadastro público em produção |
@@ -149,7 +150,7 @@ gate correspondente no [roadmap](../01-ROADMAP.md).
 | Limitação | Impacto | Mitigação |
 |---|---|---|
 | Dashboard ainda não usa os campos próprios | Relatórios/consultas por categoria não existem | `B2C-01B` é a prioridade |
-| Foto opcional no app | Motoboy aceita sem ver o produto | Feature flag na Fase 1; ativar obrigatoriedade após `DEC-01` |
+| Foto ainda opcional no código | Motoboy aceita sem ver o produto | `DEC-01` decidida; ativar em `B2C-05` após baseline |
 | Sem pagamento | Ninguém paga nada ainda | `PLANO_PAGAMENTOS.md` |
 | Despacho por "motoboy mais próximo" (1 oferta por vez) | Sem concorrência de ofertas visíveis | Aceite/recusa já existe; anéis de raio futuros |
 | Sem validação de telefone | Contas lixo possíveis | `PLANO_CONFIANCA_E_PRECO.md` §5 |

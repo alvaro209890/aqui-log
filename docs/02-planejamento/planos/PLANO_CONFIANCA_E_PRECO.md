@@ -2,9 +2,10 @@
 
 > **Atualizado:** 2026-08-07
 > **Papel:** especificação subordinada ao [roadmap](../01-ROADMAP.md)
-> **Abrange:** `B2C-01` a `B2C-04` e `DISP-01` a `DISP-03`
+> **Abrange:** `B2C-01` a `B2C-06` e `DISP-01` a `DISP-03` (preço dual com
+> [fluxo cliente↔prestador](PLANO_FLUXO_CLIENTE_PRESTADOR.md))
 > **Não autoriza:** gateway, SMS pago, cloud ou aumento automático de preço
-> **Estado de `B2C-01`:** schema/API/core/apps implementados em 2026-08-07; dashboard e execução da migration em banco de teste permanecem no próximo pacote
+> **Estado de `B2C-01`:** schema/API/core/apps implementados em 2026-08-07; dashboard e execução da migration em banco de teste permanecem no próximo pacote; foto obrigatória decidida (`DEC-01`), ativação em `B2C-05`
 
 ## 1. Objetivos e invariantes
 
@@ -63,12 +64,18 @@ Não fazer backfill SQL frágil sobre texto localizado. Se o backfill for necess
 
 ### 2.4 Foto da encomenda
 
-Recomendação: exigir ao menos uma foto antes de publicar uma oferta, com `REQUIRE_PRODUCT_PHOTO=false` durante a migração e ativação somente após `DEC-01`.
+**Decisão (`DEC-01`, 2026-08-07):** exigir ao menos uma foto na **criação** de
+pedido novo. Pedidos legados sem foto continuam legíveis; criação sem foto é
+rejeitada. Ativação em código: pacote `B2C-05` (após `BASE-04` / `B2C-01B`).
 
 - validar MIME, tamanho, quantidade e host no backend;
 - armazenar chaves/URLs privadas conforme o adapter de storage;
 - não aceitar URL arbitrária enviada pelo cliente;
 - não reutilizar `collectionProofUrl` ou `deliveryProofUrl`.
+
+Campos estruturados (`product_type`, `package_size`, `weight_kg`) e endereços de
+coleta/entrega também são obrigatórios em pedidos novos (`DEC-18`). Detalhe em
+[PLANO_FLUXO_CLIENTE_PRESTADOR.md](PLANO_FLUXO_CLIENTE_PRESTADOR.md).
 
 ### 2.5 Aceite de `B2C-01`
 
@@ -80,26 +87,37 @@ Recomendação: exigir ao menos uma foto antes de publicar uma oferta, com `REQU
 - smoke B2C permanece verde para pedido novo e pedido histórico lido pelo fallback
   de `notes`; o modelo B2B removido não faz parte do aceite.
 
-## 3. `B2C-02` — preço v2
+## 3. `B2C-02` — preço v2 (e extensão `B2C-06`)
 
 ### 3.1 Modelo
 
 ```text
-subtotal = base + distância + adicional_tamanho + adicional_peso
+km_rate = fulfillment_mode == IMMEDIATE
+          ? settings.price_per_km_immediate
+          : settings.price_per_km_scheduled
+
+subtotal = base + (distância_km * km_rate) + adicional_tamanho + adicional_peso
 priceCents = max(minFee, arredondar(subtotal))
 platformFeeCents = arredondar(priceCents * percentual_plataforma)
 courierFeeCents = priceCents - platformFeeCents
 ```
 
+Invariante de produto (`DEC-19`): `price_per_km_immediate` > `price_per_km_scheduled`
+na validação do admin. Valores numéricos finais: `DEC-02`.
+
 Persistir no pedido:
 
+- `fulfillment_mode` — `IMMEDIATE` | `SCHEDULED`;
 - `pricing_version` — identifica a configuração/regra;
-- `pricing_breakdown` — componentes em centavos e entradas relevantes;
+- `pricing_breakdown` — componentes em centavos (inclui `km_rate` usado);
 - `quoted_at` — instante da cotação;
 - `price_cents` e `courier_fee_cents` — snapshot já existente;
 - `platform_fee_cents` — persistir explicitamente ou provar derivação invariável.
 
 Configuração pode continuar em settings/Redis, mas cada pedido deve guardar dados suficientes para auditoria mesmo que a configuração mude.
+
+Modos, aceite antecipado e UI do prestador: ver
+[PLANO_FLUXO_CLIENTE_PRESTADOR.md](PLANO_FLUXO_CLIENTE_PRESTADOR.md).
 
 ### 3.2 Prévia e confirmação
 
@@ -204,7 +222,7 @@ Essas métricas alimentam `TRIP-00` e a futura decisão de aumento de preço.
 
 | Ordem | Pacote | Dependência | Pode ser entregue sozinho? |
 | --- | --- | --- | --- |
-| 1 | `B2C-01` schema/API/core/apps | contrato fechado | Sim, com foto opcional por flag |
+| 1 | `B2C-01` schema/API/core/apps | contrato fechado | Sim (obrigatoriedade de foto na criação = `B2C-05`) |
 | 2 | `B2C-01B` dashboard B2C | `B2C-01` | Sim |
 | 3 | `B2C-02` preço v2 | campos estruturados | Sim |
 | 4 | `B2C-03` avaliação mútua | nenhuma externa | Sim |

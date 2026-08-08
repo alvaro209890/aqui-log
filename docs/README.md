@@ -21,6 +21,9 @@ sem reconstruir contexto a partir de commits antigos.
 | [`00-governanca/`](00-governanca/) | Fluxo dos agentes, checklists e templates | O processo de trabalho mudar |
 | [`01-produto/`](01-produto/) | Jornadas e identidade do produto | Uma decisão de experiência mudar |
 | [`02-planejamento/`](02-planejamento/) | Roadmap, backlog e planos detalhados | Prioridade, gate ou requisito mudar |
+
+Planos detalhados em [`02-planejamento/planos/`](02-planejamento/planos/), incluindo
+o [fluxo cliente↔prestador](02-planejamento/planos/PLANO_FLUXO_CLIENTE_PRESTADOR.md).
 | [`03-referencia/`](03-referencia/) | Arquitetura, API, ambiente e deploy | O sistema observado mudar |
 | [`04-status/`](04-status/) | Estado atual, handoff, cobertura e changelog | Toda sessão relevante |
 | [`99-arquivo/`](99-arquivo/) | Material histórico não executável | Somente para preservar contexto |

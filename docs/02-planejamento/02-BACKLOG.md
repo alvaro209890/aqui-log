@@ -12,15 +12,23 @@
 | 2 | `B2C-01B` | `BLOCKED` | P0 | Dashboard filtra e relata encomendas B2C | concluir `BASE-04` |
 | 3 | `UX-01C` | `BLOCKED` | P1 | Dashboard usa tokens laranja equivalentes | concluir `BASE-04`; não misturar com `B2C-01B` |
 | 4 | `UX-02` | `BLOCKED` | P1 | Fluxos principais passam por QA visual/acessibilidade | `UX-01C`, navegador e dispositivo/emulador |
-| 5 | `B2C-02` | `BLOCKED` | P1 | Preço v2 versionado com breakdown | `B2C-01B`; `DEC-02` bloqueia valores finais |
-| 6 | `B2C-03` | `BLOCKED` | P1 | Avaliação mútua por papel | baseline estável e migração de ratings definida |
-| 7 | `DISP-01` | `BLOCKED` | P1 | Reoferta limitada por anéis e recusas | `B2C-02`, `DEC-03` |
-| 8 | `PAY-01` | `BLOCKED` | P2 | Ledger interno sem gateway | autorização explícita + `B2C-02` |
-| 9 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-01B`, `B2C-02B`, `B2C-03A`, `DISP-03` |
-| 10 | `LOT-01` | `BLOCKED` | P3 | Aceite atômico de lote manual | `B2C-01B`, `B2C-02B`, `B2C-03A`, `DISP-03`, `DEC-10`, `DEC-11` |
+| 5 | `B2C-05` | `BLOCKED` | P0 | Foto + campos obrigatórios na criação | `B2C-01B`; `DEC-01` decidida |
+| 6 | `B2C-02` | `BLOCKED` | P1 | Preço v2 versionado com breakdown | `B2C-01B`; `DEC-02` bloqueia valores finais |
+| 7 | `B2C-06` | `BLOCKED` | P1 | Dual km imediato/agendado + settings admin | `B2C-02` (ou unificado); `DEC-19`; valores `DEC-02` |
+| 8 | `SCHED-01` | `BLOCKED` | P1 | Modo `SCHEDULED` individual + aceite antecipado | `B2C-06`; `DEC-18`, `DEC-20` |
+| 9 | `COUR-01` | `BLOCKED` | P1 | App prestador: Em andamento + Agenda | `SCHED-01`; `DEC-21` |
+| 10 | `PICK-01` | `BLOCKED` | P1 | Código de recolhimento na coleta | `B2C-05`; `DEC-24` |
+| 11 | `B2C-03` | `BLOCKED` | P1 | Avaliação mútua por papel | baseline estável e migração de ratings definida |
+| 12 | `DISP-01` | `BLOCKED` | P1 | Reoferta limitada por anéis e recusas | `B2C-02`, `DEC-03` |
+| 13 | `PAY-01` | `BLOCKED` | P2 | Ledger interno (cliente + prestador) sem gateway | autorização explícita + `B2C-02`; `DEC-23` |
+| 14 | `COUR-02` | `BLOCKED` | P2 | Cancelamento prestador + taxa no saldo | `PAY-01`, `COUR-01`; `DEC-22` |
+| 15 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-01B`, `B2C-02B`, `B2C-03A`, `DISP-03` |
+| 16 | `LOT-01` | `BLOCKED` | P3 | Aceite atômico de lote manual | `B2C-01B`, `B2C-02B`, `B2C-03A`, `DISP-03`, `DEC-10`, `DEC-11` |
 
 Cloud, SMS, PIX, lote automático e produção não entram na fila `READY` sem o gate
 e a autorização definidos no roadmap.
+
+Plano do fluxo novo: `docs/02-planejamento/planos/PLANO_FLUXO_CLIENTE_PRESTADOR.md`.
 
 ## 2. Tarefa pronta — `BASE-04`
 
@@ -30,7 +38,8 @@ e a autorização definidos no roadmap.
   banco explicitamente descartável; aplicar todas as migrations, incluindo
   `DeliveryPackageFields` e `RemoveCompanyModel`; criar admin; executar smoke B2C;
   verificar o fluxo cliente → oferta → aceite → entrega → avaliação.
-- **Fora do escopo:** corrigir feature, refatorar código, ligar cloud ou alterar contrato.
+- **Fora do escopo:** corrigir feature, refatorar código, ligar cloud ou alterar contrato;
+  **não** implementar `B2C-05`…`PICK-01` nesta sessão.
 
 ### Passos
 
@@ -87,10 +96,25 @@ e a autorização definidos no roadmap.
 - [ ] Dashboard trata zero resultados, erro e carregamento.
 - [ ] Testes e QA do navegador têm evidência.
 
-## 4. Regras para promover uma tarefa
+## 4. Pacotes do fluxo cliente↔prestador (ainda não `READY`)
+
+Detalhe e aceite em
+`docs/02-planejamento/planos/PLANO_FLUXO_CLIENTE_PRESTADOR.md`.
+
+| ID | Resumo | Não misturar com |
+| --- | --- | --- |
+| `B2C-05` | Foto e campos obrigatórios na criação | preço dual, ledger |
+| `B2C-06` | Km imediato vs agendado + admin | tela agenda, cancelamento |
+| `SCHED-01` | Modo agendado individual + aceite antecipado | lote `LOT-02` |
+| `COUR-01` | UI Em andamento / Agenda | taxa financeira |
+| `PICK-01` | `pickup_code` na coleta | saque/gateway |
+| `COUR-02` | Cancelamento prestador + taxa no saldo | exige `PAY-01` |
+
+## 5. Regras para promover uma tarefa
 
 1. Dependências devem estar `DONE` com evidência.
-2. Gates de decisão devem estar fechados no roadmap.
+2. Gates de decisão devem estar fechados no roadmap (valores pendentes não
+   impedem desenho; impedem calibragem final).
 3. Credenciais/serviços necessários devem estar disponíveis e autorizados.
 4. O pacote deve caber em uma sessão com critérios verificáveis.
 5. Somente então o estado muda de `BLOCKED` para `READY`.

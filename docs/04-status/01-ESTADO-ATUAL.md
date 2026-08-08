@@ -50,11 +50,13 @@ Documento de evidência: `docs/04-status/entregas/2026-08-07-ENTREGA-MOBILE-B2C.
 
 Executar somente `BASE-04`, descrito em
 `docs/02-planejamento/02-BACKLOG.md`. Depois da evidência verde, promover
-`B2C-01B` para `READY`.
+`B2C-01B` para `READY`. O fluxo cliente↔prestador (`B2C-05`…`PICK-01`) está
+**planejado** em `planos/PLANO_FLUXO_CLIENTE_PRESTADOR.md` — ainda sem código.
 
 ## 6. Bloqueios externos
 
 - Firebase/Render/Vercel: exigem pedido explícito e credenciais.
 - SMS: exige escolha de provedor e sandbox (`DEC-04`).
-- Pagamentos/PIX: exigem autorização explícita e gates `PAY-01/02`.
-- Valores finais de preço v2: exigem `DEC-02`.
+- Pagamentos/PIX: exigem autorização explícita e gates `PAY-01/02` (`DEC-05`/`DEC-06`).
+- Valores finais de preço v2 / km dual: exigem `DEC-02`.
+- Cutoffs/taxa de cancelamento do prestador: `FLOW-DEC-01`.

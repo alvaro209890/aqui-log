@@ -99,12 +99,32 @@ Objetivo: provar contabilidade e regras usando apenas saldo de teste creditado p
 
 ### Política de cancelamento a fechar
 
+#### Cliente (reserva)
+
 | Momento | Recomendação inicial |
 | --- | --- |
 | Antes de aceite | liberar 100% |
 | Aceito, antes da coleta | regra configurável com possível taxa; decisão explícita |
 | Após coleta | não automatizar na v1; abrir análise administrativa |
 | Cancelamento do sistema/sem motoboy | liberar 100% |
+
+#### Prestador (saldo interno) — `DEC-22`
+
+| Momento | Regra decidida |
+| --- | --- |
+| Pré-coleta, dentro do cutoff | Debita `courier_cancel_fee_cents` (congelada no aceite) do saldo disponível; pedido volta à fila |
+| Pré-coleta, fora do cutoff | Recusa; só suporte/admin redespacha |
+| Saldo < taxa | Cancelamento **recusado** (sem saldo negativo) |
+| Pós-coleta | Só suporte (custódia/devolução) |
+
+Revoga a regra antiga “desistência sem penalidade dura” pré-coleta. Detalhe:
+[PLANO_FLUXO_CLIENTE_PRESTADOR.md](PLANO_FLUXO_CLIENTE_PRESTADOR.md) §6.
+
+### Saldo do prestador e saque — `DEC-23`
+
+O crédito MVP do motoboy evolui para conta do ledger. Dinheiro real ao prestador
+só via **saque** (`PAY-02`), após janela de contestação (`DEC-17`, valor pendente).
+Taxas de cancelamento do prestador são lançamentos do ledger (`PAY-01A` / `COUR-02`).
 
 ### Aceite
 
@@ -165,12 +185,14 @@ Pagar.me pode ser avaliado por já existir experiência no AquiResolve, mas isso
 ## 8. Decisões pendentes
 
 - `PAY-DEC-01` (`DEC-05`) — autorizar ou não `PAY-01` no próximo ciclo.
-- `PAY-DEC-02` (`DEC-13`) — política de cancelamento após aceite/coleta.
+- `PAY-DEC-02` (`DEC-13`) — política de cancelamento do **cliente** após aceite/coleta.
+- `PAY-DEC-02b` (`DEC-22`) — **decidida** a lógica da taxa do prestador; valores em `FLOW-DEC-01`.
 - `PAY-DEC-03` — recarga mínima e saldo máximo.
 - `PAY-DEC-04` (`DEC-06`) — gateway PIX e conta comercial.
 - `PAY-DEC-05` — quem assume taxas e devoluções.
-- `PAY-DEC-06` (`DEC-17`) — quando o crédito do motoboy se torna sacável.
+- `PAY-DEC-06` (`DEC-17`) — quando o crédito do motoboy se torna sacável (janela).
 - `PAY-DEC-07` — necessidade fiscal/contábil antes do piloto pago.
+- `DEC-23` — **decidida:** modelo = saldo interno sacável (implementação ainda `PAY-*`).
 
 ## 9. Fora de escopo inicial
 

@@ -2,8 +2,9 @@
 
 > **Atualizado:** 2026-08-07
 > **Status:** fonte de verdade para prioridade, dependências e ordem de execução
-> **Rodada atual:** reorganização e normalização do planejamento para execução por
-> agentes. **Somente documentação; nenhum código ou runtime foi alterado.**
+> **Rodada atual:** formalização do fluxo cliente↔prestador (modos imediato/agendado,
+> foto obrigatória, cancelamento com taxa, código de recolhimento, saldo sacável).
+> **Somente documentação; nenhum código ou runtime foi alterado.**
 > **Produto principal:** cliente pessoa física → motoboy, sem intermediário no fluxo
 > **Regra operacional:** desenvolvimento e validação local primeiro; nenhuma cloud é ligada sem pedido explícito do Álvaro
 
@@ -14,10 +15,15 @@ Transformar o MVP B2C já funcional em um piloto confiável, mensurável e prepa
 O fluxo que precisa permanecer íntegro em todas as fases é:
 
 ```text
-cliente cadastra → descreve encomenda → recebe preço do servidor → cria pedido
-→ sistema oferece → motoboy aceita → coleta/prova → trânsito → entrega/prova
-→ cliente e motoboy avaliam
+cliente cadastra → descreve encomenda (foto+peso+endereços obrigatórios)
+→ escolhe IMMEDIATE ou SCHEDULED → recebe preço do servidor (km conforme modo)
+→ cria pedido → sistema oferece (aceite antecipado permitido no agendado)
+→ motoboy aceita → agenda/em andamento → coleta (pickup_code + prova)
+→ trânsito → entrega/prova → cliente e motoboy avaliam
+→ saldo interno do motoboy (saque futuro)
 ```
+
+Plano detalhado do fluxo: [PLANO_FLUXO_CLIENTE_PRESTADOR.md](planos/PLANO_FLUXO_CLIENTE_PRESTADOR.md).
 
 ## 2. Como os documentos se relacionam
 
@@ -26,6 +32,7 @@ cliente cadastra → descreve encomenda → recebe preço do servidor → cria p
 | [Roadmap](01-ROADMAP.md) | Ordem executiva, dependências, gates e Definition of Done | **Sim — fonte principal** |
 | [Plano B2C](planos/PLANO_B2C.md) | Estado funcional e visão do domínio B2C | Não; segue este roadmap |
 | [Confiança e preço](planos/PLANO_CONFIANCA_E_PRECO.md) | Encomenda, preço, avaliações, SMS e oferta | Não; detalha `B2C-01..04` |
+| [Fluxo cliente↔prestador](planos/PLANO_FLUXO_CLIENTE_PRESTADOR.md) | Modos, aceite antecipado, cancelamento, recolhimento, saldo | Não; detalha `B2C-05/06`, `SCHED-01`, `COUR-*`, `PICK-01` |
 | [Diretrizes visuais](../01-produto/02-DIRETRIZES-VISUAIS.md) | Paleta e identidade laranja | Não; detalha `UX-01` |
 | [Pagamentos](planos/PLANO_PAGAMENTOS.md) | Ledger, reserva, estorno e gateway | Não; detalha `PAY-01/02` |
 | [Lote](planos/PLANO_LOTE_MULTI_PEDIDO.md) | Lote, blocos, anti-atraso e agrupamento | Não; detalha `LOT-*`/`TRIP-*` |
@@ -51,9 +58,11 @@ cliente cadastra → descreve encomenda → recebe preço do servidor → cria p
 | Tema | Decisão atual |
 | --- | --- |
 | Produto | Produto **B2C**: três perfis — prestador (motoboy), cliente e admin. Modelo empresa/B2B removido em 2026-08-07. |
-| Preço | Calculado e congelado pelo servidor. O cliente nunca define `priceCents` ou `courierFeeCents`. |
+| Preço | Calculado e congelado pelo servidor. O cliente nunca define `priceCents` ou `courierFeeCents`. Km imediato > km agendado (`DEC-19`); valores em `DEC-02`. |
 | Persistência | PostgreSQL continua fonte de verdade; Redis continua suporte para locks, jobs e settings. |
-| Encomenda | Campos próprios entregues em 2026-08-07; manter fallback de `notes` até medir que o legado não é mais usado. |
+| Encomenda | Campos próprios entregues; **foto obrigatória** em pedidos novos (`DEC-01`). Fallback de `notes` permanece até medir legado. |
+| Modos | `IMMEDIATE` vs `SCHEDULED` (`DEC-18`); aceite antecipado do agendado (`DEC-20`); tela Agenda no app prestador (`DEC-21`). |
+| Prestador / dinheiro | Cancelamento pré-coleta com taxa no saldo (`DEC-22`); pagamento = saldo interno sacável (`DEC-23`); coleta com `pickup_code` (`DEC-24`). |
 | Mapas | OSM/Leaflet/`flutter_map` continuam no piloto; provedor pago permanece em aberto. |
 | Storage e push | Firebase é o alvo futuro, mas o adapter local deve continuar funcionando. |
 | Identidade | Tema laranja inspirado no AquiResolve implementado nos dois apps Flutter; dashboard ainda segue a identidade anterior. |
@@ -68,10 +77,12 @@ cliente cadastra → descreve encomenda → recebe preço do servidor → cria p
 | Cadastro/login de cliente | ✅ | Telefone ainda não é verificado por SMS |
 | Pedido B2C e auto-dispatch | ✅ | Pedidos novos usam campos próprios; `notes` permanece como fallback legado |
 | Oferta/aceite do motoboy | ✅ | Apenas um candidato por rodada; baixa transparência quando ninguém aceita |
-| Preço server-side | ✅ básico | Não considera peso/tamanho e não expõe versão/breakdown persistido |
+| Preço server-side | ✅ básico | Sem dual km imediato/agendado; sem versão/breakdown persistido |
+| Modo agendado individual | ❌ | Só `scheduledAt` legado / blocos `LOT-02` em design; falta `SCHED-01` |
+| Código de recolhimento | ❌ | Só código público `AQL-*` + foto de coleta |
 | Provas, GPS e tracking | ✅ piloto | Storage local; retenção e push real pendentes |
 | Avaliação | ✅ unilateral | Falta avaliação mútua com origem explícita |
-| Carteira do motoboy | ✅ básica | Não equivale a pagamento/repasse financeiro real |
+| Carteira do motoboy | ✅ básica | Crédito MVP; falta ledger + taxa cancelamento + saque (`DEC-22/23`) |
 | Carteira/pagamento do cliente | Não existe | Exige ledger, política de cancelamento e idempotência antes de gateway |
 | Dashboard | ✅ operacional | Falta gestão B2C por cliente/categoria/peso e futura identidade visual |
 | Cloud | Estrutura apenas | Sem projeto ou credencial conectado segundo a documentação e o Segundo Cérebro |
@@ -87,7 +98,9 @@ cliente cadastra → descreve encomenda → recebe preço do servidor → cria p
 | BASE-03 | ✅ | Congelar contratos aditivos de `B2C-01` | DTO, resposta, compatibilidade e rollback implementados/documentados |
 | BASE-04 | ▶️ | Validar o baseline em runtime local | Migrations atuais aplicadas em banco descartável, health e smoke B2C registrados |
 
-`BASE-02` não impede preparar código aditivo, mas impede ativar obrigatoriedade de foto, aumento de preço ou cobrança.
+`BASE-02` / `DEC-01`: a **obrigatoriedade de foto** foi decidida (2026-08-07). A
+ativação em código fica em `B2C-05` após `BASE-04`/`B2C-01B`. Cobrança real e
+valores finais de km continuam atrás de `DEC-05`/`DEC-02`.
 
 ### Fase 1 — fundação da encomenda
 
@@ -96,20 +109,23 @@ cliente cadastra → descreve encomenda → recebe preço do servidor → cria p
 | B2C-01 | ✅ | `BASE-03` | Colunas próprias para tipo, tamanho, peso, alcance e fotos; leitura compatível com `notes` legado |
 | B2C-01A | ✅ | `B2C-01` | Apps e core consomem campos próprios com fallback legado |
 | B2C-01B | ⏳ | `BASE-04` | Dashboard filtra/relata por cliente, categoria, tamanho e peso |
+| B2C-05 | ⏳ | `B2C-01B`, `DEC-01` | Obrigatoriedade de foto + peso/tipo/tamanho/endereços na criação; legados legíveis |
 
 **Estratégia de migração:** mudança aditiva, leitura dupla durante a transição e remoção do parser legado somente em uma versão posterior, após medir que não existem pedidos antigos dependentes dele.
 
 **Gate de saída:** pedido novo e pedido legado precisam abrir nos dois apps e no dashboard; migration precisa subir e reverter em banco de teste.
 
-### Fase 2 — preço v2 e transparência
+### Fase 2 — preço v2, modos e transparência
 
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
 | B2C-02 | ⏳ | `B2C-01` | Preço com faixas de peso/tamanho e configuração server-side |
 | B2C-02A | ⏳ | `B2C-02` | Persistir breakdown e versão da regra usada no pedido |
 | B2C-02B | ⏳ | `B2C-02` | Prévia de preço antes da confirmação, sem confiar em valores enviados pelo app |
+| B2C-06 | ⏳ | `B2C-02` ou unificado, `DEC-19` | Dual `price_per_km_immediate` / `price_per_km_scheduled` + validação imediato > agendado |
+| SCHED-01 | ⏳ | `B2C-06`, `DEC-18`, `DEC-20` | Modo `SCHEDULED` individual, janelas e aceite antecipado |
 
-O preço de uma oferta aceita é imutável. Qualquer aumento posterior exige nova oferta e consentimento do cliente; não deve ser aplicado silenciosamente.
+O preço de uma oferta aceita é imutável. Qualquer aumento posterior exige nova oferta e consentimento do cliente; não deve ser aplicado silenciosamente. Troca de modo exige novo pedido/recotação.
 
 **Gate de saída:** invariantes `price = courierFee + platformFee`, arredondamento, mínimo, faixas limítrofes e replay da regra antiga cobertos por testes.
 
@@ -133,15 +149,23 @@ SMS não bloqueia a fundação de dados nem o preço v2, mas é gate para abrir 
 
 Falha de aceite deve terminar em estado recuperável e compreensível, nunca em loop infinito de reofertas.
 
-### Fase 5 — carteira interna do cliente
+### Fase 5 — carteira interna (cliente e prestador)
 
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
-| PAY-01 | ⏸️ | Autorização de pagamentos, `B2C-02` | Ledger imutável, saldo disponível/reservado, reserva e estorno sem gateway |
-| PAY-01A | ⏳ | `PAY-01` | Políticas de cancelamento e liquidação idempotente ao concluir entrega |
+| PAY-01 | ⏸️ | Autorização de pagamentos (`DEC-05`), `B2C-02` | Ledger imutável; saldos cliente e prestador; reserva/estorno sem gateway |
+| PAY-01A | ⏳ | `PAY-01`, `DEC-22` | Políticas de cancelamento (cliente + taxa do prestador no saldo) e liquidação idempotente |
 | PAY-01B | ⏳ | `PAY-01A` | Operação administrativa auditada para crédito manual de ambiente de teste |
+| COUR-02 | ⏳ | `PAY-01`, `COUR-01`, `DEC-22` | Cancelamento do prestador com cutoff + débito de taxa; recusa se saldo insuficiente |
 
-Nenhuma integração PIX/cartão entra nesta fase. O objetivo é provar a contabilidade e as transições.
+Nenhuma integração PIX/cartão entra nesta fase. O objetivo é provar a contabilidade e as transições. O **modelo** de saldo sacável do prestador está decidido (`DEC-23`); saque real continua em `PAY-02`.
+
+### Fase 5b — agenda do prestador e recolhimento
+
+| ID | Status | Dependências | Entrega |
+| --- | --- | --- | --- |
+| COUR-01 | ⏳ | `SCHED-01`, `DEC-21` | App prestador: Em andamento + Agenda |
+| PICK-01 | ⏳ | `B2C-05`, `DEC-24` | `pickup_code` na transição de coleta (+ foto de prova) |
 
 ### Fase 6 — prontidão operacional e publicação
 
@@ -220,10 +244,12 @@ O estado canônico de todas as decisões está em
 Para a fila próxima:
 
 - `BASE-04` e `B2C-01B` não dependem de decisão nova do dono;
-- `DEC-01` bloqueia somente tornar foto obrigatória;
-- `DEC-02` bloqueia os valores finais de `B2C-02`;
+- `DEC-01` está **DECIDIDA** (foto obrigatória); ativação em código = `B2C-05`;
+- `DEC-18`…`DEC-24` estão **DECIDIDAS** (fluxo cliente↔prestador); valores em
+  `DEC-02` / `FLOW-DEC-*` / `DEC-17` continuam pendentes;
+- `DEC-02` bloqueia os **valores finais** de `B2C-02`/`B2C-06` (estrutura liberada);
 - `DEC-03` bloqueia `DISP-01/02`;
-- cloud, SMS e pagamentos continuam atrás de autorização explícita.
+- cloud, SMS e pagamentos reais continuam atrás de autorização explícita.
 
 ## 9. Definition of Done comum
 
@@ -263,6 +289,10 @@ ser simplesmente omitida.
 | Admin com poder sem trilha | Confirmação dupla + motivo obrigatório + audit log + guards da máquina de estados |
 | Guarda/segurança e LGPD da frota | Pino ocioso coarsificado, exposição exata só em viagem ativa, permissão "ver frota" + audit de acesso |
 | Payout duplicado após reclamação tardia | Janela de contestação (48–72 h) e clawback no termo do motoboy |
+| Misturar imediato e agendado no mesmo lote | Pré-vet rejeita modos temporais mistos (`DEC-18`) |
+| Cancelamento prestador gera saldo negativo | Recusar cancelamento se saldo < taxa (`DEC-22`) |
+| Coleta sem prova de posse | `pickup_code` + foto obrigatórios (`DEC-24`) |
+| Preço/km errado após mudança de settings | Snapshot de `km_rate` e versão no pedido (`DEC-19`) |
 
 ## 11. Próximo pacote recomendado
 
@@ -274,6 +304,8 @@ Ao retomar:
    `1785200000000-RemoveCompanyModel`;
 2. executar health, smoke B2C vivo e verificações de build/lint/test;
 3. registrar toda evidência e promover `B2C-01B` para `READY` somente se o baseline passar;
-4. manter `notes` como fallback de leitura e foto opcional até `DEC-01` ser confirmada.
+4. manter `notes` como fallback de leitura; **não** implementar `B2C-05`…`PICK-01`
+   nesta sessão — só após baseline e na ordem do
+   [plano de fluxo](planos/PLANO_FLUXO_CLIENTE_PRESTADOR.md).
 
 Não iniciar Firebase, deploy, gateway ou rota multi-pedido como parte desse pacote.

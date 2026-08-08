@@ -8,20 +8,19 @@
 
 ## 1. Visão geral (em 5 linhas)
 
-1. **O Aqui Log é um app de entregas B2C**: a pessoa física se cadastra sozinha, descreve a encomenda (tipo, tamanho, peso, foto, alcance) e pede uma entrega.
-2. **Não há atendente nem intermediário no meio**: o próprio sistema publica o pedido para os motoboys disponíveis, e o motoboy decide se aceita.
-3. **Tudo que importa é rastreado**: status do pedido, GPS ao vivo, fotos de prova na coleta e na entrega, avaliação e extrato do motoboy.
-4. **O preço é sempre calculado no servidor** — o app nunca "chuta" valor; cliente e motoboy veem o mesmo número.
-5. **Para onde vai**: o motoboy poderá aceitar vários pedidos juntos (lote, inclusive entre municípios em blocos agendados), o dono acompanhará a frota num mapa em tempo real, o painel admin controlará quase tudo, e o dinheiro passará a ser controlado por uma carteira contábil (ledger) antes de qualquer gateway de pagamento real.
+1. **O Aqui Log é um app de entregas B2C**: a pessoa física se cadastra sozinha, descreve a encomenda (tipo, tamanho, peso, **foto obrigatória**, alcance) e pede uma entrega **imediata** ou **agendada**.
+2. **Não há atendente nem intermediário no meio**: o próprio sistema publica o pedido para os motoboys disponíveis, e o motoboy decide se aceita — **inclusive aceitar agendado no ato**.
+3. **Tudo que importa é rastreado**: status do pedido, GPS ao vivo, **código de recolhimento** + fotos de prova na coleta e na entrega, avaliação e extrato do motoboy.
+4. **O preço é sempre calculado no servidor** — km imediato mais caro que km agendado (configurável no admin); cliente e motoboy veem o mesmo número congelado.
+5. **Para onde vai**: agenda do prestador (em andamento + agendados), cancelamento do prestador com taxa no saldo, saldo interno sacável, lote multi-pedido, frota no dashboard, painel admin e ledger antes de gateway real.
 
 ```
-HOJE (funcional)      PLANEJADO (design aprovado)      FUTURO (atrás de gate)
-cliente → pedido      aceite de lote pelo motoboy     PIX/gateway, SMS real,
-→ motoboy aceita      blocos agendados                 foto obrigatória, nuvem,
-→ entrega + prova     mapa de frota no dashboard      agrupamento automático,
-→ avaliação           painel admin completo           payout bancário real
-                      suporte/reclamações com
-                      "prova reversa"
+HOJE (funcional)      PLANEJADO (design aprovado)           FUTURO (atrás de gate)
+cliente → pedido      IMMEDIATE vs SCHEDULED + km dual     PIX/gateway, SMS real,
+→ motoboy aceita      aceite antecipado + Agenda           nuvem, agrupamento
+→ entrega + prova     pickup_code + taxa cancel prestador  automático
+→ avaliação           saldo interno sacável (modelo)
+                      lote / frota / admin / suporte
 ```
 
 ---
@@ -47,17 +46,25 @@ Regra de ouro: **o Sistema é o árbitro**. Ele não decide se a entrega acontec
 - *Futuro:* verificação de telefone por SMS antes de contas públicas em produção (gate `DEC-04`).
 
 ### Passo 2 — Pedir
-- **O que faz:** descreve a encomenda e os endereços de coleta e entrega.
-- **Campos da encomenda:** tipo (7 categorias: Documento, Alimento, Eletrônico, Frágil, Roupas, Medicamento, Outro), tamanho (P/M/G), peso (kg), alcance (mesma cidade / outra cidade ou município), até 3 fotos e observação livre.
-- **O que VÊ:** formulário simples; a foto aparece no card do motoboy (hoje opcional — obrigatória no futuro).
-- *Planejado (agendamento):* o cliente pode escolher dia e janela de coleta para pedidos agendados (lotes intermunicipais). O preço é o do momento da criação (congelado). Se o bloco não formar, o pedido vira individual automaticamente até X min antes da janela — com aviso no app.
-- **Quando pode pedir:** apenas estados permitidos — depois de aceito, não dá para mudar a encomenda.
+- **O que faz:** descreve a encomenda e os endereços de coleta e entrega; escolhe
+  **imediato** (`IMMEDIATE`) ou **agendado** (`SCHEDULED` com janela).
+- **Campos obrigatórios (decidido `DEC-01`/`DEC-18`):** tipo, tamanho (P/M/G),
+  peso (kg), alcance, **≥ 1 foto**, endereços de saída e entrega. Observação livre opcional.
+- **O que VÊ:** formulário; a foto no card do motoboy. *Hoje no código a foto ainda
+  pode estar opcional — ativação em `B2C-05`.*
+- **Agendamento individual (`SCHED-01`):** dia/janela de coleta; preço com km
+  **menor** que o imediato (`DEC-19`), congelado na criação. Prestador pode aceitar
+  na hora (`DEC-20`). *Distinto* dos blocos intermunicipais `LOT-02`.
+- **Quando pode pedir:** apenas estados permitidos — depois de aceito, não dá para
+  mudar a encomenda nem o modo (troca = novo pedido).
 
 ### Passo 3 — Preço
 - **O que faz:** nada — o valor é calculado no servidor (`PricingService`).
-- **Hoje:** base + quilometragem + percentual da plataforma. **Planejado (preço v2):** breakdown transparente (base + distância + adicional de tamanho + adicional de peso), prévia do valor ANTES de confirmar e cotação com validade — se a cotação expirar, o app pede nova confirmação.
-- **O que VÊ:** o valor total. No futuro, verá o detalhamento ("por que custa isso?") e nunca pagará a mais sem uma nova proposta com o motivo.
-- **Regra de confiança:** o valor mostrado na confirmação fica **congelado** — nem atraso nem lote mudam o preço sem consentimento.
+- **Hoje:** base + quilometragem + percentual da plataforma.
+- **Planejado:** breakdown (base + distância com **km conforme modo** + tamanho +
+  peso), prévia antes de confirmar, cotação com validade.
+- **O que VÊ:** o valor total. Nunca paga a mais sem nova proposta com motivo.
+- **Regra de confiança:** valor da confirmação fica **congelado**.
 
 ### Passo 4 — Acompanhar
 - **O que VÊ:** lista de entregas + detalhe do pedido com status colorido (semântico), foto da encomenda, GPS ao vivo do motoboy e, no futuro, ETA ("chega às 15h20"), avisos de atraso e, em lote, "seu pacote está a N paradas de você" — **nunca vê** endereço/posição de paradas de outras pessoas.
@@ -98,12 +105,22 @@ CADASTRO → PEDIR → PREÇO → ACOMPANHAR → RECEBER → AVALIAR → RECLAMA
 - *Planejado (frota):* heartbeat de posição a cada 10 s em viagem, 30 s ocioso; o app mostra quando está com sinal fraco.
 
 ### Passo 3 — Oferta
-- **O que VÊ:** um card com a encomenda — tipo · tamanho · peso · alcance · foto —, código, endereços, e o repasse. Aceita ou recusa.
-- Hoje: o sistema oferece **um pedido por vez ao motoboy mais próximo** (sem concorrência de cards). *Planejado:* fila com filtro por município, janelas de coleta/entrega e ordenação por janela.
+- **O que VÊ:** um card com a encomenda — tipo · tamanho · peso · alcance · foto —,
+  código público, modo (imediato/agendado), endereços, e o repasse. Aceita ou recusa.
+- Hoje: o sistema oferece **um pedido por vez ao motoboy mais próximo**.
+  *Planejado:* pedidos `SCHEDULED` também entram na oferta **na criação** (aceite
+  antecipado). Fila com filtro por município/janelas.
 
 ### Passo 4 — Aceite individual
-- Toca "aceitar" → o servidor valida e trava (lock + revalidação) → status `ACCEPTED`. Se dois motoboys aceitam juntos, só um ganha.
-- **Preço e repasse ficam congelados no aceite.**
+- Toca "aceitar" → o servidor valida e trava → status `ACCEPTED`.
+- **Preço, repasse e taxa de cancelamento do prestador ficam congelados no aceite.**
+- Se for `SCHEDULED` com janela futura, o pedido vai para a **Agenda** até a janela.
+
+### Passo 4b — Em andamento e Agenda (`COUR-01`, `DEC-21`)
+- Tela do app com duas seções: **Em andamento** (corridas ativas) e **Agenda**
+  (agendados aceitos ainda não iniciados).
+- Cancelar só até cutoff configurável antes do início; taxa debitada do saldo
+  (`DEC-22`). Sem saldo suficiente → cancelamento recusado. Fora do cutoff → só suporte.
 
 ### Passo 5 — Aceite de lote (planejado, `LOT-01`)
 - Multi-select de vários pedidos → "Montar lote" → **pré-vet** no servidor:
@@ -120,7 +137,8 @@ CADASTRO → PEDIR → PREÇO → ACOMPANHAR → RECEBER → AVALIAR → RECLAMA
 - O motoboy se **candidata** ao bloco; a confirmação segue o mesmo aceite atômico. Um motoboy só tem um bloco ativo por faixa de tempo.
 
 ### Passo 7 — Coleta
-- Chega na retirada (`AT_PICKUP`) → coleta (`PICKED_UP`) com **foto de prova** e código do pacote.
+- Chega na retirada (`AT_PICKUP`) → coleta (`PICKED_UP`) com **código de
+  recolhimento** (`pickup_code`, distinto do `AQL-*`) **e** foto de prova (`DEC-24`).
 - Em viagem multi-parada, cada pacote tem estado e prova próprios — **falha de um não derruba os outros**.
 
 ### Passo 8 — Viagem
@@ -136,11 +154,13 @@ CADASTRO → PEDIR → PREÇO → ACOMPANHAR → RECEBER → AVALIAR → RECLAMA
 
 ### Passo 11 — Carteira
 - **O que VÊ:** extrato com créditos do MVP (repasse por entrega).
-- *Planejado (`PAY-01`):* conta contábil com saldo disponível/reservado, extrato nos apps e obrigação de repasse registrada em ledger. *Futuro (`PAY-02`+):* saque real via gateway/PIX, com janela de contestação (buffer de liquidação) antes do payout.
+- *Planejado (`PAY-01`, `DEC-23`):* saldo interno na plataforma; taxas de
+  cancelamento debitadas aqui; **saque** é o caminho para dinheiro real (`PAY-02`,
+  após janela de contestação `DEC-17`).
 
 ```
 CADASTRO → APROVAÇÃO → DISPONÍVEL → OFERTA → ACEITE (individual ou LOTE)
-→ COLETA (prova) → VIAGEM → ENTREGA (prova) → CARTEIRA
+→ AGENDA / EM ANDAMENTO → COLETA (código + prova) → VIAGEM → ENTREGA → CARTEIRA/SAQUE
 ```
 
 ---
@@ -176,7 +196,10 @@ CADASTRO → APROVAÇÃO → DISPONÍVEL → OFERTA → ACEITE (individual ou LO
 - Dashboard com entregas, status, auditoria de eventos. *Planejado (`B2C-01B`):* filtros por cliente, categoria, tamanho e peso da encomenda.
 
 ### Passo 6 — Configurações
-- O admin (via configuração server-side, não código) ajusta: preço (base, km, percentual da plataforma e, no futuro, faixas de tamanho/peso), limites de lote, tolerâncias anti-atraso, limiares de alerta e feature flags (ex.: foto obrigatória).
+- O admin ajusta: preço (base, **km imediato**, **km agendado**, %, faixas
+  peso/tamanho), cutoffs e taxa de cancelamento do prestador, parâmetros de
+  `pickup_code`, limites de lote, tolerâncias anti-atraso, limiares de alerta e
+  feature flags. Tudo versionado com rollback.
 
 ---
 
@@ -326,7 +349,8 @@ O ledger é **imutável**: cada evento financeiro gera lançamentos que somam ze
 | **Cliente cancela** (antes do aceite) | `CANCELED`; libera 100% da reserva (futuro) | toca "cancelar" | — | vê no log |
 | **Cliente cancela** (aceito, antes da coleta) | tira do lote, re-sequencia, estorno parcial por fatia | cancela (regra/taxa configurável) | perde a corrida; compensação conforme regra | — |
 | **Cliente cancela após coleta** | abre devolução/transferência e análise humana (`DEC-13` pendente) | abre o pedido | mantém custódia até concluir fluxo | analisa e decide |
-| **Motoboy desiste** (antes da 1ª coleta) | pedido volta à fila (`REQUESTED`), redespacha; registra no índice de confiabilidade | vê novo motoboy quando aceitar | desiste sem penalidade dura | — |
+| **Motoboy desiste** (antes da 1ª coleta, **dentro do cutoff**) | Debita taxa do saldo (`DEC-22`); pedido → `REQUESTED` + redespacho; registra confiabilidade | vê novo motoboy quando aceitar | cancela na Agenda/Em andamento; paga taxa | log |
+| **Motoboy tenta desistir fora do cutoff / sem saldo** | Recusa | — | bloqueado | pode redespachar com motivo |
 | **Motoboy desiste** (após 1ª coleta) | **exige autorização de suporte**; orquestra devolução | é avisado | solicita via suporte | **autoriza/recusa** |
 | **Atraso** | recalcula ETA, notifica, `AT_RISK`, oferece 3 opções ao motoboy; 120 s sem resposta → redespacho (se não coletado); > 45 min → oferece cancelamento sem custo ao cliente | pode cancelar sem custo | segue/pula/reordena; se já coletou, registra `late_delivery` e segue | vê alerta vermelho + pedido atrasado na frota |
 | **Falha de coleta** | parada `FAILED` com motivo + prova; se antes da coleta, pedido volta à fila; viagem re-sequenciada | é avisado | registra o motivo/prova | acompanha |
@@ -360,6 +384,7 @@ O ledger é **imutável**: cada evento financeiro gera lançamentos que somam ze
 
 | ID | O quê |
 |---|---|
+| `SCHED-01` / `COUR-01` / `PICK-01` / `COUR-02` / `B2C-05` / `B2C-06` | Fluxo cliente↔prestador: modos, km dual, agenda, pickup_code, taxa cancel, foto obrigatória — ver [plano](../02-planejamento/planos/PLANO_FLUXO_CLIENTE_PRESTADOR.md) |
 | `LOT-01` | Aceite de lote pelo motoboy: multi-select, pré-vet, aceite atômico all-or-nothing, máx. 3 pedidos, reserva por delivery, regras anti-atraso D-R1..D-R13 |
 | `LOT-02` | Blocos agendados intermunicipais (candidatura, janelas, reserva de capacidade, índice de pontualidade, deadhead no preço) |
 | `FROTA-01/02` | Mapa de frota: pinos, coleta, trilha, `FROTA-ALERTA-01..07`, lista e métricas |
@@ -379,7 +404,7 @@ O ledger é **imutável**: cada evento financeiro gera lançamentos que somam ze
 | `PAY-02` PIX via gateway | `DEC-06` + sandbox + `PAY-01` validado (Pagar.me é candidato, a validar) |
 | Payout real ao motoboy | Viabilidade regulatória/operacional + janela de contestação definida |
 | Validação de telefone por SMS (`B2C-04`) | `DEC-04` + provedor/sandbox — pré-requisito para cadastro público em produção |
-| Foto obrigatória antes de publicar oferta | `DEC-01` (flag já existe desligada) |
+| Foto obrigatória antes de publicar / criar | `DEC-01` **decidida**; ativação em código = `B2C-05` |
 | Publicação em nuvem | Gates operacionais + pedido explícito do dono |
 | Cartão tokenizado | PIX estável e necessidade comprovada |
 | Agrupamento automático operacional | Gate `TRIP-00` (medir densidade real) |

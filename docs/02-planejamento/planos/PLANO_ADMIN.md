@@ -126,8 +126,11 @@ A especificação completa está no [plano de suporte](PLANO_SUPORTE_RECLAMACOES
 
 - **Mostra:** catálogo de `app_settings` versionados com valor atual, autor, data e anterior.
 - **Permite fazer (tudo editável no painel, com efeito imediato validado no servidor):**
-  - Feature flags (foto obrigatória `DEC-01`, lote, avaliação mútua, módulo de frota);
-  - Preços e faixas de peso/tamanho (`B2C-02`: base, por km, %, faixas) com **prévia do efeito** e versão da regra;
+  - Feature flags (foto obrigatória alinhada a `DEC-01`, lote, avaliação mútua, módulo de frota);
+  - Preços e faixas (`B2C-02`/`B2C-06`: base, **km imediato**, **km agendado**, %, faixas) com validação `km_imediato > km_agendado`, prévia e versão;
+  - Cancelamento do prestador: `courier_cancel_cutoff_minutes_*`, `courier_cancel_fee_cents` (`DEC-22`);
+  - Recolhimento: parâmetros de `pickup_code` (`DEC-24`);
+  - Agendamento: `min_schedule_lead_minutes`;
   - Tolerâncias anti-atraso D-R1..D-R13 (folgas 10/15/45 min, timeout 120 s, tolerância 15 min, cancelamento grátis 45 min);
   - Limiares `FROTA-ALERTA-01..07` (amarelo/vermelho, tempos de "sem sinal");
   - Limites de lote (`LOT-DEC-04`) e janela de agrupamento (`DEC-10`);
@@ -211,7 +214,12 @@ aplicável e testes de autorização.
 - **Aprovação em lote de cadastros sem revisão individual** (documentos exigem olho humano).
 - **Mensagens em nome do cliente ou do motoboy sem histórico.**
 
-**Fora para v2:** banir com retenção de documentos, edição de cadastro com justificativa digital, reordenação de paradas em voo, reconciliação automática com gateway (`PAY-02`), suporte ao cliente final (chat público), penalidades financeiras reais e agrupamento automático operacional (`TRIP-01/02`).
+**Fora para v2:** banir com retenção de documentos, edição de cadastro com justificativa digital, reordenação de paradas em voo, reconciliação automática com gateway (`PAY-02`), suporte ao cliente final (chat público) e agrupamento automático operacional (`TRIP-01/02`).
+
+> **Nota (2026-08-07):** taxa de cancelamento do **prestador** no saldo interno
+> (`DEC-22` / `COUR-02`) **não** está mais “fora para v2” — está no desenho do
+> [fluxo cliente↔prestador](PLANO_FLUXO_CLIENTE_PRESTADOR.md). Continua fora:
+> penalidades arbitrárias fora do ledger e payout sem `PAY-02`.
 
 ---
 
@@ -225,7 +233,7 @@ aplicável e testes de autorização.
 | `ADMIN-04` | Frota no painel | `FROTA-01`, depois `FROTA-02` | Páginas Frota/Alertas, ack auditado e ações de `FROTA-ALERTA-05`; progresso multi-parada com `FROTA-02`. |
 | `ADMIN-05` | Viagens e lotes | `LOT-01`, depois `LOT-02` | Ver/reordenar paradas (revalidando invariantes), remover pedido do lote, cancelar lote, intervenção com motivo; blocos agendados após `LOT-02`. |
 | `ADMIN-06` | Reclamações/suporte | `ADMIN-02`, `ADMIN-03`, `SUP-01..03` | Fila, atribuição, resposta, resolução, estorno e penalização (fluxo detalhado em `PLANO_SUPORTE_RECLAMACOES.md`). |
-| `ADMIN-07` | Configurações, notificações, avaliações | `B2C-02` (preços v2), `B2C-03` (avaliação mútua) | Editor de `app_settings` versionado com rollback, templates e disparos manuais, moderação de avaliações. |
+| `ADMIN-07` | Configurações, notificações, avaliações | `B2C-02`/`B2C-06` (preços), `B2C-03` | Editor de `app_settings` versionado (inclui km dual, cutoffs/taxa prestador, pickup_code), templates, moderação |
 
 Cada fase fecha com: testes de autorização por papel, teste de confirmação dupla (motivo vazio rejeitado), `pnpm build/lint/test/smoke` verdes e `Definition of Done` do roadmap seção 9.
 

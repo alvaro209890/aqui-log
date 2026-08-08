@@ -72,7 +72,13 @@ Invariantes (herdados + novos):
 
 ### 4.2 Blocos agendados intermunicipais
 
+> **Distinção:** pedido `SCHEDULED` **individual** (`SCHED-01`, aceite antecipado,
+> preço/km agendado) ≠ **bloco** `scheduled_lots` abaixo. Ver
+> [PLANO_FLUXO_CLIENTE_PRESTADOR.md](PLANO_FLUXO_CLIENTE_PRESTADOR.md).
+> Lote **não** mistura `IMMEDIATE` e `SCHEDULED` no mesmo trip.
+
 - R2.1. Pedidos com `scheduled_at` futuro e destino em município diferente da coleta são elegíveis a **blocos agendados**, publicados por (origem, destino, dia): "Cuiabá → Rondonópolis, 3 pedidos, coleta 07h–08h, entrega até 12h, repasse R$ 84".
+- R2.1b. Pedido agendado individual pode existir sem bloco; aceito antecipadamente e listado na Agenda do app prestador.
 - R2.2. Motoboy **se candidata** ao bloco (`CANDIDATE`) ou recebe pré-alocação
   para confirmação (`LOT-DEC-02`). Confirmação segue o aceite atômico.
 - R2.3. Blocos têm janelas obrigatórias (coleta e entrega) definidas na publicação.
@@ -116,7 +122,10 @@ Invariantes (herdados + novos):
 - R6.4. Cancelamento da viagem inteira → somente pedidos ainda não coletados voltam
   à fila. Pacotes sob custódia permanecem ativos e exigem devolução ou transferência
   registrada antes de encerrar a viagem.
-- R7.1. Desistência antes da 1ª coleta: sem penalidade dura, registrada e afeta índice de confiabilidade.
+- R7.1. Desistência antes da 1ª coleta: segue `DEC-22` / `COUR-02` (cutoff +
+  taxa no saldo do prestador; sem saldo suficiente → recusa). Em lote, a mesma
+  regra aplica-se ao pedido removido; demais paradas re-sequenciadas. Índice de
+  confiabilidade também registra.
 - R7.2. Desistência após 1ª coleta: só com autorização de suporte; devolução e
   repasse dependem de `LOT-DEC-06`.
 - R7.3. Redespacho antes da coleta: pedido → `REQUESTED`, nova oferta e viagem
