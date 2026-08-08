@@ -17,7 +17,7 @@ O modelo empresa/B2B foi removido do código em 2026-08-07.
 | Backend NestJS | Auth, cliente, entregas, ofertas, tracking, pricing básico, dashboard e storage local | migrations atuais ainda não revalidadas em banco vivo nesta máquina |
 | App cliente Flutter | Cadastro/login, pedido estruturado, histórico e acompanhamento | QA recente em dispositivo/emulador pendente |
 | App motoboy Flutter | Cadastro, disponibilidade, oferta, coleta, prova, entrega e carteira básica | QA recente em dispositivo/emulador pendente |
-| Dashboard React | KPIs, entregas (+ filtros categoria/tamanho), mapa, motoboys, usuários, auditoria, configurações e relatórios | peso/cliente e identidade laranja pendentes |
+| Dashboard React | KPIs, entregas (+ categoria/tamanho/peso), mapa, motoboys, usuários, auditoria, configurações e relatórios | filtro por cliente e identidade laranja pendentes |
 | Postgres/Redis | Arquitetura local definida | não estavam ativos na última rodada registrada |
 | Cloud | Scaffolds Render/Vercel/Firebase; alvos **decididos** (`DEC-25`) | nenhum projeto ou credencial conectado |
 
@@ -50,8 +50,8 @@ Documento de evidência: `docs/04-status/entregas/2026-08-07-ENTREGA-MOBILE-B2C.
 
 ## 5. Próximo passo
 
-`B2C-01B` está `IN_PROGRESS` (`productType` + `packageSize` entregues). Continuar
-com peso/cliente **ou** executar `BASE-04` (ainda `READY`).
+`B2C-01B` está `IN_PROGRESS` (categoria + tamanho + peso). Falta filtro por
+cliente **ou** executar `BASE-04` (ainda `READY`).
 
 ## 6. Bloqueios externos
 

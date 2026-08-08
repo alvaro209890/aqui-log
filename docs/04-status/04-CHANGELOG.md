@@ -4,7 +4,14 @@ Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
 ## Fluxo cliente↔prestador nos planos — 2026-08-07
 
+## B2C-01B fatia 3 (faixa de peso) — 2026-08-08
+
+- `GET /deliveries?weightMin=&weightMax=` com validação (>=0, min≤max).
+- Dashboard: inputs peso min/max + coluna Peso; legado sem peso fora do filtro.
+- Backend 35 testes; builds/lints verdes.
+
 ## B2C-01B fatia 2 (`packageSize`) — 2026-08-08
+
 
 - `GET /deliveries?packageSize=` com validação (`SMALL`/`MEDIUM`/`LARGE`).
 - Dashboard: select Tamanho + coluna; combo com `productType` nos testes.

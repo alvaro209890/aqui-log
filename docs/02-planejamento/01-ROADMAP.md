@@ -85,7 +85,7 @@ Plano detalhado do fluxo: [PLANO_FLUXO_CLIENTE_PRESTADOR.md](planos/PLANO_FLUXO_
 | Avaliação | ✅ unilateral | Falta avaliação mútua com origem explícita |
 | Carteira do motoboy | ✅ básica | Crédito MVP; falta ledger + taxa cancelamento + saque (`DEC-22/23`) |
 | Carteira/pagamento do cliente | Não existe | Exige ledger, política de cancelamento e idempotência antes de gateway |
-| Dashboard | ✅ operacional + `productType`/`packageSize` | Faltam peso/cliente (`B2C-01B`); identidade = `UX-01C` |
+| Dashboard | ✅ operacional + filtros B2C parciais | Falta cliente (`B2C-01B`); identidade = `UX-01C` |
 | Cloud | Alvos decididos (`DEC-25`); scaffold Render/Vercel/Firebase — sem credencial conectada |
 
 ## 6. Caminho crítico de implementação
@@ -109,7 +109,7 @@ valores finais de km continuam atrás de `DEC-05`/`DEC-02`.
 | --- | --- | --- | --- |
 | B2C-01 | ✅ | `BASE-03` | Colunas próprias para tipo, tamanho, peso, alcance e fotos; leitura compatível com `notes` legado |
 | B2C-01A | ✅ | `B2C-01` | Apps e core consomem campos próprios com fallback legado |
-| B2C-01B | ▶️ parcial | autorizado sem `BASE-04` | Fatias: `productType` + `packageSize`; faltam peso/cliente |
+| B2C-01B | ▶️ parcial | autorizado sem `BASE-04` | Fatias: categoria + tamanho + peso; falta cliente |
 | B2C-05 | ⏳ | `B2C-01B`, `DEC-01` | Obrigatoriedade de foto + peso/tipo/tamanho/endereços na criação; legados legíveis |
 
 **Estratégia de migração:** mudança aditiva, leitura dupla durante a transição e remoção do parser legado somente em uma versão posterior, após medir que não existem pedidos antigos dependentes dele.
