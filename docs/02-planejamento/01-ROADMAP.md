@@ -167,7 +167,7 @@ Nenhuma integração PIX/cartão entra nesta fase. O objetivo é provar a contab
 
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
-| COUR-01 | ▶️ | `SCHED-01` ✅, `DEC-21` ✅ | App prestador: Em andamento + Agenda |
+| COUR-01 | ✅ | `SCHED-01` ✅, `DEC-21` ✅ | App prestador: abas *Em andamento* / *Agenda* (+ *Concluídas*), separadas pela janela de coleta; backend já entregava modo e janelas (2026-08-09) |
 | PICK-01 | ✅ | `B2C-05` ✅, `DEC-24` ✅, `FLOW-DEC-03` ✅ | `pickup_code` de 4 dígitos + foto do prestador em `AT_PICKUP → PICKED_UP`, com rate limit e fallback auditado (2026-08-09) |
 
 ### Fase 6 — prontidão operacional e publicação

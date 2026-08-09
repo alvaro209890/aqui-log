@@ -16,12 +16,12 @@
 | — | `B2C-02` | `DONE` (2026-08-08) | P1 | Preço v2 versionado com breakdown congelado | `DEC-02` decidida; evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-02-E-TEMA-ESCURO.md` |
 | — | `B2C-06` | `DONE` (2026-08-09) | P1 | Dual km imediato/agendado + settings admin | evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-SCHED-01-B2C-06.md` |
 | — | `SCHED-01` | `DONE` (2026-08-09) | P1 | Modo `SCHEDULED` individual + aceite antecipado | mesmo esforço e mesma evidência de `B2C-06` |
-| 2 | `COUR-01` | `READY` | P1 | App prestador: Em andamento + Agenda | `SCHED-01` ✅ DONE; `DEC-21` ✅ decidida |
+| — | `COUR-01` | `DONE` (2026-08-09) | P1 | App prestador: Em andamento + Agenda | evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-COUR-01.md` |
 | — | `PICK-01` | `DONE` (2026-08-09) | P1 | Código de recolhimento + foto do prestador na coleta | evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-PICK-01.md` |
 | 3 | `B2C-03` | `BLOCKED` | P1 | Avaliação mútua por papel | baseline estável e migração de ratings definida |
 | 4 | `DISP-01` | `READY` | P1 | Reoferta limitada por anéis e recusas | `B2C-02` DONE; `DEC-03` decidida (ampliar raio + aumento com consentimento) |
 | 5 | `PAY-01` | `READY` | P2 | Ledger interno (cliente + prestador) sem gateway | autorização `DEC-05` ✅; `B2C-02` DONE; `DEC-23` |
-| 6 | `COUR-02` | `BLOCKED` | P2 | Cancelamento prestador + taxa no saldo | `PAY-01`, `COUR-01`; `DEC-22` |
+| 6 | `COUR-02` | `BLOCKED` | P2 | Cancelamento prestador + taxa no saldo | `COUR-01` ✅ DONE; falta `PAY-01`; `DEC-22` ✅ decidida |
 | 7 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-02B`, `B2C-03A`, `DISP-03` (`B2C-01B` ok) |
 | 8 | `OPS-DB-01` | `BLOCKED` | P2 | Modelo + migração Postgres → Firestore | `DEC-25`; credenciais Firebase |
 | 9 | `OPS-02` | `BLOCKED` | P2 | Firebase Firestore/Storage/FCM reais | pedido + credenciais; ver `PLANO_HOSPEDAGEM.md` |
@@ -187,12 +187,33 @@ hora (aceite antecipado, `DEC-20`) e só abre para execução na janela.
 
 Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-SCHED-01-B2C-06.md`.
 
-## 3. Tarefa pronta — `COUR-01`, `UX-02` ou `DISP-01`
+## 2d. Concluído em 2026-08-09 (3ª rodada)
 
-- **`COUR-01`** — abas *Em andamento* / *Agenda* no app do prestador. Destravou
-  agora: `SCHED-01` está `DONE` e `DEC-21` já estava decidida. O modelo
-  compartilhado já expõe `scheduledAhead`, que é o critério de separação das
-  duas listas.
+### `COUR-01` — `DONE`
+
+As corridas do prestador deixaram de morar numa lista só: *Em andamento* mostra
+o trabalho de agora e *Agenda* o que ele reservou para depois (`DEC-20`). O
+critério é a janela, não o modo — agendado com a janela já aberta é trabalho de
+agora. Uma terceira aba (*Concluídas*) preserva o histórico que a lista antiga
+mostrava.
+
+| Critério | Resultado |
+| --- | --- |
+| Agendada aceita com janela futura aparece em *Agenda* | ✅ regra pura + widget + HTTP vivo |
+| Agendada cuja janela já abriu aparece em *Em andamento* | ✅ mesmos três níveis |
+| Imediata aceita/em execução aparece em *Em andamento* | ✅ `IN_TRANSIT` em HTTP vivo |
+| Cartão com código, modo, janelas, endereços, encomenda, repasse e status | ✅ teste de widget |
+| Tocar no cartão abre o detalhe/execução **existente** | ✅ nenhuma tela recriada |
+| Ofertas (auto-dispatch) seguem separadas das duas seções | ✅ aba própria intocada |
+| Sem botão de cancelar funcional (é `COUR-02`) | ✅ ausente da tela, verificado em teste |
+| Backend já entrega modo + janelas | ✅ nenhuma rota/DTO/migration nova; contrato travado por teste |
+| `build`/`lint`/`test`/`smoke` + Flutter/Dart | ✅ 153 testes backend; motoboy 18; core 23 |
+| APK e QA em emulador/dispositivo | ❌ NÃO EXECUTADO (segue em `UX-02`) |
+
+Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-COUR-01.md`.
+
+## 3. Tarefa pronta — `UX-02` ou `DISP-01`
+
 - **`UX-02`** — QA visual e de acessibilidade dos fluxos. O dashboard já saiu em
   `UX-01C` + tema escuro; o que resta exige **dispositivo/emulador**, ainda
   indisponível nesta máquina. Inclui o gráfico de pizza quebrado e a seção
@@ -210,7 +231,7 @@ Detalhe e aceite em
 | `B2C-05` | ✅ `DONE` — foto e campos obrigatórios na criação | — |
 | `B2C-06` | ✅ `DONE` — km imediato vs agendado + admin | — |
 | `SCHED-01` | ✅ `DONE` — modo agendado individual + aceite antecipado | — |
-| `COUR-01` | UI Em andamento / Agenda | taxa financeira |
+| `COUR-01` | ✅ `DONE` — UI Em andamento / Agenda | — |
 | `PICK-01` | ✅ `DONE` — `pickup_code` + foto do prestador na coleta | — |
 | `COUR-02` | Cancelamento prestador + taxa no saldo | exige `PAY-01` |
 

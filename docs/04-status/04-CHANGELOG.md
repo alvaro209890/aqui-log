@@ -4,6 +4,34 @@ Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
 ## Fluxo cliente↔prestador nos planos — 2026-08-07
 
+## `COUR-01`: agenda do prestador no app do motoboy — 2026-08-09
+
+- **A aba *Corridas* virou três abas** (`DEC-21`, plano §5.2): *Em andamento*
+  (imediata aceita/em execução e agendada cuja janela já abriu), *Agenda*
+  (agendada aceita com o início da janela ainda no futuro — o aceite antecipado
+  do `DEC-20`) e *Concluídas*, que preserva o histórico que a lista antiga
+  mostrava. Cada aba traz sua própria contagem e seu próprio estado vazio.
+- **O critério é a janela, não o modo.** Um agendado com a janela já aberta é
+  trabalho de agora. Só uma corrida ainda parada em `ACCEPTED` pode estar na
+  agenda: se o status andou (coleta liberada por suporte, por exemplo), ela está
+  acontecendo.
+- **A regra é pura e compartilhada** (`packages/aqui_log_core/.../courier_board.dart`),
+  recebe o "agora" por parâmetro e tem 9 testes — a fronteira entre as duas
+  seções é um instante, e teste que lê o relógio real não prova os dois lados.
+- **Cartão da corrida** com código público, modo, janelas de coleta e entrega,
+  os dois endereços, a encomenda (tipo, tamanho, peso e foto) e o repasse. Tocar
+  abre o detalhe/execução **existente**; nenhuma tela foi recriada.
+- **Sem botão de cancelar:** a taxa de cancelamento é `COUR-02` e depende de
+  `PAY-01`. Botão desabilitado prometeria uma saída que não existe.
+- **O backend não mudou.** `GET /deliveries` já entregava modo, janelas,
+  endereços, encomenda e repasse ao prestador desde `SCHED-01`; não houve rota,
+  DTO nem migration nova. Acrescentou-se um teste que **trava esse contrato** —
+  sem ele, uma listagem que parasse de mandar a janela quebraria a separação em
+  silêncio. `pickupCode` continua fora do app do prestador (`PICK-01`).
+- Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-COUR-01.md`
+  (18 suítes / 153 testes no backend, motoboy 18, core 23, smoke e sonda em
+  HTTP vivo). QA em emulador/dispositivo **não executado** — segue em `UX-02`.
+
 ## `SCHED-01` + `B2C-06`: modo agendado individual — 2026-08-09
 
 - **Todo pedido novo declara o modo** (`DEC-18`). `fulfillmentMode` virou campo

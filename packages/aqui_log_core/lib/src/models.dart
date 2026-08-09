@@ -98,10 +98,15 @@ class DeliverySummary {
 
   /// DEC-20: aceito, mas a janela ainda não começou — está na agenda, não em
   /// execução. É o que separa "Agenda" de "Em andamento" (`COUR-01`).
-  bool get scheduledAhead =>
+  bool get scheduledAhead => isScheduledAheadAt(DateTime.now());
+
+  /// A mesma pergunta com o instante explícito. A separação das listas do
+  /// prestador depende de um corte no tempo, e teste que lê o relógio real não
+  /// consegue provar os dois lados da fronteira.
+  bool isScheduledAheadAt(DateTime now) =>
       isScheduled &&
       pickupWindowStart != null &&
-      pickupWindowStart!.isAfter(DateTime.now());
+      pickupWindowStart!.isAfter(now);
 
   /// Bloqueio ainda em vigor neste instante.
   bool get pickupCodeBlocked =>

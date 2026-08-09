@@ -179,3 +179,23 @@ Registro append-only. Nada acima foi alterado.
 | QA de navegador da tela nova / APK / emulador | Não executado | Segue em `UX-02` |
 
 Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-SCHED-01-B2C-06.md`.
+
+## `COUR-01` — agenda do prestador (2026-08-09) ✅
+
+Registro append-only. Nada acima foi alterado.
+
+| Funcionalidade | Estado | Observação |
+| --- | --- | --- |
+| Aba *Em andamento* no app do prestador | Funcional | Imediata aceita/em execução (`ACCEPTED`, `AT_PICKUP`, `PICKED_UP`, `IN_TRANSIT`) e agendada cuja janela já abriu |
+| Aba *Agenda* no app do prestador | Funcional | `SCHEDULED` aceita com início de janela no futuro, incluindo o aceite antecipado (`DEC-20`); ordenada pelo próximo compromisso |
+| Aba *Concluídas* | Funcional | `DELIVERED`/`CANCELED`; preserva o histórico que a lista única mostrava |
+| Regra de separação compartilhada e testável | Funcional | `courier_board.dart` no `aqui_log_core`, com o "agora" injetável; 9 testes |
+| Cartão com código, modo, janelas, endereços, encomenda e repasse | Funcional | Plano §5.2; foto e peso vindos do `OrderMeta` |
+| Toque no cartão abre o detalhe/execução existente | Funcional | `DeliveryDetailScreen`; nenhuma tela recriada |
+| Ofertas (auto-dispatch) separadas das duas seções | Funcional | Aba *Ofertas* intocada; oferta ainda não é corrida do prestador |
+| Contrato da listagem do prestador | Funcional | `GET /deliveries` já entregava modo + janelas (`SCHED-01`); travado por teste, sem mudança de servidor |
+| Botão de cancelar corrida | Planejado | `COUR-02`, depende de `PAY-01` (`DEC-22`) |
+| Paginação da lista do prestador | Planejado | Sem `page`/`limit`, a aba *Concluídas* cresce sem limite |
+| APK / QA em emulador ou dispositivo | Não executado | Segue em `UX-02` |
+
+Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-COUR-01.md`.

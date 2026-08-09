@@ -2,7 +2,7 @@
 
 > **Data de referência:** 2026-08-09
 > **Ambiente:** desenvolvimento local no PC `acer`; nada produtivo roda aqui.
-> **Baseline de código:** `5d0ecd7` no início da sessão de `SCHED-01`+`B2C-06`.
+> **Baseline de código:** `531a432` no início da sessão de `COUR-01`.
 
 ## 1. Produto vigente
 
@@ -18,12 +18,39 @@ coluna `company_id`).
 | --- | --- | --- |
 | Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso/modo**), **modo agendado com janela e aceite antecipado**, ofertas com **reserva de agenda**, tracking, **preço v2 versionado com breakdown congelado**, **código de recolhimento na coleta**, dashboard e storage local | migrations revalidadas em banco vivo em 2026-08-09 (11 migrations) |
 | App cliente Flutter | Cadastro/login, pedido estruturado **com foto obrigatória**, **escolha entre agora e agendar (com janela)**, **código de recolhimento visível após o aceite**, histórico e acompanhamento | QA recente em dispositivo/emulador pendente |
-| App motoboy Flutter | Cadastro, disponibilidade, oferta (**agendada mostra a janela e aceita antecipado**), **coleta com código de recolhimento**, prova, entrega e carteira básica | sem abas Em andamento/Agenda (`COUR-01`); QA em dispositivo/emulador pendente |
+| App motoboy Flutter | Cadastro, disponibilidade, oferta (**agendada mostra a janela e aceita antecipado**), **abas Em andamento / Agenda / Concluídas**, **coleta com código de recolhimento**, prova, entrega e carteira básica | sem botão de cancelar (é `COUR-02`); QA em dispositivo/emulador pendente |
 | Dashboard React | KPIs, entregas (**filtro e coluna de modo**), mapa, motoboys, usuários, auditoria, **configurações completas de preço/multas/agendamento** e relatórios; identidade laranja + **tema claro/escuro** | seção "Modo agendado" ainda **sem QA de navegador**; busca da `TopBar` decorativa; **gráfico de pizza não renderiza setores** (Recharts 3.9 + React 19) — em `UX-02` |
 | Postgres/Redis | Containers `aqui-log-postgres` (5433) e `aqui-log-redis` (6379) ativos | banco de teste é descartável; nenhum dado tem valor |
 | Cloud | Scaffolds Render/Vercel/Firebase; alvos **decididos** (`DEC-25`) | nenhum projeto ou credencial conectado |
 
 ## 3. Evidência das rodadas técnicas
+
+### `COUR-01` (rodada de 2026-08-09)
+
+Executado no banco descartável `aqui_log_cour01` com API em `PORT=3011`:
+
+- as corridas do prestador são separadas por uma regra pura no pacote
+  compartilhado (`courier_board.dart`): agendada `ACCEPTED` com janela no futuro
+  vai para **Agenda**; imediata e agendada com a janela já aberta vão para
+  **Em andamento**; entregue/cancelada vai para uma terceira aba,
+  **Concluídas**, que preserva o histórico que a lista antiga mostrava;
+- em HTTP vivo, com dois agendados de **mesmo modo e mesmo status** separados
+  só pela janela: 1 caiu em *Agenda* e 1 em *Em andamento*, junto da imediata
+  em `IN_TRANSIT`;
+- **o backend não mudou**: `GET /deliveries` já devolvia `fulfillmentMode`,
+  janelas, endereços, encomenda e repasse ao prestador desde `SCHED-01`.
+  Nenhuma rota, DTO ou migration foi criada; acrescentou-se um teste que trava
+  esse contrato;
+- `pickupCode` continua não chegando ao app do prestador (`PICK-01` intacto);
+- tocar num cartão abre o `DeliveryDetailScreen` existente — nenhuma tela de
+  coleta/entrega foi recriada; a aba *Ofertas* segue separada;
+- **sem botão de cancelar**: a taxa é `COUR-02` e depende de `PAY-01`;
+- `pnpm build`, `pnpm lint` e `pnpm test` verdes (18 suítes / 153 testes);
+- `pnpm smoke` aprovado contra a API viva;
+- `flutter analyze`/`flutter test` verdes nos dois apps (motoboy 18) e
+  `dart analyze`/`dart test` no core (23).
+
+Documento: `docs/04-status/entregas/2026-08-09-EVIDENCIA-COUR-01.md`.
 
 ### `SCHED-01` + `B2C-06` (rodada de 2026-08-09)
 
@@ -156,13 +183,18 @@ Evidência anterior (mobile, 2026-08-07):
 
 ## 5. Próximo passo
 
-`BASE-04`, `B2C-01B`, `B2C-05`, `UX-01C`, `B2C-02`, `PICK-01`, `B2C-06` e
-`SCHED-01` estão `DONE`. Com `SCHED-01` fechado, **`COUR-01` deixou de estar
-bloqueado por código** (só `DEC-21`, já decidida) e é o próximo pacote esperado:
-abas *Em andamento* / *Agenda* no app do prestador. A fila também tem `UX-02`
-(QA visual — a parte mobile exige dispositivo/emulador e inclui o gráfico de
-pizza quebrado) e `DISP-01` (reoferta por anéis). Escolher um único ID, conforme
-o backlog.
+`BASE-04`, `B2C-01B`, `B2C-05`, `UX-01C`, `B2C-02`, `PICK-01`, `B2C-06`,
+`SCHED-01` e `COUR-01` estão `DONE`. `COUR-02` (cancelamento com taxa no saldo)
+tem agora só **uma** dependência aberta: `PAY-01`, o ledger interno — que está
+`READY`. A fila também tem `UX-02` (QA visual — a parte mobile exige
+dispositivo/emulador e inclui o gráfico de pizza quebrado) e `DISP-01` (reoferta
+por anéis). Escolher um único ID, conforme o backlog.
+
+Pendência aberta de `COUR-01`: a classificação das abas roda no **relógio do
+aparelho**. O servidor continua sendo a autoridade (recusa `AT_PICKUP` fora da
+janela com `409`), então um relógio adiantado muda o cartão de aba antes da hora
+mas não libera a coleta. A lista do prestador também **não pagina**: a aba
+*Concluídas* cresce sem limite.
 
 Pendência aberta de `SCHED-01`: a folga de capacidade usa uma **estimativa fixa**
 de duração do imediato (45 min, editável no admin), não a rota real; calibrar
