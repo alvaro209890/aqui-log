@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, LessThanOrEqual, Repository } from 'typeorm';
+import { In, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
 import type { AuthenticatedUser } from '../auth/jwt.strategy';
 import { AuditService } from '../audit/audit.service';
 import { Courier } from '../database/entities/courier.entity';
@@ -31,6 +31,16 @@ import { RedisService } from '../redis/redis.module';
 import { SettingsService } from '../settings/settings.module';
 import { StorageService } from '../storage/storage.module';
 import { parsePagination, toPageResult } from '../common/pagination';
+import { formatWindowInstant } from '../common/timezone';
+import { FULFILLMENT_MODES } from '../pricing/pricing.types';
+import {
+  executionWindow,
+  hasCapacityConflict,
+  isReservedAhead,
+  resolveSchedule,
+  scheduleExecutionOpen,
+  type TimeWindow,
+} from './scheduling';
 import {
   OFFER_ACCEPT_LOCK_TTL_SECONDS,
   offerAcceptLockKey,
@@ -114,15 +124,32 @@ export class DeliveriesService {
     for (const url of productPhotoUrls) {
       this.storage.assertAllowedProductPhotoUrl(url);
     }
-    // B2C-02: o preço agora considera peso e tamanho da encomenda, que o
-    // B2C-05 tornou obrigatórios. O modo default é IMMEDIATE; o agendado
-    // (SCHED-01) ainda não é escolhido pelo cliente.
+    // SCHED-01 / FLOW-DEC-02: a janela é validada ANTES da cotação — não faz
+    // sentido calcular preço agendado de uma janela que será recusada.
+    const platform = await this.settings.get();
+    const schedule = resolveSchedule(
+      {
+        fulfillmentMode: dto.fulfillmentMode,
+        pickupWindowStart: dto.pickupWindowStart,
+        pickupWindowEnd: dto.pickupWindowEnd,
+        deliveryWindowStart: dto.deliveryWindowStart,
+        deliveryWindowEnd: dto.deliveryWindowEnd,
+      },
+      {
+        minLeadMinutes: platform.minScheduleLeadMinutes,
+        maxWindowMinutes: platform.scheduleMaxWindowMinutes,
+      },
+      new Date(),
+    );
+    // B2C-02 + B2C-06: o preço considera peso, tamanho e agora o MODO — o km
+    // do agendado é mais barato que o do imediato (`DEC-19`). O valor usado
+    // fica congelado no pedido, então mudar settings depois não o altera.
     const quote = await this.pricing.quoteAsync({
       pickupLatitude: dto.pickupLatitude,
       pickupLongitude: dto.pickupLongitude,
       deliveryLatitude: dto.deliveryLatitude,
       deliveryLongitude: dto.deliveryLongitude,
-      fulfillmentMode: 'IMMEDIATE',
+      fulfillmentMode: dto.fulfillmentMode,
       weightKg: dto.weightKg,
       packageSize: dto.packageSize,
     });
@@ -139,7 +166,19 @@ export class DeliveriesService {
         weightKg: dto.weightKg,
         deliveryScope: dto.deliveryScope ?? null,
         productPhotoUrls,
-        scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : null,
+        // `scheduledAt` é o campo legado de agendamento. Para não deixá-lo
+        // mentindo, o agendado o preenche com o início da janela: é isso que
+        // faz o redespacho automático (`dispatchDueScheduled`) tentar de novo
+        // na hora certa quando ninguém aceitou antes.
+        scheduledAt: schedule.pickupWindowStart
+          ? schedule.pickupWindowStart
+          : dto.scheduledAt
+            ? new Date(dto.scheduledAt)
+            : null,
+        pickupWindowStart: schedule.pickupWindowStart,
+        pickupWindowEnd: schedule.pickupWindowEnd,
+        deliveryWindowStart: schedule.deliveryWindowStart,
+        deliveryWindowEnd: schedule.deliveryWindowEnd,
         // Server-side pricing always wins (client price fields ignored)
         priceCents: quote.priceCents,
         courierFeeCents: quote.courierFeeCents,
@@ -147,6 +186,8 @@ export class DeliveriesService {
         pricingVersion: quote.pricingVersion,
         pricingBreakdown: quote.breakdown,
         fulfillmentMode: quote.breakdown.fulfillmentMode,
+        kmRateCents: quote.breakdown.kmRateCents,
+        courierCancelFeeCents: null,
         collectionProofUrl: null,
         deliveryProofUrl: null,
         canceledAt: null,
@@ -155,7 +196,9 @@ export class DeliveriesService {
     await this.recordEvent(
       delivery,
       user.id,
-      `Pedido solicitado (dist ${quote.distanceKm}km)`,
+      delivery.pickupWindowStart
+        ? `Pedido agendado (dist ${quote.distanceKm}km, coleta ${delivery.pickupWindowStart.toISOString()} a ${delivery.pickupWindowEnd?.toISOString()})`
+        : `Pedido solicitado (dist ${quote.distanceKm}km)`,
     );
     await this.audit.record({
       actorId: user.id,
@@ -172,12 +215,23 @@ export class DeliveriesService {
           deliveryScope: delivery.deliveryScope,
           productPhotoCount: delivery.productPhotoUrls.length,
         },
+        fulfillment: {
+          mode: delivery.fulfillmentMode,
+          kmRateCents: delivery.kmRateCents,
+          pickupWindowStart: delivery.pickupWindowStart?.toISOString() ?? null,
+          pickupWindowEnd: delivery.pickupWindowEnd?.toISOString() ?? null,
+          deliveryWindowStart:
+            delivery.deliveryWindowStart?.toISOString() ?? null,
+          deliveryWindowEnd: delivery.deliveryWindowEnd?.toISOString() ?? null,
+        },
         pricing: quote,
       },
     });
     // B2C: pedido do cliente é publicado direto para os motoboys próximos.
     // Se não houver motoboy disponível agora, fica REQUESTED e o job de
     // redespacho (expireStaleOffers) tenta de novo quando houver.
+    // DEC-20: o agendado entra na fila de ofertas na mesma hora — é isso que
+    // permite o aceite antecipado; ele não espera a janela chegar.
     try {
       await this.dispatch(delivery.id, user.id);
     } catch {
@@ -194,6 +248,7 @@ export class DeliveriesService {
       date?: string;
       productType?: string;
       packageSize?: string;
+      fulfillmentMode?: string;
       weightMin?: string;
       weightMax?: string;
       customerId?: string;
@@ -252,6 +307,22 @@ export class DeliveriesService {
       }
       qb.andWhere('delivery.packageSize = :packageSize', {
         packageSize: filters.packageSize,
+      });
+    }
+    // SCHED-01: separar agendado de imediato é a primeira pergunta da operação
+    // quando existem os dois modos na mesma lista.
+    if (filters.fulfillmentMode) {
+      if (
+        !(FULFILLMENT_MODES as readonly string[]).includes(
+          filters.fulfillmentMode,
+        )
+      ) {
+        throw new BadRequestException(
+          `fulfillmentMode invalido. Use: ${FULFILLMENT_MODES.join(', ')}`,
+        );
+      }
+      qb.andWhere('delivery.fulfillmentMode = :fulfillmentMode', {
+        fulfillmentMode: filters.fulfillmentMode,
       });
     }
 
@@ -363,7 +434,7 @@ export class DeliveriesService {
       status: OfferStatus.REJECTED,
     });
     const rejectedIds = new Set(rejected.map((offer) => offer.courierId));
-    const candidates = (
+    const available = (
       await this.couriers.findBy({
         status: AccountStatus.ACTIVE,
         available: true,
@@ -374,9 +445,14 @@ export class DeliveriesService {
         courier.lastLongitude !== null &&
         !rejectedIds.has(courier.id),
     );
-    if (!candidates.length)
+    if (!available.length)
       throw new NotFoundException(
         'Nenhum entregador disponivel com localizacao',
+      );
+    const candidates = await this.filterByCapacity(delivery, available);
+    if (!candidates.length)
+      throw new NotFoundException(
+        'Nenhum entregador com agenda livre para esta janela',
       );
     const courier = candidates.sort(
       (a, b) =>
@@ -398,6 +474,68 @@ export class DeliveriesService {
       courier,
       actorId,
       'Despacho automatico por proximidade',
+    );
+  }
+
+  /**
+   * SCHED-01 / plano §5.1 — capacidade do prestador.
+   *
+   * Quem já aceitou um agendado reservou aquela janela. Oferecer-lhe uma
+   * corrida que cai dentro dela (com folga dos dois lados) é oferecer algo que
+   * ele não pode cumprir: ou ele fura o agendado, ou recusa a oferta e a
+   * entrega volta para a fila depois de queimar o TTL.
+   *
+   * A regra vale nos dois sentidos — imediato que colide com agendado e
+   * agendado que colide com agendado. O plano cita o primeiro caso porque é o
+   * frequente; o segundo é a mesma reserva vista do outro lado.
+   */
+  private async filterByCapacity(
+    delivery: Delivery,
+    candidates: Courier[],
+  ): Promise<Courier[]> {
+    const platform = await this.settings.get();
+    const now = new Date();
+    const candidateWindow = executionWindow(
+      delivery,
+      now,
+      platform.immediateExecutionEstimateMinutes,
+    );
+    // Só o agendado reserva agenda; o imediato em curso já tira o prestador da
+    // lista por `available = false`.
+    const reservedRows = await this.deliveries.find({
+      where: {
+        courierId: In(candidates.map((courier) => courier.id)),
+        fulfillmentMode: 'SCHEDULED',
+        status: In([
+          DeliveryStatus.ACCEPTED,
+          DeliveryStatus.AT_PICKUP,
+          DeliveryStatus.PICKED_UP,
+          DeliveryStatus.IN_TRANSIT,
+        ]),
+        pickupWindowEnd: MoreThanOrEqual(now),
+      },
+    });
+    const reservedByCourier = new Map<string, TimeWindow[]>();
+    for (const row of reservedRows) {
+      if (row.id === delivery.id) continue;
+      if (!row.courierId || !row.pickupWindowStart || !row.pickupWindowEnd) {
+        continue;
+      }
+      const list = reservedByCourier.get(row.courierId) ?? [];
+      list.push({
+        start: new Date(row.pickupWindowStart),
+        end: new Date(row.pickupWindowEnd),
+      });
+      reservedByCourier.set(row.courierId, list);
+    }
+    if (reservedByCourier.size === 0) return candidates;
+    return candidates.filter(
+      (courier) =>
+        !hasCapacityConflict(
+          candidateWindow,
+          reservedByCourier.get(courier.id) ?? [],
+          platform.scheduleCapacitySlackMinutes,
+        ),
     );
   }
 
@@ -433,7 +571,18 @@ export class DeliveriesService {
         delivery.pickupCodeBlockedUntil = null;
         delivery.pickupCodeVerifiedAt = null;
       }
-      courier.available = false;
+      // DEC-20: o aceite congela também a taxa de cancelamento vigente. Mudar
+      // a multa no admin depois não pode alterar o que já foi combinado.
+      const platform = await this.settings.get();
+      if (delivery.courierCancelFeeCents === null) {
+        delivery.courierCancelFeeCents = platform.courierCancelFeeCents;
+      }
+      // Aceite antecipado de agendado NÃO tira o prestador do mercado: a
+      // janela dele é lá na frente, e marcá-lo indisponível agora faria o
+      // `DEC-20` custar horas de trabalho. Quem protege a janela é o filtro de
+      // capacidade em `filterByCapacity`.
+      const reservedAhead = isReservedAhead(delivery, new Date());
+      if (!reservedAhead) courier.available = false;
       // Expire sibling pending offers for this delivery
       await this.offers
         .createQueryBuilder()
@@ -469,6 +618,11 @@ export class DeliveriesService {
           offerId,
           courierId: courier.id,
           pickupCodeIssued: delivery.pickupCode !== null,
+          // DEC-20: o que foi congelado no aceite.
+          fulfillmentMode: delivery.fulfillmentMode,
+          earlyAccept: reservedAhead,
+          courierFeeCents: delivery.courierFeeCents,
+          courierCancelFeeCents: delivery.courierCancelFeeCents,
         },
       });
       return this.present(delivery, user);
@@ -571,6 +725,9 @@ export class DeliveriesService {
     const delivery = await this.getById(id);
     await this.ensureCanTransition(delivery, dto.status, user);
     assertDeliveryTransition(delivery.status, dto.status);
+    if (dto.status === DeliveryStatus.AT_PICKUP) {
+      this.assertScheduleWindowOpen(delivery, user);
+    }
     if (
       [DeliveryStatus.PICKED_UP, DeliveryStatus.DELIVERED].includes(
         dto.status,
@@ -760,6 +917,28 @@ export class DeliveriesService {
       `A coleta de ${delivery.code} foi liberada sem o código de recolhimento.`,
     );
     return this.present(delivery, user);
+  }
+
+  /**
+   * SCHED-01 / DEC-20 — a execução do agendado só "abre" na janela.
+   *
+   * Entre o aceite antecipado e o início da janela o pedido vive na agenda do
+   * prestador. Deixar `ACCEPTED → AT_PICKUP` passar antes disso convidaria o
+   * motoboy a bater na porta do cliente horas antes do combinado.
+   *
+   * Admin/suporte passam: eles operam exceção, e travá-los aqui só criaria
+   * chamado sem saída quando cliente e prestador se acertarem por fora.
+   */
+  private assertScheduleWindowOpen(
+    delivery: Delivery,
+    user: AuthenticatedUser,
+  ) {
+    if (STAFF_ROLES.includes(user.role)) return;
+    if (scheduleExecutionOpen(delivery, new Date())) return;
+    const start = delivery.pickupWindowStart as Date;
+    throw new ConflictException(
+      `A coleta agendada abre em ${formatWindowInstant(start)}. Antes disso o pedido fica na agenda.`,
+    );
   }
 
   /**

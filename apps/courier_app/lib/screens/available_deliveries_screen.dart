@@ -141,6 +141,21 @@ class AvailableDeliveriesScreen extends StatelessWidget {
                       Map<String, dynamic>.from(delivery),
                     )
                   : null;
+              // SCHED-01 / DEC-20: o agendado aparece na mesma lista e pode
+              // ser aceito agora — o prestador precisa ver a janela ANTES de
+              // aceitar, senão ele reserva um horário sem saber qual.
+              //
+              // Lê direto do mapa da oferta em vez de montar um
+              // `DeliverySummary`: o card já trabalha assim e não deve quebrar
+              // por causa de um campo ausente numa oferta.
+              final scheduled = delivery is Map &&
+                  delivery['fulfillmentMode'] == FulfillmentMode.scheduled;
+              final windowStart = delivery is Map
+                  ? _parseDate(delivery['pickupWindowStart'])
+                  : null;
+              final windowEnd = delivery is Map
+                  ? _parseDate(delivery['pickupWindowEnd'])
+                  : null;
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: Padding(
@@ -191,6 +206,49 @@ class AvailableDeliveriesScreen extends StatelessWidget {
                           ],
                         ),
                       ],
+                      if (scheduled) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AquiLogColors.primarySoft,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.event_available_outlined,
+                                size: 15,
+                                color: AquiLogColors.primaryDark,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Agendado · ${formatPickupWindow(windowStart, windowEnd)}',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: AquiLogColors.primaryDark,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Aceitando agora voce reserva essa janela; a coleta '
+                          'so abre no horario combinado.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AquiLogColors.muted,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                      ],
                       if (pickup.isNotEmpty) Text('Coleta: $pickup'),
                       if (drop.isNotEmpty) Text('Entrega: $drop'),
                       if (meta?.photoUrl != null &&
@@ -233,6 +291,11 @@ class AvailableDeliveriesScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  static DateTime? _parseDate(dynamic value) {
+    if (value is! String || value.isEmpty) return null;
+    return DateTime.tryParse(value)?.toLocal();
   }
 
   static String _weight(OrderMeta meta) {

@@ -176,4 +176,64 @@ void main() {
     expect(delivery.orderMeta!.weightKg, 0.5);
     expect(delivery.orderMeta!.notes, 'Envelope pardo');
   });
+
+  // SCHED-01 / DEC-18 — modo e janela.
+  test('DeliverySummary le modo agendado e janela', () {
+    final start = DateTime.now().add(const Duration(hours: 2));
+    final end = start.add(const Duration(hours: 1));
+    final delivery = DeliverySummary.fromJson({
+      'id': '4',
+      'code': 'AQL-4',
+      'status': 'ACCEPTED',
+      'fulfillmentMode': 'SCHEDULED',
+      'pickupWindowStart': start.toUtc().toIso8601String(),
+      'pickupWindowEnd': end.toUtc().toIso8601String(),
+      'kmRateCents': 180,
+    });
+
+    expect(delivery.isScheduled, isTrue);
+    expect(delivery.scheduledAhead, isTrue);
+    expect(delivery.kmRateCents, 180);
+    expect(
+      delivery.pickupWindowStart!.difference(start).inSeconds.abs() < 2,
+      isTrue,
+    );
+  });
+
+  test('pedido legado sem modo continua valendo como imediato', () {
+    final delivery = DeliverySummary.fromJson({
+      'id': '5',
+      'code': 'AQL-5',
+      'status': 'DELIVERED',
+    });
+
+    expect(delivery.fulfillmentMode, 'IMMEDIATE');
+    expect(delivery.isScheduled, isFalse);
+    expect(delivery.scheduledAhead, isFalse);
+    expect(delivery.pickupWindowStart, isNull);
+  });
+
+  test('agendado cuja janela ja comecou sai da agenda', () {
+    final start = DateTime.now().subtract(const Duration(minutes: 5));
+    final delivery = DeliverySummary.fromJson({
+      'id': '6',
+      'code': 'AQL-6',
+      'status': 'ACCEPTED',
+      'fulfillmentMode': 'SCHEDULED',
+      'pickupWindowStart': start.toUtc().toIso8601String(),
+      'pickupWindowEnd':
+          start.add(const Duration(hours: 1)).toUtc().toIso8601String(),
+    });
+
+    expect(delivery.isScheduled, isTrue);
+    expect(delivery.scheduledAhead, isFalse);
+  });
+
+  test('formatPickupWindow resume a janela do mesmo dia', () {
+    final start = DateTime(2026, 8, 10, 14, 0);
+    final end = DateTime(2026, 8, 10, 15, 30);
+
+    expect(formatPickupWindow(start, end), '10/08 das 14:00 às 15:30');
+    expect(formatPickupWindow(null, null), 'Sem janela definida');
+  });
 }

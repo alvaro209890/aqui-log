@@ -125,6 +125,107 @@ void main() {
     expect(find.text('Enviar comprovante'), findsOneWidget);
   });
 
+  // SCHED-01 / DEC-20: o agendado aparece na mesma lista de ofertas e pode ser
+  // aceito antes da janela — mas a janela tem de estar visível antes do aceite.
+  testWidgets('AvailableDeliveriesScreen mostra a janela do agendado', (
+    tester,
+  ) async {
+    final start = DateTime.now().add(const Duration(hours: 3));
+    final end = start.add(const Duration(hours: 1));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AvailableDeliveriesScreen(
+            offers: [
+              {
+                'id': 'offer-agendada',
+                'delivery': {
+                  'id': 'd-agendada',
+                  'code': 'AQL-AGEND',
+                  'status': 'OFFERED',
+                  'pickupAddress': 'A',
+                  'deliveryAddress': 'B',
+                  'fulfillmentMode': 'SCHEDULED',
+                  'pickupWindowStart': start.toUtc().toIso8601String(),
+                  'pickupWindowEnd': end.toUtc().toIso8601String(),
+                  'productPhotoUrls': <String>[],
+                },
+              },
+            ],
+            loading: false,
+            available: true,
+            onToggleAvailable: (_) {},
+            onAccept: (_) async {},
+            onReject: (_) async {},
+            onRefresh: () async {},
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.textContaining(formatPickupWindow(start, end)),
+      findsOneWidget,
+    );
+    // O aceite antecipado continua disponível.
+    expect(find.text('Aceitar'), findsOneWidget);
+  });
+
+  testWidgets('DeliveryDetailScreen trava a coleta antes da janela', (
+    tester,
+  ) async {
+    final start = DateTime.now().add(const Duration(hours: 3));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DeliveryDetailScreen(
+          delivery: DeliverySummary(
+            id: 'd2',
+            code: 'AQL-AG',
+            status: 'ACCEPTED',
+            fulfillmentMode: 'SCHEDULED',
+            pickupWindowStart: start,
+            pickupWindowEnd: start.add(const Duration(hours: 1)),
+          ),
+          onProof: () {},
+          onStatus: (s, {proofUrl}) async {},
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Cheguei na coleta'), findsNothing);
+    expect(
+      find.textContaining('Na agenda. A coleta so abre'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('DeliveryDetailScreen libera a coleta dentro da janela', (
+    tester,
+  ) async {
+    final start = DateTime.now().subtract(const Duration(minutes: 10));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DeliveryDetailScreen(
+          delivery: DeliverySummary(
+            id: 'd3',
+            code: 'AQL-AG2',
+            status: 'ACCEPTED',
+            fulfillmentMode: 'SCHEDULED',
+            pickupWindowStart: start,
+            pickupWindowEnd: start.add(const Duration(hours: 1)),
+          ),
+          onProof: () {},
+          onStatus: (s, {proofUrl}) async {},
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Cheguei na coleta'), findsOneWidget);
+  });
+
   testWidgets('ProofScreen camera UI exists', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(

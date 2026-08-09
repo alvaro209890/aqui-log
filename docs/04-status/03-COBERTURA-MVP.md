@@ -157,3 +157,25 @@ cliente e admin**.
 - `OrderMeta` movido p/ `packages/aqui_log_core` (compartilhado)
 - Smoke e2e atualizado p/ auto-dispatch (fallback dispatch manual); validado ao vivo: register → create → OFFERED → accept → ACCEPTED
 - Testes: backend 27/27, cliente 10/10, motoboy 7/7; planos futuros: PLANO_LOTE_MULTI_PEDIDO / PLANO_PAGAMENTOS / PLANO_CONFIANCA_E_PRECO
+
+## `SCHED-01` + `B2C-06` — modo agendado individual (2026-08-09) ✅
+
+Registro append-only. Nada acima foi alterado.
+
+| Funcionalidade | Estado | Observação |
+| --- | --- | --- |
+| Escolha do modo pelo cliente (`IMMEDIATE`/`SCHEDULED`) | Funcional | Obrigatório na criação (`DEC-18`); sem modo → `400` |
+| Janela de coleta com antecedência mínima | Funcional | 30 min (`FLOW-DEC-02`); passado, invertida, curta, longa e horizonte de 30 dias recusados em HTTP vivo |
+| Janela de entrega | Funcional (opcional) | Se enviada, exige as duas pontas e não pode preceder a coleta |
+| Tarifa por modo aplicada e congelada | Funcional | 250 imediato × 180 agendado; `km_rate_cents` + `pricing_breakdown` no pedido |
+| Aceite antecipado do agendado | Funcional | `DEC-20`; congela repasse e `courier_cancel_fee_cents`; prestador segue disponível |
+| Reserva de agenda do prestador | Funcional | Plano §5.1; folga e duração estimada editáveis no admin |
+| Execução só abre na janela | Funcional | `AT_PICKUP` antes do início → `409`; admin/suporte passam |
+| Settings de agendamento no admin | Funcional | 4 campos versionados e validados |
+| Filtro e coluna de modo no painel | Funcional | `GET /deliveries?fulfillmentMode=…`; valor inválido → `400` |
+| Pedido legado sem modo | Funcional | Legível como `IMMEDIATE`; fallback de `notes` intacto |
+| Abas Em andamento / Agenda no app do prestador | Planejado | `COUR-01` |
+| Cancelamento do prestador com débito da taxa | Planejado | `COUR-02`, depende de `PAY-01` |
+| QA de navegador da tela nova / APK / emulador | Não executado | Segue em `UX-02` |
+
+Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-SCHED-01-B2C-06.md`.

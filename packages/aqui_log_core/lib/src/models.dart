@@ -38,6 +38,12 @@ class DeliverySummary {
     this.pickupCodeRequired = false,
     this.pickupCodeAttemptsLeft,
     this.pickupCodeBlockedUntil,
+    this.fulfillmentMode = 'IMMEDIATE',
+    this.pickupWindowStart,
+    this.pickupWindowEnd,
+    this.deliveryWindowStart,
+    this.deliveryWindowEnd,
+    this.kmRateCents,
   });
 
   final String id;
@@ -73,6 +79,30 @@ class DeliverySummary {
   /// Fim do bloqueio temporário por tentativas erradas, quando houver.
   final DateTime? pickupCodeBlockedUntil;
 
+  /// SCHED-01 / DEC-18: `IMMEDIATE` ou `SCHEDULED`. Pedido legado, criado antes
+  /// do modo existir, é lido como `IMMEDIATE` — é o default da coluna.
+  final String fulfillmentMode;
+
+  /// Janela de coleta combinada. Nula fora do modo agendado.
+  final DateTime? pickupWindowStart;
+  final DateTime? pickupWindowEnd;
+
+  /// Janela de entrega — opcional mesmo no agendado.
+  final DateTime? deliveryWindowStart;
+  final DateTime? deliveryWindowEnd;
+
+  /// Tarifa por km congelada na criação (`DEC-19`).
+  final int? kmRateCents;
+
+  bool get isScheduled => fulfillmentMode == 'SCHEDULED';
+
+  /// DEC-20: aceito, mas a janela ainda não começou — está na agenda, não em
+  /// execução. É o que separa "Agenda" de "Em andamento" (`COUR-01`).
+  bool get scheduledAhead =>
+      isScheduled &&
+      pickupWindowStart != null &&
+      pickupWindowStart!.isAfter(DateTime.now());
+
   /// Bloqueio ainda em vigor neste instante.
   bool get pickupCodeBlocked =>
       pickupCodeBlockedUntil != null &&
@@ -99,6 +129,13 @@ class DeliverySummary {
         pickupCodeAttemptsLeft: (json['pickupCodeAttemptsLeft'] as num?)
             ?.toInt(),
         pickupCodeBlockedUntil: _toDate(json['pickupCodeBlockedUntil']),
+        fulfillmentMode:
+            (json['fulfillmentMode'] as String?) ?? 'IMMEDIATE',
+        pickupWindowStart: _toDate(json['pickupWindowStart']),
+        pickupWindowEnd: _toDate(json['pickupWindowEnd']),
+        deliveryWindowStart: _toDate(json['deliveryWindowStart']),
+        deliveryWindowEnd: _toDate(json['deliveryWindowEnd']),
+        kmRateCents: (json['kmRateCents'] as num?)?.toInt(),
       );
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
   api,
+  FULFILLMENT_MODE_OPTIONS,
   PACKAGE_SIZE_OPTIONS,
   PRODUCT_TYPE_OPTIONS,
   type DeliveryRecord,
@@ -28,6 +29,21 @@ function productTypeLabel(value: string | null | undefined): string {
   );
 }
 
+/**
+ * SCHED-01: pedido legado nao tem modo declarado e vale como imediato — a
+ * coluna `fulfillment_mode` nasceu com default IMMEDIATE no B2C-02A.
+ */
+function fulfillmentLabel(item: DeliveryRecord): string {
+  const mode = item.fulfillmentMode ?? 'IMMEDIATE';
+  if (mode !== 'SCHEDULED') return 'Imediato';
+  if (!item.pickupWindowStart || !item.pickupWindowEnd) return 'Agendado';
+  const start = new Date(item.pickupWindowStart);
+  const end = new Date(item.pickupWindowEnd);
+  const hour = (value: Date) =>
+    value.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return `Agendado ${start.toLocaleDateString('pt-BR')} ${hour(start)}-${hour(end)}`;
+}
+
 function packageSizeLabel(value: string | null | undefined): string {
   if (!value) return '—';
   return (
@@ -43,6 +59,7 @@ export function DeliveriesPage({ token }: { token: string }) {
   const [date, setDate] = useState('');
   const [productType, setProductType] = useState('');
   const [packageSize, setPackageSize] = useState('');
+  const [fulfillmentMode, setFulfillmentMode] = useState('');
   const [weightMin, setWeightMin] = useState('');
   const [weightMax, setWeightMax] = useState('');
   const [customerId, setCustomerId] = useState('');
@@ -61,6 +78,7 @@ export function DeliveriesPage({ token }: { token: string }) {
         date: date || undefined,
         productType: productType || undefined,
         packageSize: packageSize || undefined,
+        fulfillmentMode: fulfillmentMode || undefined,
         weightMin: weightMin || undefined,
         weightMax: weightMax || undefined,
         customerId: customerId || undefined,
@@ -140,6 +158,19 @@ export function DeliveriesPage({ token }: { token: string }) {
           </select>
         </label>
         <label>
+          Modo
+          <select
+            value={fulfillmentMode}
+            onChange={(e) => setFulfillmentMode(e.target.value)}
+          >
+            {FULFILLMENT_MODE_OPTIONS.map((opt) => (
+              <option key={opt.value || 'all-modes'} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
           Peso min (kg)
           <input
             type="number"
@@ -207,6 +238,7 @@ export function DeliveriesPage({ token }: { token: string }) {
               <thead>
                 <tr>
                   <th>CODIGO</th>
+                  <th>MODO</th>
                   <th>CATEGORIA</th>
                   <th>TAMANHO</th>
                   <th>PESO</th>
@@ -225,6 +257,7 @@ export function DeliveriesPage({ token }: { token: string }) {
                     <td>
                       <strong>{item.code}</strong>
                     </td>
+                    <td>{fulfillmentLabel(item)}</td>
                     <td>{productTypeLabel(item.productType)}</td>
                     <td>{packageSizeLabel(item.packageSize)}</td>
                     <td>

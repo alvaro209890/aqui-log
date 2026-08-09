@@ -4,6 +4,45 @@ Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
 ## Fluxo cliente↔prestador nos planos — 2026-08-07
 
+## `SCHED-01` + `B2C-06`: modo agendado individual — 2026-08-09
+
+- **Todo pedido novo declara o modo** (`DEC-18`). `fulfillmentMode` virou campo
+  **obrigatório** na criação, sem default: pedido sem modo é recusado com `400`.
+  A coluna já existia desde `B2C-02A`; o que faltava era o cliente escolher.
+- **Janela de coleta no agendado** (`FLOW-DEC-02`): início ao menos **30 min** à
+  frente, fim depois do início, duração de 15 min até o máximo configurado (480)
+  e horizonte de 30 dias. Janela de entrega é opcional — mas se vier, vem
+  inteira, e não pode começar antes da coleta. Janela enviada em pedido
+  **imediato** é recusada.
+- **Tarifa dual efetiva** (`B2C-06` / `DEC-19`): a cotação e a criação usam o km
+  do modo (250 imediato × **180** agendado, valores provisórios do `DEC-02`) e o
+  congelam no pedido, agora também em coluna própria (`km_rate_cents`), além do
+  `pricing_breakdown`. Mudar settings **não** altera pedido criado.
+- **Aceite antecipado** (`DEC-20`): o agendado entra na fila de ofertas na hora
+  da criação. O aceite congela `courier_cancel_fee_cents` e **não** marca o
+  prestador como indisponível — a janela dele é lá na frente. A cobrança da taxa
+  continua em `COUR-02`/`PAY-01`.
+- **Reserva de agenda** (plano §5.1): prestador com agendado aceito não recebe
+  oferta cuja execução colida com a janela reservada, com folga configurável.
+  Sem ninguém livre, o despacho devolve `404` com motivo em português.
+- **Execução abre na janela:** `ACCEPTED → AT_PICKUP` antes do início devolve
+  `409`, com o horário em `America/Sao_Paulo`. Admin e suporte passam.
+- **4 settings novos no admin:** `minScheduleLeadMinutes` (30),
+  `scheduleMaxWindowMinutes` (480), `scheduleCapacitySlackMinutes` (15) e
+  `immediateExecutionEstimateMinutes` (45) — os três últimos provisórios.
+- **Painel:** seção "Modo agendado" nas configurações, filtro por modo e coluna
+  MODO na lista de entregas (o agendado mostra dia e faixa de horário).
+- **App cliente:** escolha "Agora / Agendar", seletor de dia e hora da janela,
+  duração ajustável e validação local antes de chamar a API.
+  **App motoboy:** a oferta agendada mostra a janela antes do aceite, e o botão
+  de chegada fica desabilitado até a janela abrir.
+- Migration `1785500000000` aditiva (6 colunas opcionais + 2 índices), revertida
+  e reaplicada com uma linha legada dentro da tabela. Pedido legado sem modo
+  segue legível e vale como imediato; fallback de `notes` intacto.
+- Smoke ganhou o cenário agendado ponta a ponta, com 4 casos negativos.
+- Testes: backend 96 → **149**; core Dart 10 → 14; cliente 13 → 15; motoboy 11 → 14.
+- Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-SCHED-01-B2C-06.md`.
+
 ## `PICK-01`: código de recolhimento na coleta — 2026-08-09
 
 - **`AT_PICKUP → PICKED_UP` exige código válido + foto do prestador** (`DEC-24`).

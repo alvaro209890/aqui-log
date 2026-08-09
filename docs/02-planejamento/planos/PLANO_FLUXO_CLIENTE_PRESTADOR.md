@@ -251,7 +251,10 @@ Novos (ou estendidos) `app_settings` versionados:
 | `courier_cancel_fee_cents` | Taxa debitada do saldo do prestador |
 | `REQUIRE_PRODUCT_PHOTO` | Alinhada a `DEC-01` (true para novos) |
 | `pickup_code_length` / tentativas | **4 dígitos / 5 tentativas** (`FLOW-DEC-03`) |
-| `min_schedule_lead_minutes` | **30 min** de antecedência mínima para agendar (`FLOW-DEC-02`) |
+| `min_schedule_lead_minutes` | **30 min** de antecedência mínima para agendar (`FLOW-DEC-02`) — implementado em `SCHED-01` |
+| `schedule_max_window_minutes` | Duração máxima da janela de coleta (**480**, provisório de `SCHED-01`) |
+| `schedule_capacity_slack_minutes` | Folga mínima entre a janela reservada e outra corrida (**15**, provisório de `SCHED-01`) |
+| `immediate_execution_estimate_minutes` | Quanto se assume que um imediato ocupa, para detectar colisão (**45**, provisório de `SCHED-01`) |
 
 Toda mudança: versão nova, prévia de efeito, rollback de 1 clique, confirmação
 dupla se houver pedidos em voo.
@@ -266,10 +269,10 @@ fechar (`DONE`, mesma data) e liberou `PICK-01` para `READY`.
 | ✅ | `BASE-04` | Baseline runtime | concluído 2026-08-08 |
 | ✅ | `B2C-01B` | Filtros dashboard B2C | concluído 2026-08-08 |
 | 1 | `B2C-05` ✅ | Obrigatoriedade foto + campos na criação | `B2C-01B` ✅, `DEC-01` |
-| 3 | `B2C-06` | Preço dual km imediato/agendado + settings | `B2C-02` (ou unificar), `DEC-19`; valores `DEC-02` |
-| 4 | `SCHED-01` | Modo `SCHEDULED` individual + aceite antecipado | `B2C-06`, `DEC-18`, `DEC-20` |
-| 5 | `COUR-01` | Tela Em andamento / Agenda | `SCHED-01`, `DEC-21` |
-| 6 | `PICK-01` ▶️ | `pickup_code` na coleta | `B2C-05` ✅, `DEC-24` ✅, `FLOW-DEC-03` ✅ |
+| 3 | `B2C-06` ✅ | Preço dual km imediato/agendado + settings | concluído 2026-08-09, junto de `SCHED-01` |
+| 4 | `SCHED-01` ✅ | Modo `SCHEDULED` individual + aceite antecipado | concluído 2026-08-09 |
+| 5 | `COUR-01` ▶️ | Tela Em andamento / Agenda | `SCHED-01` ✅, `DEC-21` ✅ |
+| 6 | `PICK-01` ✅ | `pickup_code` na coleta | concluído 2026-08-09 |
 | 7 | `COUR-02` | Cancelamento prestador + taxa no ledger | `PAY-01`, `COUR-01`, `DEC-22` |
 | 8 | `PAY-01`… | Ledger + saldo sacável (modelo) | `DEC-23`, autorização `DEC-05` |
 
@@ -278,16 +281,16 @@ couber; senão, `B2C-02` entrega faixas peso/tamanho e `B2C-06` o dual km.
 
 ## 12. Critérios de aceite (documentais → futuros testes)
 
-- [ ] Novo pedido sem foto/peso/endereços/modo é rejeitado.
-- [ ] Cotação `IMMEDIATE` > cotação equivalente `SCHEDULED` (mesmo km), com settings válidos.
-- [ ] Settings com km agendado ≥ km imediato são rejeitados.
-- [ ] Prestador aceita `SCHEDULED` na criação; pedido aparece na Agenda.
-- [ ] Cancelamento prestador dentro do cutoff debita taxa; fora, recusa.
-- [ ] Sem saldo suficiente, cancelamento prestador recusa sem saldo negativo.
-- [ ] `PICKED_UP` exige código válido + foto; código errado não avança.
-- [ ] Fallback de código só via papel admin/suporte auditado.
-- [ ] Lote rejeita mistura `IMMEDIATE`/`SCHEDULED`.
-- [ ] Reoferta não recalcula com settings novos.
+- [x] Novo pedido sem foto/peso/endereços/modo é rejeitado. — `B2C-05` + `SCHED-01`
+- [x] Cotação `IMMEDIATE` > cotação equivalente `SCHEDULED` (mesmo km), com settings válidos. — `B2C-06`
+- [x] Settings com km agendado ≥ km imediato são rejeitados. — `B2C-02`, reconferido em `B2C-06`
+- [x] Prestador aceita `SCHEDULED` na criação. — `SCHED-01`; **a tela de Agenda em si continua em `COUR-01`**
+- [ ] Cancelamento prestador dentro do cutoff debita taxa; fora, recusa. — `COUR-02`
+- [ ] Sem saldo suficiente, cancelamento prestador recusa sem saldo negativo. — `COUR-02`
+- [x] `PICKED_UP` exige código válido + foto; código errado não avança. — `PICK-01`
+- [x] Fallback de código só via papel admin/suporte auditado. — `PICK-01`
+- [ ] Lote rejeita mistura `IMMEDIATE`/`SCHEDULED`. — `LOT-01`
+- [x] Reoferta não recalcula com settings novos. — congelamento provado em `B2C-02` e `B2C-06`
 
 ## 13. Fora de escopo deste plano
 

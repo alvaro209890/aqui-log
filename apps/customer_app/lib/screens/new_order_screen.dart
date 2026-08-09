@@ -42,9 +42,75 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   String size = OrderMeta.sizes[1];
   String scope = OrderMeta.scopes.first;
 
+  /// SCHED-01 / DEC-18: o modo é escolha do cliente. O padrão é imediato
+  /// porque é o pedido comum; a API recusa criação sem modo declarado.
+  String fulfillmentMode = FulfillmentMode.immediate;
+  DateTime? windowStart;
+  DateTime? windowEnd;
+
   bool loading = false;
   bool photoMissing = false;
   String? error;
+
+  bool get isScheduled => fulfillmentMode == FulfillmentMode.scheduled;
+
+  /// Primeiro horário aceitável, já com a antecedência do `FLOW-DEC-02`.
+  DateTime get earliestStart => DateTime.now().add(
+    const Duration(minutes: kMinScheduleLeadMinutes),
+  );
+
+  /// Erro da janela em texto, ou `null` quando ela está boa. É a mesma regra
+  /// do servidor, antecipada para o cliente não descobrir por um 400.
+  String? get windowProblem {
+    if (!isScheduled) return null;
+    if (windowStart == null || windowEnd == null) {
+      return 'Escolha a janela de coleta.';
+    }
+    if (windowStart!.isBefore(earliestStart)) {
+      return 'A coleta agendada precisa começar ao menos '
+          '$kMinScheduleLeadMinutes minutos à frente.';
+    }
+    if (!windowEnd!.isAfter(windowStart!)) {
+      return 'O fim da janela precisa ser depois do início.';
+    }
+    if (windowEnd!.difference(windowStart!).inMinutes < 15) {
+      return 'A janela precisa ter ao menos 15 minutos.';
+    }
+    return null;
+  }
+
+  Future<void> _pickWindow() async {
+    final now = DateTime.now();
+    final suggestion = windowStart ?? earliestStart;
+    final date = await showDatePicker(
+      context: context,
+      initialDate: suggestion.isBefore(now) ? now : suggestion,
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: now.add(const Duration(days: 30)),
+      helpText: 'Dia da coleta',
+    );
+    if (date == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(suggestion),
+      helpText: 'Início da janela de coleta',
+    );
+    if (time == null || !mounted) return;
+    final start = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+    setState(() {
+      windowStart = start;
+      windowEnd = start.add(
+        const Duration(minutes: kDefaultScheduleWindowMinutes),
+      );
+      error = null;
+    });
+  }
 
   @override
   void dispose() {
@@ -120,6 +186,13 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       }
       return;
     }
+    // SCHED-01: a janela também não é campo de formulário; sem esta checagem o
+    // app mandaria um agendamento que a API recusa com 400.
+    final janela = windowProblem;
+    if (janela != null) {
+      setState(() => error = janela);
+      return;
+    }
     setState(() {
       loading = true;
       error = null;
@@ -152,6 +225,13 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
         'deliveryLongitude': deliveryGeo.longitude,
         'recipientName': recipient.text.trim(),
         'recipientPhone': phone.text.trim(),
+        'fulfillmentMode': fulfillmentMode,
+        // Janela em ISO com offset: o servidor guarda em UTC e não precisa
+        // adivinhar o fuso de quem pediu.
+        if (isScheduled) ...{
+          'pickupWindowStart': windowStart!.toIso8601String(),
+          'pickupWindowEnd': windowEnd!.toIso8601String(),
+        },
         ...meta.toApiJson(),
       });
       if (!mounted) return;
@@ -262,6 +342,10 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             const SizedBox(height: 16),
             _photoSection(),
             const SizedBox(height: 22),
+            _sectionTitle('Quando'),
+            const SizedBox(height: 10),
+            _modeSection(),
+            const SizedBox(height: 22),
             _sectionTitle('De onde sai'),
             const SizedBox(height: 10),
             TextFormField(
@@ -350,6 +434,94 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
     text,
     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
   );
+
+  /// SCHED-01 / B2C-06 — a escolha do modo. O agendado custa menos por km
+  /// (`DEC-19`), e a tela diz isso: sem esse aviso o cliente não tem motivo
+  /// para escolher a opção que ajuda a operação.
+  Widget _modeSection() {
+    final problem = windowProblem;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SegmentedButton<String>(
+          segments: const [
+            ButtonSegment(
+              value: FulfillmentMode.immediate,
+              label: Text('Agora'),
+              icon: Icon(Icons.bolt_outlined),
+            ),
+            ButtonSegment(
+              value: FulfillmentMode.scheduled,
+              label: Text('Agendar'),
+              icon: Icon(Icons.event_outlined),
+            ),
+          ],
+          selected: {fulfillmentMode},
+          onSelectionChanged: (selection) => setState(() {
+            fulfillmentMode = selection.first;
+            error = null;
+          }),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          isScheduled
+              ? 'Agendado sai mais barato por km. Escolha uma janela com pelo '
+                    'menos $kMinScheduleLeadMinutes minutos de antecedência.'
+              : 'Publicamos agora e o primeiro motoboy disponível aceita.',
+          style: const TextStyle(color: AquiLogColors.muted, fontSize: 12),
+        ),
+        if (isScheduled) ...[
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _pickWindow,
+            icon: const Icon(Icons.schedule_outlined),
+            label: Text(
+              windowStart == null
+                  ? 'Escolher janela de coleta'
+                  : formatPickupWindow(windowStart, windowEnd),
+            ),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(50),
+              foregroundColor: problem != null ? Colors.red : null,
+              side: problem != null
+                  ? const BorderSide(color: Colors.red)
+                  : null,
+            ),
+          ),
+          if (windowStart != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Text('Duração da janela: '),
+                DropdownButton<int>(
+                  value: windowEnd!.difference(windowStart!).inMinutes,
+                  items: const [30, 60, 120, 240]
+                      .map(
+                        (minutes) => DropdownMenuItem(
+                          value: minutes,
+                          child: Text('$minutes min'),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (minutes) => setState(() {
+                    if (minutes == null) return;
+                    windowEnd = windowStart!.add(Duration(minutes: minutes));
+                  }),
+                ),
+              ],
+            ),
+          ],
+          if (problem != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              problem,
+              style: const TextStyle(color: Colors.red, fontSize: 12),
+            ),
+          ],
+        ],
+      ],
+    );
+  }
 
   Widget _photoSection() {
     if (photo == null) {

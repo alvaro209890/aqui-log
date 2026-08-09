@@ -1,6 +1,6 @@
 # Backlog executável por agentes
 
-> **Atualizado:** 2026-08-09
+> **Atualizado:** 2026-08-09 (2ª rodada)
 > **Papel:** converter o roadmap em pacotes pequenos, ordenados e verificáveis.
 > **Regra:** um agente executa um único ID por sessão, salvo autorização explícita.
 
@@ -14,19 +14,19 @@
 | — | `UX-01C` | `DONE` (2026-08-08) | P1 | Dashboard usa tokens laranja equivalentes | evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-UX-01C.md` |
 | 1 | `UX-02` | `READY` | P1 | Fluxos principais passam por QA visual/acessibilidade | `UX-01C` DONE; exige dispositivo/emulador para a parte mobile |
 | — | `B2C-02` | `DONE` (2026-08-08) | P1 | Preço v2 versionado com breakdown congelado | `DEC-02` decidida; evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-02-E-TEMA-ESCURO.md` |
-| 2 | `B2C-06` | `READY` | P1 | Dual km imediato/agendado + settings admin | tarifa dual e admin **já entregues** em `B2C-02`; falta a escolha do modo (implementa junto com `SCHED-01`); gates `DEC-02/18/19/20` + `FLOW-DEC-02` ✅ |
-| 3 | `SCHED-01` | `READY` | P1 | Modo `SCHEDULED` individual + aceite antecipado | implementa com `B2C-06`; gates `DEC-18`, `DEC-20`, `FLOW-DEC-02` ✅ (30 min de lead) |
-| 4 | `COUR-01` | `BLOCKED` | P1 | App prestador: Em andamento + Agenda | `SCHED-01`; `DEC-21` |
+| — | `B2C-06` | `DONE` (2026-08-09) | P1 | Dual km imediato/agendado + settings admin | evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-SCHED-01-B2C-06.md` |
+| — | `SCHED-01` | `DONE` (2026-08-09) | P1 | Modo `SCHEDULED` individual + aceite antecipado | mesmo esforço e mesma evidência de `B2C-06` |
+| 2 | `COUR-01` | `READY` | P1 | App prestador: Em andamento + Agenda | `SCHED-01` ✅ DONE; `DEC-21` ✅ decidida |
 | — | `PICK-01` | `DONE` (2026-08-09) | P1 | Código de recolhimento + foto do prestador na coleta | evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-PICK-01.md` |
-| 5 | `B2C-03` | `BLOCKED` | P1 | Avaliação mútua por papel | baseline estável e migração de ratings definida |
-| 6 | `DISP-01` | `READY` | P1 | Reoferta limitada por anéis e recusas | `B2C-02` DONE; `DEC-03` decidida (ampliar raio + aumento com consentimento) |
-| 7 | `PAY-01` | `READY` | P2 | Ledger interno (cliente + prestador) sem gateway | autorização `DEC-05` ✅; `B2C-02` DONE; `DEC-23` |
-| 8 | `COUR-02` | `BLOCKED` | P2 | Cancelamento prestador + taxa no saldo | `PAY-01`, `COUR-01`; `DEC-22` |
-| 9 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-02B`, `B2C-03A`, `DISP-03` (`B2C-01B` ok) |
-| 10 | `OPS-DB-01` | `BLOCKED` | P2 | Modelo + migração Postgres → Firestore | `DEC-25`; credenciais Firebase |
-| 11 | `OPS-02` | `BLOCKED` | P2 | Firebase Firestore/Storage/FCM reais | pedido + credenciais; ver `PLANO_HOSPEDAGEM.md` |
-| 12 | `OPS-03` | `BLOCKED` | P2 | Deploy Render + Vercel + smoke público | `OPS-01`, `OPS-02`, credenciais |
-| 13 | `LOT-01` | `BLOCKED` | P3 | Aceite atômico de lote manual | código: `B2C-02B`, `B2C-03A`, `DISP-03`; gates `DEC-08/10/11` ✅ decididas 2026-08-09 |
+| 3 | `B2C-03` | `BLOCKED` | P1 | Avaliação mútua por papel | baseline estável e migração de ratings definida |
+| 4 | `DISP-01` | `READY` | P1 | Reoferta limitada por anéis e recusas | `B2C-02` DONE; `DEC-03` decidida (ampliar raio + aumento com consentimento) |
+| 5 | `PAY-01` | `READY` | P2 | Ledger interno (cliente + prestador) sem gateway | autorização `DEC-05` ✅; `B2C-02` DONE; `DEC-23` |
+| 6 | `COUR-02` | `BLOCKED` | P2 | Cancelamento prestador + taxa no saldo | `PAY-01`, `COUR-01`; `DEC-22` |
+| 7 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-02B`, `B2C-03A`, `DISP-03` (`B2C-01B` ok) |
+| 8 | `OPS-DB-01` | `BLOCKED` | P2 | Modelo + migração Postgres → Firestore | `DEC-25`; credenciais Firebase |
+| 9 | `OPS-02` | `BLOCKED` | P2 | Firebase Firestore/Storage/FCM reais | pedido + credenciais; ver `PLANO_HOSPEDAGEM.md` |
+| 10 | `OPS-03` | `BLOCKED` | P2 | Deploy Render + Vercel + smoke público | `OPS-01`, `OPS-02`, credenciais |
+| 11 | `LOT-01` | `BLOCKED` | P3 | Aceite atômico de lote manual | código: `B2C-02B`, `B2C-03A`, `DISP-03`; gates `DEC-08/10/11` ✅ decididas 2026-08-09 |
 
 Cloud: alvos **decididos** (`DEC-25` — Render / Vercel / Firebase). Ligar projetos
 ainda exige credenciais e pacote OPS. PIX (Pagar.me) definido; falta conta/credenciais. SMS e lote automático idem.
@@ -158,27 +158,58 @@ vai para o cliente (e para admin/suporte) e **nunca** para o app do motoboy.
 
 Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-PICK-01.md`.
 
-## 3. Tarefa pronta — `UX-02`, `B2C-06`/`SCHED-01` ou `DISP-01`
+## 2c. Concluído em 2026-08-09 (2ª rodada)
 
+### `SCHED-01` + `B2C-06` — `DONE`
+
+Um único esforço, como o backlog previa. Todo pedido novo declara
+`fulfillment_mode`; o agendado exige janela com 30 min de antecedência
+(`FLOW-DEC-02`), custa o km mais barato (`DEC-19`), entra na fila de ofertas na
+hora (aceite antecipado, `DEC-20`) e só abre para execução na janela.
+
+| Critério | Resultado |
+| --- | --- |
+| Cliente escolhe o modo; criação sem modo é rejeitada | ✅ `400` com mensagem em português |
+| Janela obrigatória no agendado, com 30 min de antecedência | ✅ 29 min recusado, 30 min aceito; passado recusado |
+| Fim > início, janela razoável, entrega opcional | ✅ invertida/curta/longa recusadas; horizonte de 30 dias |
+| Janela enviada no modo imediato é recusada | ✅ `400` |
+| Cotação e criação usam o km do modo e o congelam | ✅ 250 × **180** na mesma rota; settings alteradas não mexem no pedido |
+| `DEC-19` (imediato > agendado) na escrita de settings | ✅ `400` nos dois casos inválidos |
+| Aceite antecipado congela preço, repasse e taxa de cancelamento | ✅ `courier_cancel_fee_cents` gravada no aceite |
+| Aceite antecipado não tira o prestador do mercado | ✅ `available` permanece `true` |
+| `AT_PICKUP` antes da janela é recusado | ✅ `409`; admin/suporte passam |
+| Capacidade: agendado reservado bloqueia imediato colidente | ✅ `404` com o reservado sozinho; com dois, foi para o outro |
+| Settings novos no admin, versionados e validados | ✅ 4 campos (`minScheduleLeadMinutes` = 30 + 3 provisórios) |
+| Pedido legado sem modo continua legível como imediato | ✅ em HTTP vivo; fallback de `notes` intacto |
+| Migration aditiva com rollback ensaiado | ✅ 11 migrations; revert + reapply com linha legada |
+| `build`/`lint`/`test`/`smoke` + Flutter/Dart | ✅ 149 testes backend; smoke 3× |
+| QA de navegador do painel / APK / emulador | ❌ NÃO EXECUTADO (segue em `UX-02`) |
+
+Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-SCHED-01-B2C-06.md`.
+
+## 3. Tarefa pronta — `COUR-01`, `UX-02` ou `DISP-01`
+
+- **`COUR-01`** — abas *Em andamento* / *Agenda* no app do prestador. Destravou
+  agora: `SCHED-01` está `DONE` e `DEC-21` já estava decidida. O modelo
+  compartilhado já expõe `scheduledAhead`, que é o critério de separação das
+  duas listas.
 - **`UX-02`** — QA visual e de acessibilidade dos fluxos. O dashboard já saiu em
   `UX-01C` + tema escuro; o que resta exige **dispositivo/emulador**, ainda
-  indisponível nesta máquina. Inclui o gráfico de pizza quebrado.
-
-`SCHED-01` continua bloqueado, mas ficou mais perto: a tarifa dual e o admin
-dela já existem desde `B2C-02`; falta o cliente **escolher** o modo.
+  indisponível nesta máquina. Inclui o gráfico de pizza quebrado e a seção
+  "Modo agendado" do admin, que não passou por Chrome real.
 
 ## 4. Pacotes do fluxo cliente↔prestador
 
 Detalhe e aceite em
 `docs/02-planejamento/planos/PLANO_FLUXO_CLIENTE_PRESTADOR.md`.
-`B2C-05` e `PICK-01` estão `DONE`; os demais continuam `BLOCKED` ou `READY`
-conforme a fila da seção 1.
+`B2C-05`, `PICK-01`, `B2C-06` e `SCHED-01` estão `DONE`; os demais continuam
+`BLOCKED` ou `READY` conforme a fila da seção 1.
 
 | ID | Resumo | Não misturar com |
 | --- | --- | --- |
 | `B2C-05` | ✅ `DONE` — foto e campos obrigatórios na criação | — |
-| `B2C-06` | Km imediato vs agendado + admin | tela agenda, cancelamento |
-| `SCHED-01` | Modo agendado individual + aceite antecipado | lote `LOT-02` |
+| `B2C-06` | ✅ `DONE` — km imediato vs agendado + admin | — |
+| `SCHED-01` | ✅ `DONE` — modo agendado individual + aceite antecipado | — |
 | `COUR-01` | UI Em andamento / Agenda | taxa financeira |
 | `PICK-01` | ✅ `DONE` — `pickup_code` + foto do prestador na coleta | — |
 | `COUR-02` | Cancelamento prestador + taxa no saldo | exige `PAY-01` |

@@ -70,6 +70,13 @@ export interface DeliveryRecord {
   productType?: string | null;
   packageSize?: string | null;
   weightKg?: number | null;
+  /** SCHED-01: modo e janela. Pedido legado vem como IMMEDIATE, sem janela. */
+  fulfillmentMode?: string | null;
+  pickupWindowStart?: string | null;
+  pickupWindowEnd?: string | null;
+  deliveryWindowStart?: string | null;
+  deliveryWindowEnd?: string | null;
+  kmRateCents?: number | null;
 }
 
 export interface CourierRecord {
@@ -157,6 +164,12 @@ export interface PlatformSettings {
   courierCancelCutoffMinutesImmediate: number;
   courierCancelCutoffMinutesScheduled: number;
   customerCancelFeeCents: number;
+  // SCHED-01 — modo agendado. `minScheduleLeadMinutes` vem do FLOW-DEC-02 (30);
+  // os demais são provisórios e existem para calibrar a capacidade sem deploy.
+  minScheduleLeadMinutes: number;
+  scheduleMaxWindowMinutes: number;
+  scheduleCapacitySlackMinutes: number;
+  immediateExecutionEstimateMinutes: number;
 }
 
 export interface ReportRange {
@@ -186,6 +199,8 @@ export type DeliveryFilters = {
   productType?: string;
   /** Filtro B2C-01B: tamanho P/M/G. */
   packageSize?: string;
+  /** Filtro SCHED-01: IMMEDIATE ou SCHEDULED. */
+  fulfillmentMode?: string;
   /** Peso mínimo inclusivo (kg). */
   weightMin?: number | string;
   /** Peso máximo inclusivo (kg). */
@@ -205,6 +220,12 @@ export const PRODUCT_TYPE_OPTIONS = [
   { value: 'CLOTHING', label: 'Roupas' },
   { value: 'MEDICINE', label: 'Medicamento' },
   { value: 'OTHER', label: 'Outro' },
+] as const;
+
+export const FULFILLMENT_MODE_OPTIONS = [
+  { value: '', label: 'Todos' },
+  { value: 'IMMEDIATE', label: 'Imediato' },
+  { value: 'SCHEDULED', label: 'Agendado' },
 ] as const;
 
 export const PACKAGE_SIZE_OPTIONS = [

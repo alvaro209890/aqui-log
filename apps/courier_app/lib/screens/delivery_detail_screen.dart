@@ -57,6 +57,44 @@ class DeliveryDetailScreen extends StatelessWidget {
                   ],
                   if (d.deliveryAddress != null)
                     Text('Entrega: ${d.deliveryAddress}'),
+                  // SCHED-01: no agendado, a janela combinada é a informação
+                  // que decide o dia do prestador.
+                  if (d.isScheduled) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.event_available_outlined,
+                          size: 18,
+                          color: AquiLogColors.primaryDark,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            formatPickupWindow(
+                              d.pickupWindowStart,
+                              d.pickupWindowEnd,
+                            ),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: AquiLogColors.primaryDark,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (d.scheduledAhead)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Na agenda. A coleta so abre no inicio da janela.',
+                          style: TextStyle(
+                            color: AquiLogColors.muted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                  ],
                 ],
               ),
             ),
@@ -209,8 +247,14 @@ class DeliveryDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           OutlinedButton(
-            onPressed: () => onStatus('AT_PICKUP'),
-            child: const Text('Cheguei na coleta'),
+            // DEC-20: antes da janela o servidor recusa a transicao; deixar o
+            // botao ativo so produziria um erro que o prestador nao pediu.
+            onPressed: d.scheduledAhead ? null : () => onStatus('AT_PICKUP'),
+            child: Text(
+              d.scheduledAhead
+                  ? 'Coleta abre em ${formatPickupWindow(d.pickupWindowStart, d.pickupWindowEnd)}'
+                  : 'Cheguei na coleta',
+            ),
           ),
           const SizedBox(height: 8),
           OutlinedButton(

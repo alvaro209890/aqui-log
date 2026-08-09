@@ -124,6 +124,7 @@ export class Delivery {
   @Column({ name: 'pricing_breakdown', type: 'jsonb', nullable: true })
   pricingBreakdown!: PricingBreakdown | null;
 
+  @Index()
   @Column({
     name: 'fulfillment_mode',
     type: 'varchar',
@@ -131,6 +132,41 @@ export class Delivery {
     default: 'IMMEDIATE',
   })
   fulfillmentMode!: string;
+
+  // SCHED-01 / B2C-06: a tarifa/km efetivamente usada, congelada na criação.
+  // Ela também vive dentro de `pricing_breakdown`; a coluna existe para poder
+  // auditar e consultar sem abrir o JSON. Nula em pedido anterior ao v2.
+  @Column({ name: 'km_rate_cents', type: 'integer', nullable: true })
+  kmRateCents!: number | null;
+
+  // SCHED-01 / DEC-18: janela de coleta do modo agendado. Nula em IMMEDIATE e
+  // em pedido legado.
+  @Index()
+  @Column({ name: 'pickup_window_start', type: 'timestamptz', nullable: true })
+  pickupWindowStart!: Date | null;
+
+  @Column({ name: 'pickup_window_end', type: 'timestamptz', nullable: true })
+  pickupWindowEnd!: Date | null;
+
+  /** Janela de entrega: opcional mesmo no agendado (plano §3.1). */
+  @Column({
+    name: 'delivery_window_start',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  deliveryWindowStart!: Date | null;
+
+  @Column({ name: 'delivery_window_end', type: 'timestamptz', nullable: true })
+  deliveryWindowEnd!: Date | null;
+
+  // DEC-20: no aceite congela-se também a taxa de cancelamento do prestador,
+  // para que mudança de settings depois não altere o combinado.
+  @Column({
+    name: 'courier_cancel_fee_cents',
+    type: 'integer',
+    nullable: true,
+  })
+  courierCancelFeeCents!: number | null;
 
   // PICK-01 / DEC-24: código de recolhimento. Nulo em pedido legado e em
   // pedido ainda não aceito; a partir do aceite, é exigido na coleta.

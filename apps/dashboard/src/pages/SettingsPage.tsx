@@ -307,6 +307,72 @@ export function SettingsPage({ token }: { token: string }) {
           <section className="panel settings-panel">
             <div className="panel-heading">
               <div>
+                <h2>Modo agendado</h2>
+                <p>
+                  Antecedencia minima (FLOW-DEC-02) e reserva de agenda do
+                  prestador. Vale para pedidos novos; pedido ja criado nao muda.
+                </p>
+              </div>
+            </div>
+            <div className="settings-form">
+              <label>
+                Antecedencia minima (minutos)
+                <input
+                  type="number"
+                  min={0}
+                  max={1440}
+                  value={form.minScheduleLeadMinutes}
+                  onChange={(e) =>
+                    setNum('minScheduleLeadMinutes', e.target.value)
+                  }
+                />
+              </label>
+              <label>
+                Janela maxima de coleta (minutos)
+                <input
+                  type="number"
+                  min={15}
+                  max={1440}
+                  value={form.scheduleMaxWindowMinutes}
+                  onChange={(e) =>
+                    setNum('scheduleMaxWindowMinutes', e.target.value)
+                  }
+                />
+              </label>
+              <label>
+                Folga entre corridas (minutos)
+                <input
+                  type="number"
+                  min={0}
+                  max={240}
+                  value={form.scheduleCapacitySlackMinutes}
+                  onChange={(e) =>
+                    setNum('scheduleCapacitySlackMinutes', e.target.value)
+                  }
+                />
+              </label>
+              <label>
+                Duracao estimada do imediato (minutos)
+                <input
+                  type="number"
+                  min={5}
+                  max={480}
+                  value={form.immediateExecutionEstimateMinutes}
+                  onChange={(e) =>
+                    setNum('immediateExecutionEstimateMinutes', e.target.value)
+                  }
+                />
+              </label>
+            </div>
+            <p className="settings-note">
+              A folga e a duracao estimada decidem quando um agendado ja aceito
+              bloqueia uma oferta imediata. Valores provisorios de SCHED-01.
+            </p>
+          </section>
+
+          <section className="panel settings-panel">
+            <div className="panel-heading">
+              <div>
                 <h2>Multas e cancelamento</h2>
                 <p>
                   Valores editaveis. A cobranca automatica ainda nao esta

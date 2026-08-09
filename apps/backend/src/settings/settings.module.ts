@@ -33,6 +33,7 @@ import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '../database/enums';
 import { RedisService } from '../redis/redis.module';
 import type { SizeSurcharges, WeightBand } from '../pricing/pricing.types';
+import { SCHEDULE_MIN_WINDOW_MINUTES } from '../deliveries/scheduling';
 
 /**
  * DEC-02 (2026-08-08, Álvaro): valores PROVISÓRIOS, escolhidos para destravar
@@ -72,6 +73,13 @@ export type PlatformSettings = {
   courierCancelCutoffMinutesImmediate: number;
   courierCancelCutoffMinutesScheduled: number;
   customerCancelFeeCents: number;
+  // SCHED-01 — modo agendado. `minScheduleLeadMinutes` é `FLOW-DEC-02` (30);
+  // os outros três são PROVISÓRIOS, escolhidos aqui para destravar a
+  // capacidade do plano §5.1, e ficam editáveis no admin como o resto.
+  minScheduleLeadMinutes: number;
+  scheduleMaxWindowMinutes: number;
+  scheduleCapacitySlackMinutes: number;
+  immediateExecutionEstimateMinutes: number;
 };
 
 const REDIS_KEY = 'aqui:settings:platform';
@@ -195,6 +203,35 @@ class UpdateSettingsDto {
   @IsInt()
   @Min(0)
   customerCancelFeeCents?: number;
+
+  // SCHED-01 / FLOW-DEC-02 + capacidade do plano §5.1.
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(1440)
+  minScheduleLeadMinutes?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(15)
+  @Max(1440)
+  scheduleMaxWindowMinutes?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(240)
+  scheduleCapacitySlackMinutes?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(5)
+  @Max(480)
+  immediateExecutionEstimateMinutes?: number;
 }
 
 @Injectable()
@@ -241,6 +278,18 @@ export class SettingsService {
       customerCancelFeeCents: Number(
         this.config.get('CUSTOMER_CANCEL_FEE_CENTS') ?? 0,
       ),
+      minScheduleLeadMinutes: Number(
+        this.config.get('MIN_SCHEDULE_LEAD_MINUTES') ?? 30,
+      ),
+      scheduleMaxWindowMinutes: Number(
+        this.config.get('SCHEDULE_MAX_WINDOW_MINUTES') ?? 480,
+      ),
+      scheduleCapacitySlackMinutes: Number(
+        this.config.get('SCHEDULE_CAPACITY_SLACK_MINUTES') ?? 15,
+      ),
+      immediateExecutionEstimateMinutes: Number(
+        this.config.get('IMMEDIATE_EXECUTION_ESTIMATE_MINUTES') ?? 45,
+      ),
     };
   }
 
@@ -263,6 +312,13 @@ export class SettingsService {
     ) {
       throw new BadRequestException(
         'As faixas de peso não podem repetir o mesmo limite (upToKg).',
+      );
+    }
+    // SCHED-01: janela máxima abaixo da mínima operacional tornaria impossível
+    // criar qualquer pedido agendado — a tela recusaria tudo em silêncio.
+    if (next.scheduleMaxWindowMinutes < SCHEDULE_MIN_WINDOW_MINUTES) {
+      throw new BadRequestException(
+        `A janela máxima de coleta não pode ser menor que ${SCHEDULE_MIN_WINDOW_MINUTES} minutos.`,
       );
     }
   }

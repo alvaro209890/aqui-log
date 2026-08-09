@@ -2,10 +2,11 @@
 
 > **Atualizado:** 2026-08-09
 > **Status:** fonte de verdade para prioridade, dependências e ordem de execução
-> **Rodada atual:** `PICK-01` fechado com evidência de runtime local (código de
-> recolhimento + foto do prestador na coleta, rate limit, fallback auditado,
-> migration com rollback ensaiado e smoke vivo).
-> **Próximo pacote:** `UX-02` (QA visual), `B2C-06`+`SCHED-01` ou `DISP-01`.
+> **Rodada atual:** `SCHED-01`+`B2C-06` fechados com evidência de runtime local
+> (modo agendado com janela de 30 min de antecedência, tarifa dual congelada,
+> aceite antecipado, reserva de agenda, migration com rollback ensaiado e smoke
+> vivo com cenário agendado).
+> **Próximo pacote:** `COUR-01` (Em andamento / Agenda), `UX-02` (QA visual) ou `DISP-01`.
 > **Produto principal:** cliente pessoa física → motoboy, sem intermediário no fluxo
 > **Regra operacional:** desenvolvimento e validação local primeiro; nenhuma cloud é ligada sem pedido explícito do Álvaro
 
@@ -68,7 +69,7 @@ Plano detalhado do fluxo: [PLANO_FLUXO_CLIENTE_PRESTADOR.md](planos/PLANO_FLUXO_
 | Pagamentos | Cobrança real não está ativa. Ledger interno autorizado (`DEC-05`, 09/08); gateway **Pagar.me v5** definido (`DEC-06`, 09/08, padrão AquiResolve); falta conta/credenciais. |
 | Cloud | Alvos **travados** (`DEC-25`): API **Render**, dashboard **Vercel**, banco **Firebase**. Scaffold existe; **não provisionar** sem credenciais e pacote OPS. |
 | Encomenda | Campos próprios entregues; **foto obrigatória** em pedidos novos (`DEC-01`). Fallback de `notes` permanece até medir legado. |
-| Modos | `IMMEDIATE` vs `SCHEDULED` (`DEC-18`); aceite antecipado do agendado (`DEC-20`); tela Agenda no app prestador (`DEC-21`). |
+| Modos | `IMMEDIATE` vs `SCHEDULED` (`DEC-18`); aceite antecipado do agendado (`DEC-20`) — ambos **implementados em `SCHED-01`+`B2C-06`, 2026-08-09**; tela Agenda no app prestador (`DEC-21`) segue em `COUR-01`. |
 | Prestador / dinheiro | Cancelamento pré-coleta com taxa no saldo (`DEC-22`); pagamento = saldo interno sacável (`DEC-23`); coleta com `pickup_code` (`DEC-24`) **implementada em `PICK-01`, 2026-08-09**. |
 | Tempo | Persistência em UTC; janelas de negócio em `America/Sao_Paulo`. |
 
@@ -79,8 +80,8 @@ Plano detalhado do fluxo: [PLANO_FLUXO_CLIENTE_PRESTADOR.md](planos/PLANO_FLUXO_
 | Cadastro/login de cliente | ✅ | Telefone ainda não é verificado por SMS |
 | Pedido B2C e auto-dispatch | ✅ | Pedidos novos usam campos próprios; `notes` permanece como fallback legado |
 | Oferta/aceite do motoboy | ✅ | Apenas um candidato por rodada; baixa transparência quando ninguém aceita |
-| Preço server-side | ✅ básico | Sem dual km imediato/agendado; sem versão/breakdown persistido |
-| Modo agendado individual | ❌ | Só `scheduledAt` legado / blocos `LOT-02` em design; falta `SCHED-01` |
+| Preço server-side | ✅ v2 versionado com tarifa dual (`B2C-02`/`B2C-06`) | Prévia antes de confirmar continua em `B2C-02B` |
+| Modo agendado individual | ✅ (`SCHED-01`, 2026-08-09) | Sem abas Em andamento/Agenda no app (`COUR-01`); capacidade usa estimativa fixa de duração do imediato |
 | Código de recolhimento | ✅ (`PICK-01`, 2026-08-09) | Fallback do suporte só por API; sem tela no painel |
 | Provas, GPS e tracking | ✅ piloto | Storage local; retenção e push real pendentes |
 | Avaliação | ✅ unilateral | Falta avaliação mútua com origem explícita |
@@ -124,8 +125,8 @@ valores finais de km continuam atrás de `DEC-05`/`DEC-02`.
 | B2C-02 | ✅ | `B2C-01` ✅, `DEC-02` ✅ | Preço v2 com faixas de peso/tamanho, tarifa dual e configuração server-side editável no admin (2026-08-08) |
 | B2C-02A | ✅ | `B2C-02` | Breakdown e versão persistidos no pedido; congelamento provado (2026-08-08) |
 | B2C-02B | ⏳ | `B2C-02` | Prévia de preço antes da confirmação, sem confiar em valores enviados pelo app |
-| B2C-06 | ▶️ | `SCHED-01` (mesmo esforço); gates ✅ | Tarifa dual e validação imediato > agendado **já entregues** em `B2C-02`; falta o cliente escolher o modo |
-| SCHED-01 | ▶️ | `B2C-06`, `DEC-18` ✅, `DEC-20` ✅, `FLOW-DEC-02` ✅ | Modo `SCHEDULED` individual, janelas e aceite antecipado |
+| B2C-06 | ✅ | `SCHED-01` (mesmo esforço); gates ✅ | Cliente escolhe o modo; cotação e criação usam e congelam o km do modo (2026-08-09) |
+| SCHED-01 | ✅ | `B2C-06`, `DEC-18` ✅, `DEC-20` ✅, `FLOW-DEC-02` ✅ | Modo `SCHEDULED` individual com janela (30 min de antecedência), aceite antecipado e reserva de agenda (2026-08-09) |
 
 O preço de uma oferta aceita é imutável. Qualquer aumento posterior exige nova oferta e consentimento do cliente; não deve ser aplicado silenciosamente. Troca de modo exige novo pedido/recotação.
 
@@ -166,7 +167,7 @@ Nenhuma integração PIX/cartão entra nesta fase. O objetivo é provar a contab
 
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
-| COUR-01 | ⏳ | `SCHED-01`, `DEC-21` | App prestador: Em andamento + Agenda |
+| COUR-01 | ▶️ | `SCHED-01` ✅, `DEC-21` ✅ | App prestador: Em andamento + Agenda |
 | PICK-01 | ✅ | `B2C-05` ✅, `DEC-24` ✅, `FLOW-DEC-03` ✅ | `pickup_code` de 4 dígitos + foto do prestador em `AT_PICKUP → PICKED_UP`, com rate limit e fallback auditado (2026-08-09) |
 
 ### Fase 6 — prontidão operacional e publicação

@@ -90,7 +90,33 @@ new_order_payload() {
     --argjson deliveryLatitude "$DELIVERY_LATITUDE" \
     --argjson deliveryLongitude "$DELIVERY_LONGITUDE" \
     --arg productPhotoUrl "$product_photo" \
-    '{pickupAddress:"Av. Afonso Pena, 1000 - Centro",pickupLatitude:$pickupLatitude,pickupLongitude:$pickupLongitude,deliveryAddress:"Praca da Liberdade - Savassi",deliveryLatitude:$deliveryLatitude,deliveryLongitude:$deliveryLongitude,recipientName:"Cliente Teste",recipientPhone:"+5531999999999",productType:"OTHER",packageSize:"SMALL",weightKg:1.5,deliveryScope:"SAME_CITY",productPhotoUrls:[$productPhotoUrl]}'
+    '{pickupAddress:"Av. Afonso Pena, 1000 - Centro",pickupLatitude:$pickupLatitude,pickupLongitude:$pickupLongitude,deliveryAddress:"Praca da Liberdade - Savassi",deliveryLatitude:$deliveryLatitude,deliveryLongitude:$deliveryLongitude,recipientName:"Cliente Teste",recipientPhone:"+5531999999999",productType:"OTHER",packageSize:"SMALL",weightKg:1.5,deliveryScope:"SAME_CITY",fulfillmentMode:"IMMEDIATE",productPhotoUrls:[$productPhotoUrl]}'
+}
+
+# SCHED-01: mesmo pedido, modo agendado, com janela a partir de agora.
+scheduled_payload() {
+  local start_minutes="$1" window_minutes="${2:-60}"
+  local start end
+  start="$(date -u -d "${start_minutes} minutes" +%Y-%m-%dT%H:%M:%S.000Z)"
+  end="$(date -u -d "$((start_minutes + window_minutes)) minutes" +%Y-%m-%dT%H:%M:%S.000Z)"
+  new_order_payload | jq -c \
+    --arg start "$start" \
+    --arg end "$end" \
+    '.fulfillmentMode="SCHEDULED" | .pickupWindowStart=$start | .pickupWindowEnd=$end'
+}
+
+# Recusa esperada: devolve o status HTTP e aborta se nao for o esperado.
+expect_rejected() {
+  local label="$1" payload="$2" expected="${3:-400}"
+  local response status
+  response="$(api_status POST /deliveries "$customer_token" "$payload")"
+  status="$(tail -n1 <<<"$response")"
+  if [[ "$status" != "$expected" ]]; then
+    printf '%s deveria ser recusado com %s, veio %s.\n' "$label" "$expected" "$status" >&2
+    sed '$d' <<<"$response" >&2
+    exit 1
+  fi
+  sed '$d' <<<"$response"
 }
 
 # Pedido incompleto (o payload legado, sem foto/tipo/tamanho/peso) tem de ser
@@ -172,4 +198,59 @@ api GET /finance/statement "$courier_token" | jq -e --argjson fee "$courier_fee"
 api GET /notifications "$customer_token" | jq -e 'length > 0' >/dev/null
 api GET /audit "$admin_token" | jq -e 'length > 0' >/dev/null
 
-printf 'Smoke test aprovado: %s (%s)\n' "$delivery_code" "$delivery_id"
+# ---------------------------------------------------------------------------
+# SCHED-01 / B2C-06 — modo agendado individual com aceite antecipado.
+# ---------------------------------------------------------------------------
+
+# FLOW-DEC-02: janela no passado e antecedencia menor que 30 min sao recusadas.
+expect_rejected 'Agendado com janela no passado' "$(scheduled_payload -180)" >/dev/null
+curto="$(expect_rejected 'Agendado com menos de 30 min de antecedencia' "$(scheduled_payload 10)")"
+jq -e '(.message | if type == "array" then .[] else . end) | test("30 minutos")' <<<"$curto" >/dev/null
+# Fim antes do inicio tambem nao passa.
+invertida="$(scheduled_payload 120 | jq -c '.pickupWindowEnd = .pickupWindowStart')"
+expect_rejected 'Agendado com janela invertida' "$invertida" >/dev/null
+# Janela em modo imediato e contradicao, nao detalhe.
+imediato_com_janela="$(scheduled_payload 120 | jq -c '.fulfillmentMode="IMMEDIATE"')"
+expect_rejected 'Imediato com janela' "$imediato_com_janela" >/dev/null
+
+# Janela valida: 2 h a frente, com 1 h de duracao.
+scheduled="$(api POST /deliveries "$customer_token" "$(scheduled_payload 120)")"
+scheduled_id="$(jq -er '.id' <<<"$scheduled")"
+scheduled_code="$(jq -er '.code' <<<"$scheduled")"
+jq -e '.fulfillmentMode == "SCHEDULED" and .pickupWindowStart != null and .pickupWindowEnd != null' <<<"$scheduled" >/dev/null
+
+# DEC-19: o km do agendado e menor que o do imediato, e fica congelado no pedido.
+km_imediato="$(jq -er '.pricingBreakdown.kmRateCents' <<<"$delivery")"
+km_agendado="$(jq -er '.kmRateCents' <<<"$scheduled")"
+jq -en --argjson imediato "$km_imediato" --argjson agendado "$km_agendado" '$agendado < $imediato' >/dev/null
+jq -e --argjson km "$km_agendado" '.pricingBreakdown.kmRateCents == $km and .pricingBreakdown.fulfillmentMode == "SCHEDULED"' <<<"$scheduled" >/dev/null
+
+# DEC-20: o agendado ja nasce na fila de ofertas e pode ser aceito agora.
+scheduled_offers="$(api GET /deliveries/offers/mine "$courier_token")"
+scheduled_offer_id="$(jq -er --arg deliveryId "$scheduled_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty' <<<"$scheduled_offers")"
+if [[ -z "$scheduled_offer_id" ]]; then
+  scheduled_dispatch="$(api POST "/deliveries/$scheduled_id/dispatch" "$admin_token")"
+  scheduled_offer_id="$(jq -er '.offer.id' <<<"$scheduled_dispatch")"
+fi
+api PATCH "/deliveries/offers/$scheduled_offer_id/accept" "$courier_token" >/dev/null
+api GET "/deliveries/$scheduled_id" "$courier_token" | jq -e '.status == "ACCEPTED"' >/dev/null
+
+# DEC-20: aceito, mas a execucao so abre na janela — AT_PICKUP antes disso e 409.
+cedo="$(api_status PATCH "/deliveries/$scheduled_id/status" "$courier_token" '{"status":"AT_PICKUP"}')"
+if [[ "$(tail -n1 <<<"$cedo")" != "409" ]]; then
+  printf 'AT_PICKUP antes da janela deveria dar 409, veio %s.\n' "$(tail -n1 <<<"$cedo")" >&2
+  exit 1
+fi
+
+# Congelamento (DEC-19): mexer na tarifa nao altera pedido ja criado.
+settings_antes="$(api GET /settings "$admin_token")"
+km_original="$(jq -er '.pricingPerKmScheduledCents' <<<"$settings_antes")"
+api PATCH /settings "$admin_token" "$(jq -nc --argjson value "$((km_original + 37))" '{pricingPerKmScheduledCents:$value}')" >/dev/null
+api GET "/deliveries/$scheduled_id" "$customer_token" | jq -e --argjson km "$km_agendado" '.kmRateCents == $km' >/dev/null
+api PATCH /settings "$admin_token" "$(jq -nc --argjson value "$km_original" '{pricingPerKmScheduledCents:$value}')" >/dev/null
+
+# O admin consegue separar os dois modos na listagem.
+api GET "/deliveries?fulfillmentMode=SCHEDULED&limit=50" "$admin_token" | jq -e --arg id "$scheduled_id" '[.items[].id] | index($id) != null' >/dev/null
+api GET "/deliveries?fulfillmentMode=IMMEDIATE&limit=50" "$admin_token" | jq -e --arg id "$scheduled_id" '[.items[].id] | index($id) == null' >/dev/null
+
+printf 'Smoke test aprovado: %s (%s) + agendado %s (%s)\n' "$delivery_code" "$delivery_id" "$scheduled_code" "$scheduled_id"

@@ -2,7 +2,7 @@
 
 > **Data de referência:** 2026-08-09
 > **Ambiente:** desenvolvimento local no PC `acer`; nada produtivo roda aqui.
-> **Baseline de código:** `a5e5909` no início da sessão de `PICK-01`.
+> **Baseline de código:** `5d0ecd7` no início da sessão de `SCHED-01`+`B2C-06`.
 
 ## 1. Produto vigente
 
@@ -16,14 +16,43 @@ coluna `company_id`).
 
 | Superfície | Estado observado na última rodada técnica | Limitação aberta |
 | --- | --- | --- |
-| Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso**), ofertas, tracking, **preço v2 versionado com breakdown congelado**, **código de recolhimento na coleta**, dashboard e storage local | migrations revalidadas em banco vivo em 2026-08-09 (10 migrations) |
-| App cliente Flutter | Cadastro/login, pedido estruturado **com foto obrigatória**, **código de recolhimento visível após o aceite**, histórico e acompanhamento | QA recente em dispositivo/emulador pendente |
-| App motoboy Flutter | Cadastro, disponibilidade, oferta, **coleta com código de recolhimento**, prova, entrega e carteira básica | QA recente em dispositivo/emulador pendente |
-| Dashboard React | KPIs, entregas, mapa, motoboys, usuários, auditoria, **configurações completas de preço/multas** e relatórios; identidade laranja + **tema claro/escuro** | busca da `TopBar` decorativa; **gráfico de pizza não renderiza setores** (Recharts 3.9 + React 19) — ambos em `UX-02` |
+| Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso/modo**), **modo agendado com janela e aceite antecipado**, ofertas com **reserva de agenda**, tracking, **preço v2 versionado com breakdown congelado**, **código de recolhimento na coleta**, dashboard e storage local | migrations revalidadas em banco vivo em 2026-08-09 (11 migrations) |
+| App cliente Flutter | Cadastro/login, pedido estruturado **com foto obrigatória**, **escolha entre agora e agendar (com janela)**, **código de recolhimento visível após o aceite**, histórico e acompanhamento | QA recente em dispositivo/emulador pendente |
+| App motoboy Flutter | Cadastro, disponibilidade, oferta (**agendada mostra a janela e aceita antecipado**), **coleta com código de recolhimento**, prova, entrega e carteira básica | sem abas Em andamento/Agenda (`COUR-01`); QA em dispositivo/emulador pendente |
+| Dashboard React | KPIs, entregas (**filtro e coluna de modo**), mapa, motoboys, usuários, auditoria, **configurações completas de preço/multas/agendamento** e relatórios; identidade laranja + **tema claro/escuro** | seção "Modo agendado" ainda **sem QA de navegador**; busca da `TopBar` decorativa; **gráfico de pizza não renderiza setores** (Recharts 3.9 + React 19) — em `UX-02` |
 | Postgres/Redis | Containers `aqui-log-postgres` (5433) e `aqui-log-redis` (6379) ativos | banco de teste é descartável; nenhum dado tem valor |
 | Cloud | Scaffolds Render/Vercel/Firebase; alvos **decididos** (`DEC-25`) | nenhum projeto ou credencial conectado |
 
 ## 3. Evidência das rodadas técnicas
+
+### `SCHED-01` + `B2C-06` (rodada de 2026-08-09)
+
+Executado no banco descartável `aqui_log_sched01` com API em `PORT=3011`:
+
+- 11 migrations, com a nova (`DeliveryScheduling`) revertida e reaplicada **com
+  um pedido legado dentro da tabela**, que sobreviveu ao ciclo; todas as colunas
+  novas são opcionais (nenhum `NOT NULL`, nenhum `DEFAULT`);
+- criação exige `fulfillmentMode`; janela no passado, com menos de 30 min de
+  antecedência (`FLOW-DEC-02`), invertida, ou enviada junto do modo imediato são
+  recusadas com `400` em HTTP vivo;
+- mesma rota, só o modo mudando: imediato R$ 13,80 (km 250) × agendado
+  R$ 12,73 (km **180**); o `km_rate` fica congelado no pedido e alterar settings
+  não o altera;
+- aceite antecipado (`DEC-20`): agendado aceito na criação, com
+  `courier_cancel_fee_cents` congelada, **e o prestador continua disponível**;
+- `AT_PICKUP` antes do início da janela devolve `409` para o prestador; admin e
+  suporte passam;
+- capacidade (plano §5.1): com o prestador reservado como único disponível, o
+  despacho de um imediato colidente devolve `404`
+  ("Nenhum entregador com agenda livre para esta janela"); com dois prestadores,
+  a oferta foi para o **outro**, mesmo o reservado sendo o mais próximo;
+- pedido legado sem modo continua legível e vale como `IMMEDIATE`;
+- `pnpm build`, `pnpm lint` e `pnpm test` verdes (17 suítes / 149 testes);
+- `pnpm smoke` aprovado 3×, agora com o cenário agendado e 4 casos negativos;
+- `flutter analyze`/`flutter test` verdes nos dois apps e `dart analyze`/`dart test`
+  no core.
+
+Documento: `docs/04-status/entregas/2026-08-09-EVIDENCIA-SCHED-01-B2C-06.md`.
 
 ### `PICK-01` (rodada de 2026-08-09)
 
@@ -119,17 +148,25 @@ Evidência anterior (mobile, 2026-08-07):
 - [x] Rodar `flutter analyze`/`flutter test` após a mudança mobile de `B2C-05`.
 - [x] Aplicar e reverter a migration do preço v2 em banco descartável.
 - [x] Aplicar e reverter `1785400000000-DeliveryPickupCode` em banco descartável.
+- [x] Aplicar e reverter `1785500000000-DeliveryScheduling` em banco descartável.
+- [ ] Fazer QA de navegador da seção "Modo agendado" do painel.
 - [ ] Gerar APKs atuais.
 - [ ] Fazer QA visual dos apps em emulador/dispositivo — pendente **e agora mais
       relevante**, porque `B2C-05` mudou a tela de novo pedido do app cliente.
 
 ## 5. Próximo passo
 
-`BASE-04`, `B2C-01B`, `B2C-05`, `UX-01C`, `B2C-02` e `PICK-01` estão `DONE`. A
-fila livre é `UX-02` (QA visual — a parte mobile exige dispositivo/emulador e
-inclui o gráfico de pizza quebrado), `B2C-06`+`SCHED-01` (escolha do modo pelo
-cliente) e `DISP-01` (reoferta por anéis). Escolher um único ID, conforme o
-backlog.
+`BASE-04`, `B2C-01B`, `B2C-05`, `UX-01C`, `B2C-02`, `PICK-01`, `B2C-06` e
+`SCHED-01` estão `DONE`. Com `SCHED-01` fechado, **`COUR-01` deixou de estar
+bloqueado por código** (só `DEC-21`, já decidida) e é o próximo pacote esperado:
+abas *Em andamento* / *Agenda* no app do prestador. A fila também tem `UX-02`
+(QA visual — a parte mobile exige dispositivo/emulador e inclui o gráfico de
+pizza quebrado) e `DISP-01` (reoferta por anéis). Escolher um único ID, conforme
+o backlog.
+
+Pendência aberta de `SCHED-01`: a folga de capacidade usa uma **estimativa fixa**
+de duração do imediato (45 min, editável no admin), não a rota real; calibrar
+depende da telemetria de `DISP-03`.
 
 Pendência aberta de `PICK-01`: o painel admin **não tem tela** para o fallback de
 código perdido — hoje ele é chamado por API (`POST /deliveries/:id/pickup-code/override`).
@@ -145,6 +182,9 @@ A tela é trabalho de `SUP-*`/`ADMIN-*` e não foi criada aqui.
   (2026-08-09). A duração do bloqueio (15 min) é fixa em código e não foi
   exposta no admin.
 - Migração banco cloud Firestore: `OPS-DB-01`.
+- Modo agendado: `DEC-18`/`DEC-19`/`DEC-20` + `FLOW-DEC-02` implementados em
+  `SCHED-01`+`B2C-06` (2026-08-09). Janela mínima de 15 min e horizonte de 30
+  dias são constantes de código, não settings.
 
 ## 7. Armadilha conhecida do ambiente local
 

@@ -51,6 +51,23 @@ export function startOfLocalDay(reference: Date = new Date()): Date {
   return verify2 === expected ? adjusted : start;
 }
 
+/**
+ * Instante em texto para MENSAGEM DE ERRO ao usuário (SCHED-01).
+ *
+ * Persistência é UTC; a janela de negócio é `APP_TIMEZONE` (roadmap §4). Dizer
+ * ao motoboy "abre às 14:00Z" não ajuda ninguém em campo.
+ */
+export function formatWindowInstant(value: Date): string {
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: APP_TIMEZONE,
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(value);
+}
+
 export function nextLocalDay(reference: Date = new Date()): Date {
   const start = startOfLocalDay(reference);
   return new Date(start.getTime() + 24 * 60 * 60_000);

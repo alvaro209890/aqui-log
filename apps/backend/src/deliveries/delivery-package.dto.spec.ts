@@ -24,8 +24,12 @@ const packagePayload = {
   productPhotoUrls: ['http://localhost:3001/api/v1/storage/files/a.jpg'],
 };
 
-/** Payload completo de um pedido novo, conforme `DEC-01`. */
-const basePayload = { ...addressPayload, ...packagePayload };
+/** Payload completo de um pedido novo, conforme `DEC-01` e `DEC-18`. */
+const basePayload = {
+  ...addressPayload,
+  ...packagePayload,
+  fulfillmentMode: 'IMMEDIATE',
+};
 
 async function failedProperties(payload: Record<string, unknown>) {
   const dto = plainToInstance(CreateDeliveryDto, payload);
@@ -133,6 +137,60 @@ describe('CreateDeliveryDto obrigatoriedade da criação (B2C-05)', () => {
     await expect(failedProperties(missing)).resolves.toContain(
       'pickupLatitude',
     );
+  });
+});
+
+// SCHED-01 / DEC-18: o modo é escolha explícita do cliente na criação.
+describe('CreateDeliveryDto fulfillmentMode (SCHED-01 / DEC-18)', () => {
+  it('aceita os dois modos', async () => {
+    for (const mode of ['IMMEDIATE', 'SCHEDULED']) {
+      const dto = plainToInstance(CreateDeliveryDto, {
+        ...basePayload,
+        fulfillmentMode: mode,
+      });
+      await expect(validate(dto)).resolves.toEqual([]);
+    }
+  });
+
+  it('rejeita pedido sem modo, com mensagem útil', async () => {
+    const payload = { ...basePayload };
+    delete (payload as Record<string, unknown>).fulfillmentMode;
+
+    const dto = plainToInstance(CreateDeliveryDto, payload);
+    const errors = await validate(dto);
+    const target = errors.find((e) => e.property === 'fulfillmentMode');
+
+    expect(target).toBeDefined();
+    expect(Object.values(target!.constraints ?? {})).toContain(
+      'Escolha o modo do pedido: IMMEDIATE ou SCHEDULED',
+    );
+  });
+
+  it('rejeita modo inventado', async () => {
+    await expect(
+      failedProperties({ ...basePayload, fulfillmentMode: 'QUANDO_DER' }),
+    ).resolves.toContain('fulfillmentMode');
+  });
+
+  it('recusa janela que não é data', async () => {
+    await expect(
+      failedProperties({
+        ...basePayload,
+        fulfillmentMode: 'SCHEDULED',
+        pickupWindowStart: 'amanha de manha',
+      }),
+    ).resolves.toContain('pickupWindowStart');
+  });
+
+  it('aceita janelas ISO — a regra de horário fica no serviço', async () => {
+    const dto = plainToInstance(CreateDeliveryDto, {
+      ...basePayload,
+      fulfillmentMode: 'SCHEDULED',
+      pickupWindowStart: '2026-08-10T13:00:00.000Z',
+      pickupWindowEnd: '2026-08-10T15:00:00.000Z',
+    });
+
+    await expect(validate(dto)).resolves.toEqual([]);
   });
 });
 

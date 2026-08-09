@@ -205,6 +205,73 @@ void main() {
     );
   });
 
+  // SCHED-01 / DEC-18: o cliente escolhe o modo; o modo default continua
+  // sendo o imediato, e a tela só pede janela quando ele agenda.
+  testWidgets('NewOrderScreen oferece a escolha do modo', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NewOrderScreen(
+          onSubmit: (_) async {},
+          geocode: (address) async => GeocodeResult(
+            latitude: -15.6,
+            longitude: -56.1,
+            formattedAddress: address,
+          ),
+          uploadPhoto: (_) async => 'http://storage/foto.jpg',
+        ),
+      ),
+    );
+
+    expect(find.text('Quando'), findsOneWidget);
+    expect(find.text('Agora'), findsOneWidget);
+    expect(find.text('Agendar'), findsOneWidget);
+    // Sem agendar, nenhuma janela é pedida.
+    expect(find.text('Escolher janela de coleta'), findsNothing);
+
+    await tester.tap(find.text('Agendar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Escolher janela de coleta'), findsOneWidget);
+    expect(
+      find.textContaining('$kMinScheduleLeadMinutes minutos'),
+      findsWidgets,
+    );
+  });
+
+  // A janela é obrigatória no agendado, e o app não gasta chamada de API para
+  // descobrir isso — a API responderia 400.
+  testWidgets('NewOrderScreen barra agendado sem janela', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    var submitted = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NewOrderScreen(
+          onSubmit: (_) async => submitted = true,
+          geocode: (address) async => GeocodeResult(
+            latitude: -15.6,
+            longitude: -56.1,
+            formattedAddress: address,
+          ),
+          uploadPhoto: (_) async => 'http://storage/foto.jpg',
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Agendar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Publicar pedido'));
+    await tester.pumpAndSettle();
+
+    expect(submitted, isFalse);
+  });
+
   testWidgets('SettingsScreen renders profile', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

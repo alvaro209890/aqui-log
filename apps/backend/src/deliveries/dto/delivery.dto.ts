@@ -22,6 +22,10 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { DeliveryStatus } from '../../database/enums';
+import {
+  FULFILLMENT_MODES,
+  type FulfillmentMode,
+} from '../../pricing/pricing.types';
 
 export const PRODUCT_TYPES = [
   'DOCUMENT',
@@ -122,6 +126,33 @@ export class CreateDeliveryDto {
     { each: true, message: 'Cada foto deve ser uma URL válida do storage' },
   )
   productPhotoUrls!: string[];
+
+  // SCHED-01 / DEC-18: o modo é escolha do cliente e não tem default. Deixar
+  // cair em IMMEDIATE por omissão faria o cliente pagar a tarifa cara sem ter
+  // escolhido nada — o plano §3.1 lista o modo como campo obrigatório.
+  @IsIn([...FULFILLMENT_MODES], {
+    message: 'Escolha o modo do pedido: IMMEDIATE ou SCHEDULED',
+  })
+  fulfillmentMode!: FulfillmentMode;
+
+  // Janelas do modo agendado. A regra (antecedência de 30 min, ordem, duração)
+  // fica em `scheduling.ts`, porque depende de settings e do relógio — o DTO
+  // só garante que veio uma data de verdade.
+  @IsOptional()
+  @IsDateString()
+  pickupWindowStart?: string;
+
+  @IsOptional()
+  @IsDateString()
+  pickupWindowEnd?: string;
+
+  @IsOptional()
+  @IsDateString()
+  deliveryWindowStart?: string;
+
+  @IsOptional()
+  @IsDateString()
+  deliveryWindowEnd?: string;
 
   @IsOptional()
   @IsDateString()

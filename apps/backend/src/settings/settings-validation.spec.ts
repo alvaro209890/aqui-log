@@ -25,6 +25,10 @@ const base: PlatformSettings = {
   courierCancelCutoffMinutesImmediate: 5,
   courierCancelCutoffMinutesScheduled: 60,
   customerCancelFeeCents: 0,
+  minScheduleLeadMinutes: 30,
+  scheduleMaxWindowMinutes: 480,
+  scheduleCapacitySlackMinutes: 15,
+  immediateExecutionEstimateMinutes: 45,
 };
 
 /**
@@ -109,6 +113,24 @@ describe('SettingsService.assertValid (DEC-19)', () => {
         ],
       }),
     ).toThrow(/mesmo limite/i);
+  });
+
+  // SCHED-01: janela máxima menor que a mínima operacional recusaria todo
+  // pedido agendado, e o operador não teria como perceber pela tela.
+  it('recusa janela máxima abaixo do mínimo operacional', () => {
+    expect(() =>
+      service.assertValid({ ...base, scheduleMaxWindowMinutes: 5 }),
+    ).toThrow(/janela máxima/i);
+  });
+
+  it('aceita a antecedência mínima do FLOW-DEC-02 e uma folga maior', () => {
+    expect(() =>
+      service.assertValid({
+        ...base,
+        minScheduleLeadMinutes: 30,
+        scheduleCapacitySlackMinutes: 30,
+      }),
+    ).not.toThrow();
   });
 
   it('aceita faixas fora de ordem, desde que sem repetição', () => {
