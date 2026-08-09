@@ -198,10 +198,11 @@ Continua em `PLANO_PAGAMENTOS.md` / `PAY-01A`. Não confundir taxa do **cliente*
 
 1. Gerado no servidor no aceite (ou na criação, mas só revelado ao prestador em
    `AT_PICKUP` / tela de coleta — cliente vê antes para mostrar ao prestador).
-2. Entropia suficiente (ex.: 6 caracteres alfanuméricos); não é o `AQL-*`.
+2. Entropia suficiente: **4 dígitos numéricos** (`FLOW-DEC-03`); não é o `AQL-*`.
 3. Prestador informa o código no app; servidor valida; só então aceita a foto
    de coleta e avança para `PICKED_UP`.
-4. Tentativas falhas: rate limit; após N erros, bloqueio temporário + alerta.
+4. Tentativas falhas: rate limit; **após 5 erros**, bloqueio temporário + alerta
+   (`FLOW-DEC-03`).
 5. Código perdido / ilegível: fallback **somente** suporte/admin, com motivo,
    auditoria e, se possível, prova alternativa (foto + declaração).
 6. Pedidos legados sem `pickup_code`: transição por foto de coleta (comportamento
@@ -249,8 +250,8 @@ Novos (ou estendidos) `app_settings` versionados:
 | `courier_cancel_cutoff_minutes_scheduled` | Cutoff antes de `pickup_window_start` |
 | `courier_cancel_fee_cents` | Taxa debitada do saldo do prestador |
 | `REQUIRE_PRODUCT_PHOTO` | Alinhada a `DEC-01` (true para novos) |
-| `pickup_code_length` / tentativas | Parâmetros do código de recolhimento |
-| `min_schedule_lead_minutes` | Antecedência mínima para agendar |
+| `pickup_code_length` / tentativas | **4 dígitos / 5 tentativas** (`FLOW-DEC-03`) |
+| `min_schedule_lead_minutes` | **30 min** de antecedência mínima para agendar (`FLOW-DEC-02`) |
 
 Toda mudança: versão nova, prévia de efeito, rollback de 1 clique, confirmação
 dupla se houver pedidos em voo.
@@ -268,7 +269,7 @@ fechar (`DONE`, mesma data) e liberou `PICK-01` para `READY`.
 | 3 | `B2C-06` | Preço dual km imediato/agendado + settings | `B2C-02` (ou unificar), `DEC-19`; valores `DEC-02` |
 | 4 | `SCHED-01` | Modo `SCHEDULED` individual + aceite antecipado | `B2C-06`, `DEC-18`, `DEC-20` |
 | 5 | `COUR-01` | Tela Em andamento / Agenda | `SCHED-01`, `DEC-21` |
-| 6 | `PICK-01` ▶️ | `pickup_code` na coleta | `B2C-05` ✅, `DEC-24` ✅ |
+| 6 | `PICK-01` ▶️ | `pickup_code` na coleta | `B2C-05` ✅, `DEC-24` ✅, `FLOW-DEC-03` ✅ |
 | 7 | `COUR-02` | Cancelamento prestador + taxa no ledger | `PAY-01`, `COUR-01`, `DEC-22` |
 | 8 | `PAY-01`… | Ledger + saldo sacável (modelo) | `DEC-23`, autorização `DEC-05` |
 

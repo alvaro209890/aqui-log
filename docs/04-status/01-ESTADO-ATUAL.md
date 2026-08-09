@@ -108,9 +108,9 @@ ID, conforme o backlog.
 ## 6. Bloqueios externos
 
 - Firebase/Render/Vercel: alvos decididos (`DEC-25`); ligar exige credenciais + `OPS-*`.
-- SMS: exige escolha de provedor e sandbox (`DEC-04`).
-- Pagamentos/PIX: exigem autorização explícita e gates `PAY-01/02` (`DEC-05`/`DEC-06`).
-- Cutoffs/taxa de cancelamento do prestador: `FLOW-DEC-01`.
+- Verificação de telefone: por **código no app** (`DEC-04`, 2026-08-09); SMS/WhatsApp seguem como opção futura.
+- Pagamentos/PIX: exigem autorização explícita e gates `PAY-01/02` (`DEC-05` decidida 2026-08-09; `DEC-06` pendente).
+- Cutoffs/taxa de cancelamento do prestador: `FLOW-DEC-01` decidida (R$ 3,00; 5/60 min).
 - Migração banco cloud Firestore: `OPS-DB-01`.
 
 ## 7. Armadilha conhecida do ambiente local

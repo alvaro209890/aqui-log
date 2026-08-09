@@ -302,15 +302,15 @@ Monitoramento de frota no dashboard — ver o [plano de frota](PLANO_FROTA_DASHB
 
 ## 12. Decisões pendentes
 
-- `LOT-DEC-01` (`DEC-08`) — convivência entre lote manual e auto-dispatch.
+- `LOT-DEC-01` (`DEC-08`) — **decidida** (2026-08-09): lote manual convive com auto-dispatch.
 - `LOT-DEC-02` (`DEC-09`) — candidatura livre ou pré-alocação.
-- `LOT-DEC-03` (`DEC-10`) — janela de espera antes da corrida individual.
+- `LOT-DEC-03` (`DEC-10`) — **decidida** (2026-08-09): janela de espera de 15 min.
 - `LOT-DEC-04` — teto por lote urbano/intermunicipal.
 - `LOT-DEC-05` — compensação de deslocamento após cancelamento pós-coleta.
 - `LOT-DEC-06` — devolução/transferência e custeio após desistência pós-coleta.
 - `LOT-DEC-07` — taxa de nova tentativa por ausência do cliente.
 - `LOT-DEC-08` — quem absorve diferença financeira de cancelamento parcial.
-- `LOT-DEC-09` (`DEC-11`) — tolerâncias D-R1..D-R13.
+- `LOT-DEC-09` (`DEC-11`) — **decidida** (2026-08-09): tolerâncias 5 min ETA / 120 s resposta / 15 min pontualidade.
 - `LOT-DEC-10` — efeito do índice de pontualidade na v1.
 - `LOT-DEC-11` — desconto de lote para o cliente.
 - `LOT-DEC-12` — fórmula de repasse do motoboy.

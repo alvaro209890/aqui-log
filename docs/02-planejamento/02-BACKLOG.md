@@ -14,19 +14,19 @@
 | — | `UX-01C` | `DONE` (2026-08-08) | P1 | Dashboard usa tokens laranja equivalentes | evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-UX-01C.md` |
 | 1 | `UX-02` | `READY` | P1 | Fluxos principais passam por QA visual/acessibilidade | `UX-01C` DONE; exige dispositivo/emulador para a parte mobile |
 | — | `B2C-02` | `DONE` (2026-08-08) | P1 | Preço v2 versionado com breakdown congelado | `DEC-02` decidida; evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-02-E-TEMA-ESCURO.md` |
-| 2 | `B2C-06` | `BLOCKED` | P1 | Dual km imediato/agendado + settings admin | tarifa dual e admin **já entregues** em `B2C-02`; falta a escolha do modo, que depende de `SCHED-01` |
-| 3 | `SCHED-01` | `BLOCKED` | P1 | Modo `SCHEDULED` individual + aceite antecipado | `B2C-06`; `DEC-18`, `DEC-20` |
+| 2 | `B2C-06` | `READY` | P1 | Dual km imediato/agendado + settings admin | tarifa dual e admin **já entregues** em `B2C-02`; falta a escolha do modo (implementa junto com `SCHED-01`); gates `DEC-02/18/19/20` + `FLOW-DEC-02` ✅ |
+| 3 | `SCHED-01` | `READY` | P1 | Modo `SCHEDULED` individual + aceite antecipado | implementa com `B2C-06`; gates `DEC-18`, `DEC-20`, `FLOW-DEC-02` ✅ (30 min de lead) |
 | 4 | `COUR-01` | `BLOCKED` | P1 | App prestador: Em andamento + Agenda | `SCHED-01`; `DEC-21` |
-| 5 | `PICK-01` | `READY` | P1 | Código de recolhimento na coleta | `B2C-05` DONE; `DEC-24` decidida |
+| 5 | `PICK-01` | `READY` | P1 | Código de recolhimento na coleta | `B2C-05` DONE; `DEC-24` + `FLOW-DEC-03` decididas |
 | 6 | `B2C-03` | `BLOCKED` | P1 | Avaliação mútua por papel | baseline estável e migração de ratings definida |
-| 7 | `DISP-01` | `BLOCKED` | P1 | Reoferta limitada por anéis e recusas | `B2C-02`, `DEC-03` |
-| 8 | `PAY-01` | `BLOCKED` | P2 | Ledger interno (cliente + prestador) sem gateway | autorização explícita + `B2C-02`; `DEC-23` |
+| 7 | `DISP-01` | `READY` | P1 | Reoferta limitada por anéis e recusas | `B2C-02` DONE; `DEC-03` decidida (ampliar raio + aumento com consentimento) |
+| 8 | `PAY-01` | `READY` | P2 | Ledger interno (cliente + prestador) sem gateway | autorização `DEC-05` ✅; `B2C-02` DONE; `DEC-23` |
 | 9 | `COUR-02` | `BLOCKED` | P2 | Cancelamento prestador + taxa no saldo | `PAY-01`, `COUR-01`; `DEC-22` |
 | 10 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-02B`, `B2C-03A`, `DISP-03` (`B2C-01B` ok) |
 | 11 | `OPS-DB-01` | `BLOCKED` | P2 | Modelo + migração Postgres → Firestore | `DEC-25`; credenciais Firebase |
 | 12 | `OPS-02` | `BLOCKED` | P2 | Firebase Firestore/Storage/FCM reais | pedido + credenciais; ver `PLANO_HOSPEDAGEM.md` |
 | 13 | `OPS-03` | `BLOCKED` | P2 | Deploy Render + Vercel + smoke público | `OPS-01`, `OPS-02`, credenciais |
-| 14 | `LOT-01` | `BLOCKED` | P3 | Aceite atômico de lote manual | `B2C-02B`, `B2C-03A`, `DISP-03`, `DEC-10`, `DEC-11` (`B2C-01B` ok) |
+| 14 | `LOT-01` | `BLOCKED` | P3 | Aceite atômico de lote manual | código: `B2C-02B`, `B2C-03A`, `DISP-03`; gates `DEC-08/10/11` ✅ decididas 2026-08-09 |
 
 Cloud: alvos **decididos** (`DEC-25` — Render / Vercel / Firebase). Ligar projetos
 ainda exige credenciais e pacote OPS. SMS, PIX e lote automático idem.

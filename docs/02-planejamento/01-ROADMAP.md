@@ -123,8 +123,8 @@ valores finais de km continuam atrás de `DEC-05`/`DEC-02`.
 | B2C-02 | ✅ | `B2C-01` ✅, `DEC-02` ✅ | Preço v2 com faixas de peso/tamanho, tarifa dual e configuração server-side editável no admin (2026-08-08) |
 | B2C-02A | ✅ | `B2C-02` | Breakdown e versão persistidos no pedido; congelamento provado (2026-08-08) |
 | B2C-02B | ⏳ | `B2C-02` | Prévia de preço antes da confirmação, sem confiar em valores enviados pelo app |
-| B2C-06 | ⏳ | `SCHED-01` | Tarifa dual e validação imediato > agendado **já entregues** em `B2C-02`; falta o cliente escolher o modo |
-| SCHED-01 | ⏳ | `B2C-06`, `DEC-18`, `DEC-20` | Modo `SCHEDULED` individual, janelas e aceite antecipado |
+| B2C-06 | ▶️ | `SCHED-01` (mesmo esforço); gates ✅ | Tarifa dual e validação imediato > agendado **já entregues** em `B2C-02`; falta o cliente escolher o modo |
+| SCHED-01 | ▶️ | `B2C-06`, `DEC-18` ✅, `DEC-20` ✅, `FLOW-DEC-02` ✅ | Modo `SCHEDULED` individual, janelas e aceite antecipado |
 
 O preço de uma oferta aceita é imutável. Qualquer aumento posterior exige nova oferta e consentimento do cliente; não deve ser aplicado silenciosamente. Troca de modo exige novo pedido/recotação.
 
@@ -136,7 +136,7 @@ O preço de uma oferta aceita é imutável. Qualquer aumento posterior exige nov
 | --- | --- | --- | --- |
 | B2C-03 | ⏳ | `B2C-01` | Avaliação mútua, uma por papel e entrega |
 | B2C-03A | ⏳ | `B2C-03` | Exibir média, contagem e contexto sem revelar dados sensíveis |
-| B2C-04 | ⏸️ | Escolha de provedor | Verificação de telefone com expiração, limite de tentativas e ambiente local seguro |
+| B2C-04 | ▶️ | `DEC-04` ✅ (código no app) | Verificação de telefone com expiração, limite de tentativas e ambiente local seguro (sem provedor SMS por enquanto) |
 
 SMS não bloqueia a fundação de dados nem o preço v2, mas é gate para abrir cadastro público em produção.
 
@@ -144,7 +144,7 @@ SMS não bloqueia a fundação de dados nem o preço v2, mas é gate para abrir 
 
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
-| DISP-01 | ⏳ | `B2C-02`, `DEC-03` | Busca por anéis de raio, exclusão de recusas e limite de rodadas |
+| DISP-01 | ▶️ | `B2C-02` ✅, `DEC-03` ✅ | Busca por anéis de raio, exclusão de recusas e limite de rodadas |
 | DISP-02 | ⏳ | `DISP-01` | Notificar cliente sobre demora e oferecer ação explícita |
 | DISP-03 | ⏳ | `DISP-02` | Telemetria de tempo até aceite, recusas, expiração e ausência de candidato |
 
@@ -154,7 +154,7 @@ Falha de aceite deve terminar em estado recuperável e compreensível, nunca em 
 
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
-| PAY-01 | ⏸️ | Autorização de pagamentos (`DEC-05`), `B2C-02` | Ledger imutável; saldos cliente e prestador; reserva/estorno sem gateway |
+| PAY-01 | ▶️ | Autorização `DEC-05` ✅, `B2C-02` ✅ | Ledger imutável; saldos cliente e prestador; reserva/estorno sem gateway |
 | PAY-01A | ⏳ | `PAY-01`, `DEC-22` | Políticas de cancelamento (cliente + taxa do prestador no saldo) e liquidação idempotente |
 | PAY-01B | ⏳ | `PAY-01A` | Operação administrativa auditada para crédito manual de ambiente de teste |
 | COUR-02 | ⏳ | `PAY-01`, `COUR-01`, `DEC-22` | Cancelamento do prestador com cutoff + débito de taxa; recusa se saldo insuficiente |
@@ -195,7 +195,7 @@ continua atrás de `TRIP-00`.
 
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
-| LOT-01 | ⏳ | `B2C-01B`, `B2C-02B`, `B2C-03A`, `DISP-03`, `DEC-10`, `DEC-11` | Aceite de lote manual, reserva e anti-atraso |
+| LOT-01 | ⏳ | Código: `B2C-02B`, `B2C-03A`, `DISP-03`. Gates: `DEC-08/10/11` ✅ | Aceite de lote manual, reserva e anti-atraso |
 | LOT-02 | ⏳ | `LOT-01` | Blocos agendados intermunicipais (`scheduled_lots`, candidatura, reserva de capacidade) |
 | FROTA-01 | ⏳ | `DISP-03`, `DEC-12`, `DEC-14` | Desacoplar heartbeat; mapa, trilha, lista e `FROTA-ALERTA-01..07` |
 | FROTA-02 | ⏳ | `FROTA-01`, `LOT-01` | Progresso de viagem multi-parada no dashboard (`/trips/:id/stops`) |
@@ -251,10 +251,11 @@ Para a fila próxima:
 
 - `BASE-04` e `B2C-01B` não dependem de decisão nova do dono;
 - `DEC-01` está **DECIDIDA** (foto obrigatória) e **ativada em código** por `B2C-05`;
-- `DEC-18`…`DEC-24` estão **DECIDIDAS** (fluxo cliente↔prestador); valores em
-  `DEC-02` / `FLOW-DEC-*` / `DEC-17` continuam pendentes;
+- `DEC-18`…`DEC-24` estão **DECIDIDAS** (fluxo cliente↔prestador); `FLOW-DEC-01`,
+  `FLOW-DEC-02`, `FLOW-DEC-03` e `DEC-17` decididas em 2026-08-09; resta `DEC-06`
+  (gateway) para o saque real;
 - `DEC-02` bloqueia os **valores finais** de `B2C-02`/`B2C-06` (estrutura liberada);
-- `DEC-03` bloqueia `DISP-01/02`;
+- `DEC-03` está **DECIDIDA** (2026-08-09: ampliar raio + aumento com consentimento) e libera `DISP-01`;
 - cloud, SMS e pagamentos reais continuam atrás de autorização explícita.
 
 ## 9. Definition of Done comum

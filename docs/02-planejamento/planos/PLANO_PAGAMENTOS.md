@@ -123,7 +123,7 @@ Revoga a regra antiga “desistência sem penalidade dura” pré-coleta. Detalh
 ### Saldo do prestador e saque — `DEC-23`
 
 O crédito MVP do motoboy evolui para conta do ledger. Dinheiro real ao prestador
-só via **saque** (`PAY-02`), após janela de contestação (`DEC-17`, valor pendente).
+só via **saque** (`PAY-02`), após janela de contestação de **24 h** (`DEC-17`).
 Taxas de cancelamento do prestador são lançamentos do ledger (`PAY-01A` / `COUR-02`).
 
 ### Aceite
@@ -184,13 +184,13 @@ Pagar.me pode ser avaliado por já existir experiência no AquiResolve, mas isso
 
 ## 8. Decisões pendentes
 
-- `PAY-DEC-01` (`DEC-05`) — autorizar ou não `PAY-01` no próximo ciclo.
+- `PAY-DEC-01` (`DEC-05`) — **decidida** (2026-08-09): autorizado `PAY-01` (ledger interno sem gateway).
 - `PAY-DEC-02` (`DEC-13`) — política de cancelamento do **cliente** após aceite/coleta.
 - `PAY-DEC-02b` (`DEC-22`) — **decidida** a lógica da taxa do prestador; valores em `FLOW-DEC-01`.
 - `PAY-DEC-03` — recarga mínima e saldo máximo.
 - `PAY-DEC-04` (`DEC-06`) — gateway PIX e conta comercial.
 - `PAY-DEC-05` — quem assume taxas e devoluções.
-- `PAY-DEC-06` (`DEC-17`) — quando o crédito do motoboy se torna sacável (janela).
+- `PAY-DEC-06` (`DEC-17`) — **decidida** (2026-08-09): crédito sacável **24 h** após `DELIVERED`.
 - `PAY-DEC-07` — necessidade fiscal/contábil antes do piloto pago.
 - `DEC-23` — **decidida:** modelo = saldo interno sacável (implementação ainda `PAY-*`).
 
