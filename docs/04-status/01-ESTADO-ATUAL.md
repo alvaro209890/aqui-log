@@ -109,7 +109,7 @@ ID, conforme o backlog.
 
 - Firebase/Render/Vercel: alvos decididos (`DEC-25`); ligar exige credenciais + `OPS-*`.
 - Verificação de telefone: por **código no app** (`DEC-04`, 2026-08-09); SMS/WhatsApp seguem como opção futura.
-- Pagamentos/PIX: exigem autorização explícita e gates `PAY-01/02` (`DEC-05` decidida 2026-08-09; `DEC-06` pendente).
+- Pagamentos/PIX: `DEC-05` (ledger sem gateway) e `DEC-06` (**Pagar.me v5**) decididas 2026-08-09; falta conta/credenciais Pagar.me e `PAY-01`.
 - Cutoffs/taxa de cancelamento do prestador: `FLOW-DEC-01` decidida (R$ 3,00; 5/60 min).
 - Migração banco cloud Firestore: `OPS-DB-01`.
 

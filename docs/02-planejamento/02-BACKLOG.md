@@ -29,7 +29,7 @@
 | 14 | `LOT-01` | `BLOCKED` | P3 | Aceite atômico de lote manual | código: `B2C-02B`, `B2C-03A`, `DISP-03`; gates `DEC-08/10/11` ✅ decididas 2026-08-09 |
 
 Cloud: alvos **decididos** (`DEC-25` — Render / Vercel / Firebase). Ligar projetos
-ainda exige credenciais e pacote OPS. SMS, PIX e lote automático idem.
+ainda exige credenciais e pacote OPS. PIX (Pagar.me) definido; falta conta/credenciais. SMS e lote automático idem.
 
 Plano do fluxo novo: `docs/02-planejamento/planos/PLANO_FLUXO_CLIENTE_PRESTADOR.md`.
 

@@ -1,7 +1,7 @@
 # Plano técnico — Carteira, pagamentos e repasses
 
-> **Atualizado:** 2026-08-07
-> **Status:** especificação futura; nenhuma cobrança real autorizada
+> **Atualizado:** 2026-08-09
+> **Status:** especificação; ledger autorizado (`DEC-05`), gateway definido = **Pagar.me v5** (`DEC-06`, padrão AquiResolve); cobrança real depende de conta/credenciais Pagar.me
 > **Roadmap:** `PAY-01`, `PAY-01A`, `PAY-01B` e `PAY-02`
 > **Pré-requisito:** preço v2 (`B2C-02`) estável e política de cancelamento aprovada
 
@@ -135,22 +135,31 @@ Taxas de cancelamento do prestador são lançamentos do ledger (`PAY-01A` / `COU
 - autorização impede cliente de consultar carteira alheia;
 - testes cobrem reserva, liberação, liquidação, ajuste e concorrência.
 
-## 6. `PAY-02` — PIX por gateway
+## 6. `PAY-02` — PIX por gateway (**Pagar.me v5**, `DEC-06` decidida 2026-08-09)
 
-Só iniciar após `DEC-06`, credenciais de sandbox e `PAY-01` validado.
+Só implementar após credenciais/sandbox Pagar.me e `PAY-01` validado. Escolha de
+fornecedor **fechada**: Pagar.me, mesmo padrão do AquiResolve (experiência real em
+produção naquele projeto — backend Node → Pagar.me v5, PIX funcionando).
 
-### Critérios para escolher fornecedor
+### Padrão de integração (estilo AquiResolve)
 
-- PIX cobrança e devolução via API;
-- webhook assinado/documentado e reenvio;
-- idempotência;
-- sandbox útil;
-- cobertura e suporte no Brasil;
-- split/payout, se necessário, sem assumir que estará habilitado;
-- taxas e prazos de liquidação;
-- exportação/reconciliação.
-
-Pagar.me pode ser avaliado por já existir experiência no AquiResolve, mas isso não substitui validar disponibilidade real de PIX e payout na conta destinada ao Aqui Log.
+- **Cobrança:** backend cria a cobrança PIX na Pagar.me (`PAGARME_SECRET_KEY`,
+  `PAGARME_BASE_URL`); app/dashboard exibem QR code + copia-e-cola.
+- **Confirmação:** fonte da verdade = **webhook** assinado
+  (`X-Hub-Signature: sha256=<hmac>`, validar com HMAC-SHA256 sobre o raw body);
+  rota pública (fora de auth), idempotência por `eventId` (retries não reprocessam),
+  IP whitelist dos IPs publicados pela Pagar.me. Eventos: `order.paid`,
+  `charge.refunded`, etc.
+- **Polling do app** (fallback): enquanto o cliente está na tela do QR, consulta
+  `GET /payments/:id/status` a cada ~5 s; webhook continua sendo a única
+  confirmação confiável com app fechado.
+- **Reembolso/devolução:** por API da Pagar.me; refletido no ledger como
+  transação reversa.
+- **Split/payout do motoboy:** avaliar quando `PAY-02` estiver estável — no
+  AquiResolve o payout ao prestador é manual pelo painel (comprovante + saldo),
+  não split automático; validar disponibilidade real na conta do Aqui Log.
+- **Reconciliação:** job periódico compara `payment_intents`/`payouts` internos
+  com o estado na Pagar.me; divergência gera alerta.
 
 ### Segurança e operação
 
@@ -178,7 +187,7 @@ Pagar.me pode ser avaliado por já existir experiência no AquiResolve, mas isso
 | 1 | `PAY-01` | Ledger + reserva/liberação | autorização de pagamentos + `B2C-02` |
 | 2 | `PAY-01A` | Liquidação e política completa de cancelamento | regras aprovadas |
 | 3 | `PAY-01B` | Operação/admin e extratos | `PAY-01A` |
-| 4 | `PAY-02` | Recarga PIX + webhook + reconciliação | gateway/sandbox |
+| 4 | `PAY-02` | Recarga PIX + webhook + reconciliação | `DEC-06` ✅ Pagar.me; credenciais/sandbox + `PAY-01` |
 | 5 | futuro | Payout real ao motoboy | viabilidade regulatória/operacional |
 | 6 | futuro | Cartão tokenizado | PIX estável e necessidade comprovada |
 
@@ -188,7 +197,7 @@ Pagar.me pode ser avaliado por já existir experiência no AquiResolve, mas isso
 - `PAY-DEC-02` (`DEC-13`) — política de cancelamento do **cliente** após aceite/coleta.
 - `PAY-DEC-02b` (`DEC-22`) — **decidida** a lógica da taxa do prestador; valores em `FLOW-DEC-01`.
 - `PAY-DEC-03` — recarga mínima e saldo máximo.
-- `PAY-DEC-04` (`DEC-06`) — gateway PIX e conta comercial.
+- `PAY-DEC-04` (`DEC-06`) — **decidida** (2026-08-09): gateway = **Pagar.me v5** (padrão AquiResolve); falta conta/credenciais do Aqui Log.
 - `PAY-DEC-05` — quem assume taxas e devoluções.
 - `PAY-DEC-06` (`DEC-17`) — **decidida** (2026-08-09): crédito sacável **24 h** após `DELIVERED`.
 - `PAY-DEC-07` — necessidade fiscal/contábil antes do piloto pago.

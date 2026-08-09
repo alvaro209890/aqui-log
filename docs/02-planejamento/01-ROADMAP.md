@@ -64,7 +64,7 @@ Plano detalhado do fluxo: [PLANO_FLUXO_CLIENTE_PRESTADOR.md](planos/PLANO_FLUXO_
 | Mapas | OSM/Leaflet/`flutter_map` continuam no piloto; provedor pago permanece em aberto. |
 | Storage e push | Firebase Storage + FCM no mesmo projeto do banco cloud; adapter local até `OPS-02`. |
 | Identidade | Tema laranja inspirado no AquiResolve implementado nos dois apps Flutter; dashboard ainda segue a identidade anterior. |
-| Pagamentos | Nenhuma cobrança real está autorizada. Primeiro desenhar e testar o ledger interno; gateway exige decisão própria. |
+| Pagamentos | Cobrança real não está ativa. Ledger interno autorizado (`DEC-05`, 09/08); gateway **Pagar.me v5** definido (`DEC-06`, 09/08, padrão AquiResolve); falta conta/credenciais. |
 | Cloud | Alvos **travados** (`DEC-25`): API **Render**, dashboard **Vercel**, banco **Firebase**. Scaffold existe; **não provisionar** sem credenciais e pacote OPS. |
 | Encomenda | Campos próprios entregues; **foto obrigatória** em pedidos novos (`DEC-01`). Fallback de `notes` permanece até medir legado. |
 | Modos | `IMMEDIATE` vs `SCHEDULED` (`DEC-18`); aceite antecipado do agendado (`DEC-20`); tela Agenda no app prestador (`DEC-21`). |
@@ -179,7 +179,7 @@ API **Render**, dashboard **Vercel**, banco **Firebase Firestore**.
 | OPS-DB-01 | ⏸️ | `DEC-25`, modelo de coleções, aceite do dono | Migração/dual-write Postgres local → Firestore cloud |
 | OPS-02 | ⏸️ | Pedido + credenciais Firebase | Projeto Firebase: Firestore, Storage, FCM; adapters reais; fallback local |
 | OPS-03 | ⏸️ | Pedido + credenciais, `OPS-01`, `OPS-02` | Deploy API **Render** + dashboard **Vercel** + smoke público |
-| PAY-02 | ⏸️ | Gateway escolhido + `PAY-01` | PIX por gateway, webhook assinado e reconciliação |
+| PAY-02 | ⏳ | `DEC-06` ✅ (**Pagar.me v5**), credenciais/sandbox, `PAY-01` | PIX por gateway Pagar.me, webhook assinado e reconciliação |
 
 Build verde não comprova deploy. `OPS-03` só fecha com health real na API Render,
 dashboard Vercel apontando para ela, Firestore/Storage operacionais e smoke B2C público.
@@ -252,8 +252,9 @@ Para a fila próxima:
 - `BASE-04` e `B2C-01B` não dependem de decisão nova do dono;
 - `DEC-01` está **DECIDIDA** (foto obrigatória) e **ativada em código** por `B2C-05`;
 - `DEC-18`…`DEC-24` estão **DECIDIDAS** (fluxo cliente↔prestador); `FLOW-DEC-01`,
-  `FLOW-DEC-02`, `FLOW-DEC-03` e `DEC-17` decididas em 2026-08-09; resta `DEC-06`
-  (gateway) para o saque real;
+  `FLOW-DEC-02`, `FLOW-DEC-03` e `DEC-17` decididas em 2026-08-09;
+- `DEC-06` está **DECIDIDA** (2026-08-09): gateway = **Pagar.me v5** (padrão
+  AquiResolve); falta conta/credenciais do Aqui Log para `PAY-02`;
 - `DEC-02` bloqueia os **valores finais** de `B2C-02`/`B2C-06` (estrutura liberada);
 - `DEC-03` está **DECIDIDA** (2026-08-09: ampliar raio + aumento com consentimento) e libera `DISP-01`;
 - cloud, SMS e pagamentos reais continuam atrás de autorização explícita.
