@@ -16,9 +16,12 @@ export class DeliveryJobsService {
     try {
       const expired = await this.deliveries.expireStaleOffers();
       const scheduled = await this.deliveries.dispatchDueScheduled();
-      if (expired > 0 || scheduled > 0) {
+      // DISP-01: é este passo que faz o raio crescer com o tempo em pedido
+      // imediato que nasceu sem ninguém por perto.
+      const reoffered = await this.deliveries.redispatchPendingRequested();
+      if (expired > 0 || scheduled > 0 || reoffered > 0) {
         this.logger.log(
-          `jobs: expiredOffers=${expired} scheduledDispatched=${scheduled}`,
+          `jobs: expiredOffers=${expired} scheduledDispatched=${scheduled} reoffered=${reoffered}`,
         );
       }
     } catch (err) {

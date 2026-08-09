@@ -4,6 +4,34 @@ Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
 ## Fluxo cliente↔prestador nos planos — 2026-08-07
 
+## `DISP-01`: reoferta por anéis de raio — 2026-08-09
+
+- **O pedido sem aceite ganhou um ciclo com fim** (`DEC-03`, plano §6.1). Cada
+  rodada oferta ao mais próximo dentro de um anel de raio, e o anel cresce a
+  cada rodada: `inicial + (rodada − 1) × incremento`. Valores provisórios e
+  editáveis no painel — 3 km, +3 km, 4 rodadas, 20 minutos (último anel: 12 km).
+- **Quem já foi tentado não recebe de volta.** Recusa e expiração contam igual:
+  reofertar a quem recusou só queima o TTL outra vez.
+- **Anel vazio não consome rodada.** O job roda a cada 10 s e queimaria o limite
+  em menos de um minuto com a cidade offline; quem freia esse caso é a duração
+  total.
+- **O ciclo termina com motivo gravado no pedido** — `ACCEPTED`, `MAX_ROUNDS`,
+  `TIMEBOX`, `NO_CANDIDATE` ou `CANCELED` — e o pedido **continua `REQUESTED`**:
+  encerrar a busca não é cancelar. O despacho manual do admin reabre o ciclo do
+  zero, mantendo a exclusão de quem recusou.
+- **Preço não muda em nenhuma rodada** (`DEC-03`/`DEC-19`): a reoferta usa o
+  snapshot congelado. Aumento com consentimento explícito continua sendo
+  `DISP-02`.
+- **Idempotência em duas camadas** (plano §6.2): lock por pedido e índice único
+  parcial `(delivery_id, courier_id, dispatch_round)`, provado no banco.
+- **Cada rodada registra raio, elegíveis e tentados** na própria oferta — a
+  matéria-prima do `DISP-03`, que ainda não existe.
+- Correções que o pacote exigiu: pedido **imediato recusado** ficava parado para
+  sempre (nenhum job olhava para ele) e o **agendado** passou a reabrir o ciclo
+  uma única vez quando a janela chega.
+
+Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-DISP-01.md`.
+
 ## `COUR-01`: agenda do prestador no app do motoboy — 2026-08-09
 
 - **A aba *Corridas* virou três abas** (`DEC-21`, plano §5.2): *Em andamento*

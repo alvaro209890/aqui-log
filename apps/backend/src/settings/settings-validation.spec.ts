@@ -29,6 +29,10 @@ const base: PlatformSettings = {
   scheduleMaxWindowMinutes: 480,
   scheduleCapacitySlackMinutes: 15,
   immediateExecutionEstimateMinutes: 45,
+  dispatchInitialRadiusKm: 3,
+  dispatchRingIncrementKm: 3,
+  dispatchMaxRounds: 4,
+  dispatchTotalDurationMinutes: 20,
 };
 
 /**
@@ -129,6 +133,40 @@ describe('SettingsService.assertValid (DEC-19)', () => {
         ...base,
         minScheduleLeadMinutes: 30,
         scheduleCapacitySlackMinutes: 30,
+      }),
+    ).not.toThrow();
+  });
+
+  // DISP-01: duração total abaixo do TTL faria o ciclo morrer antes de a
+  // primeira oferta expirar — o limite de rodadas viraria enfeite.
+  it('recusa duração total da reoferta menor que o TTL da oferta', () => {
+    expect(() =>
+      service.assertValid({
+        ...base,
+        offerTtlSeconds: 600,
+        dispatchTotalDurationMinutes: 5,
+      }),
+    ).toThrow(/duração total da reoferta/i);
+  });
+
+  it('aceita duração total igual ao TTL da oferta', () => {
+    expect(() =>
+      service.assertValid({
+        ...base,
+        offerTtlSeconds: 600,
+        dispatchTotalDurationMinutes: 10,
+      }),
+    ).not.toThrow();
+  });
+
+  it('aceita anéis maiores e mais rodadas', () => {
+    expect(() =>
+      service.assertValid({
+        ...base,
+        dispatchInitialRadiusKm: 5,
+        dispatchRingIncrementKm: 10,
+        dispatchMaxRounds: 5,
+        dispatchTotalDurationMinutes: 30,
       }),
     ).not.toThrow();
   });

@@ -203,6 +203,28 @@ export class Delivery {
   @Column({ name: 'delivery_proof_url', type: 'varchar', nullable: true })
   deliveryProofUrl!: string | null;
 
+  // DISP-01 / DEC-03 — estado do ciclo de reoferta por anéis (plano §6.1).
+  // `dispatchRound` conta rodadas que produziram oferta; anel vazio não
+  // consome rodada. Nulo em pedido anterior ao pacote, lido como 0.
+  @Column({ name: 'dispatch_round', type: 'integer', nullable: true })
+  dispatchRound!: number | null;
+
+  /** Início do ciclo — é dele que a duração total é contada. */
+  @Column({ name: 'dispatch_started_at', type: 'timestamptz', nullable: true })
+  dispatchStartedAt!: Date | null;
+
+  @Column({ name: 'dispatch_ended_at', type: 'timestamptz', nullable: true })
+  dispatchEndedAt!: Date | null;
+
+  /** `DispatchEndReason`: por que o sistema parou de tentar. */
+  @Column({
+    name: 'dispatch_end_reason',
+    type: 'varchar',
+    length: 16,
+    nullable: true,
+  })
+  dispatchEndReason!: string | null;
+
   @Column({ name: 'scheduled_at', type: 'timestamptz', nullable: true })
   scheduledAt!: Date | null;
 

@@ -9,7 +9,13 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
+import {
+  In,
+  IsNull,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+  Repository,
+} from 'typeorm';
 import type { AuthenticatedUser } from '../auth/jwt.strategy';
 import { AuditService } from '../audit/audit.service';
 import { Courier } from '../database/entities/courier.entity';
@@ -42,9 +48,24 @@ import {
   type TimeWindow,
 } from './scheduling';
 import {
+  DISPATCH_LOCK_TTL_SECONDS,
   OFFER_ACCEPT_LOCK_TTL_SECONDS,
+  dispatchLockKey,
   offerAcceptLockKey,
 } from './delivery-locks';
+import {
+  type DispatchEndReason,
+  type DispatchRingConfig,
+  type RingSelection,
+  describeEndReason,
+  dispatchTimeboxExhausted,
+  hasRoundsLeft,
+  maxRadiusKm,
+  roundsUsed,
+  selectRingCandidate,
+  shouldReopenForWindow,
+  timeboxEndReason,
+} from './dispatch';
 import { assertDeliveryTransition, distanceInKm } from './delivery-rules';
 import {
   PICKUP_CODE_MAX_ATTEMPTS,
@@ -424,57 +445,192 @@ export class DeliveriesService {
     return this.createOffer(delivery, courier, actorId, 'Despacho manual');
   }
 
-  async dispatch(id: string, actorId: string) {
-    const delivery = await this.getById(id);
-    if (delivery.status !== DeliveryStatus.REQUESTED) {
-      throw new ConflictException('A entrega nao esta aguardando despacho');
+  /**
+   * DISP-01 / `DEC-03` — uma rodada de reoferta (plano §6.1).
+   *
+   * Cada chamada tenta **uma** oferta: exclui quem já foi tentado, filtra por
+   * agenda livre e escolhe o mais próximo dentro do anel da rodada, ampliando o
+   * raio até achar alguém ou esgotar as rodadas configuradas.
+   *
+   * O ciclo termina em estado **recuperável**: o pedido continua `REQUESTED`,
+   * com `dispatch_end_reason` preenchido, e nenhum job insiste depois disso —
+   * é isso que impede o loop infinito que o roadmap proíbe. Avisar o cliente e
+   * oferecer ação explícita é `DISP-02`; reabrir manualmente já funciona pelo
+   * despacho do admin (`reopen`).
+   *
+   * Preço não é tocado: a reoferta usa o snapshot congelado do pedido
+   * (`DEC-19`). Rodada mais cara só com consentimento explícito, em `DISP-02`.
+   */
+  async dispatch(
+    id: string,
+    actorId: string,
+    options: { reopen?: boolean } = {},
+  ) {
+    const platform = await this.settings.get();
+    const config = this.dispatchConfig(platform);
+    const lockKey = dispatchLockKey(id);
+    const locked = await this.redis.acquireLock(
+      lockKey,
+      DISPATCH_LOCK_TTL_SECONDS,
+    );
+    if (!locked) {
+      throw new ConflictException('Despacho em andamento; tente novamente');
     }
-    const rejected = await this.offers.findBy({
-      deliveryId: id,
-      status: OfferStatus.REJECTED,
-    });
-    const rejectedIds = new Set(rejected.map((offer) => offer.courierId));
-    const available = (
-      await this.couriers.findBy({
-        status: AccountStatus.ACTIVE,
-        available: true,
-      })
-    ).filter(
-      (courier) =>
-        courier.lastLatitude !== null &&
-        courier.lastLongitude !== null &&
-        !rejectedIds.has(courier.id),
-    );
-    if (!available.length)
-      throw new NotFoundException(
-        'Nenhum entregador disponivel com localizacao',
+    try {
+      const delivery = await this.getById(id);
+      if (delivery.status !== DeliveryStatus.REQUESTED) {
+        throw new ConflictException('A entrega nao esta aguardando despacho');
+      }
+      const now = new Date();
+
+      if (options.reopen) {
+        // Ação de recuperação: admin redespachando ou janela do agendado que
+        // chegou. Zera o ciclo — inclusive o motivo de término — mas NÃO apaga
+        // as ofertas já feitas: quem recusou continua excluído.
+        delivery.dispatchRound = 0;
+        delivery.dispatchStartedAt = now;
+        delivery.dispatchEndedAt = null;
+        delivery.dispatchEndReason = null;
+      } else if (delivery.dispatchEndReason) {
+        throw new ConflictException(
+          `Reoferta encerrada (${describeEndReason(delivery.dispatchEndReason as DispatchEndReason)}). Tente novamente, edite ou cancele o pedido.`,
+        );
+      } else if (!delivery.dispatchStartedAt) {
+        delivery.dispatchStartedAt = now;
+      } else if (
+        dispatchTimeboxExhausted(delivery.dispatchStartedAt, now, config)
+      ) {
+        await this.endDispatchCycle(
+          delivery,
+          timeboxEndReason(delivery),
+          actorId,
+        );
+        throw new NotFoundException(
+          `Reoferta encerrada: ${describeEndReason(timeboxEndReason(delivery))}`,
+        );
+      }
+
+      if (!options.reopen && !hasRoundsLeft(delivery, config)) {
+        await this.endDispatchCycle(delivery, 'MAX_ROUNDS', actorId);
+        throw new NotFoundException(
+          `Reoferta encerrada: ${describeEndReason('MAX_ROUNDS')}`,
+        );
+      }
+
+      // Plano §6.1.2 — quem já foi tentado não recebe a mesma corrida de novo,
+      // tenha ele recusado ou simplesmente deixado a oferta expirar. Reofertar
+      // ao mesmo motoboy só queima o TTL outra vez.
+      const attempted = await this.offers.findBy({ deliveryId: delivery.id });
+      const attemptedIds = new Set(attempted.map((offer) => offer.courierId));
+      const available = (
+        await this.couriers.findBy({
+          status: AccountStatus.ACTIVE,
+          available: true,
+        })
+      ).filter(
+        (courier) =>
+          courier.lastLatitude !== null &&
+          courier.lastLongitude !== null &&
+          !attemptedIds.has(courier.id),
       );
-    const candidates = await this.filterByCapacity(delivery, available);
-    if (!candidates.length)
-      throw new NotFoundException(
-        'Nenhum entregador com agenda livre para esta janela',
+      if (!available.length) {
+        await this.deliveries.save(delivery);
+        throw new NotFoundException(
+          'Nenhum entregador disponivel com localizacao',
+        );
+      }
+      const withCapacity = await this.filterByCapacity(delivery, available);
+      if (!withCapacity.length) {
+        await this.deliveries.save(delivery);
+        throw new NotFoundException(
+          'Nenhum entregador com agenda livre para esta janela',
+        );
+      }
+      const selection = selectRingCandidate(
+        withCapacity.map((courier) => ({
+          courierId: courier.id,
+          distanceKm: distanceInKm(
+            Number(courier.lastLatitude),
+            Number(courier.lastLongitude),
+            Number(delivery.pickupLatitude),
+            Number(delivery.pickupLongitude),
+          ),
+        })),
+        config,
+        roundsUsed(delivery) + 1,
       );
-    const courier = candidates.sort(
-      (a, b) =>
-        distanceInKm(
-          Number(a.lastLatitude),
-          Number(a.lastLongitude),
-          Number(delivery.pickupLatitude),
-          Number(delivery.pickupLongitude),
-        ) -
-        distanceInKm(
-          Number(b.lastLatitude),
-          Number(b.lastLongitude),
-          Number(delivery.pickupLatitude),
-          Number(delivery.pickupLongitude),
-        ),
-    )[0];
-    return this.createOffer(
+      if (!selection) {
+        // Ninguém em nenhum anel. Não consome rodada: o freio aqui é a duração
+        // total, senão o job (a cada 10 s) gastaria o limite em menos de um
+        // minuto enquanto a cidade inteira está offline.
+        await this.deliveries.save(delivery);
+        throw new NotFoundException(
+          `Nenhum entregador dentro de ${maxRadiusKm(config)} km`,
+        );
+      }
+      const courier = withCapacity.find(
+        (item) => item.id === selection.courierId,
+      ) as Courier;
+      return this.createOffer(
+        delivery,
+        courier,
+        actorId,
+        `Reoferta rodada ${selection.round} (raio ${selection.radiusKm} km, ${selection.eligibleCount} elegiveis)`,
+        { ...selection, attemptedCount: attemptedIds.size + 1 },
+      );
+    } finally {
+      await this.redis.releaseLock(lockKey);
+    }
+  }
+
+  private dispatchConfig(platform: {
+    dispatchInitialRadiusKm: number;
+    dispatchRingIncrementKm: number;
+    dispatchMaxRounds: number;
+    dispatchTotalDurationMinutes: number;
+  }): DispatchRingConfig {
+    return {
+      initialRadiusKm: platform.dispatchInitialRadiusKm,
+      ringIncrementKm: platform.dispatchRingIncrementKm,
+      maxRounds: platform.dispatchMaxRounds,
+      totalDurationMinutes: platform.dispatchTotalDurationMinutes,
+    };
+  }
+
+  /**
+   * DISP-01 — fecha o ciclo de reoferta com motivo e carimbo.
+   *
+   * O pedido **continua `REQUESTED`**: encerrar a busca não é cancelar. O que
+   * muda é que nenhum job insiste mais, e o cliente tem um estado explicável
+   * para agir (plano §6.1.5). A notificação e o botão são `DISP-02`.
+   */
+  private async endDispatchCycle(
+    delivery: Delivery,
+    reason: DispatchEndReason,
+    actorId: string | null,
+  ) {
+    if (delivery.dispatchEndReason) return;
+    delivery.dispatchEndedAt = new Date();
+    delivery.dispatchEndReason = reason;
+    await this.deliveries.save(delivery);
+    await this.recordEvent(
       delivery,
-      courier,
       actorId,
-      'Despacho automatico por proximidade',
+      `Reoferta encerrada: ${describeEndReason(reason)} (rodadas usadas: ${roundsUsed(delivery)})`,
     );
+    await this.audit.record({
+      actorId: actorId ?? undefined,
+      action: 'DELIVERY_DISPATCH_ENDED',
+      resourceType: 'delivery',
+      resourceId: delivery.id,
+      metadata: {
+        code: delivery.code,
+        reason,
+        rounds: roundsUsed(delivery),
+        startedAt: delivery.dispatchStartedAt?.toISOString() ?? null,
+        endedAt: delivery.dispatchEndedAt?.toISOString() ?? null,
+      },
+    });
   }
 
   /**
@@ -562,6 +718,10 @@ export class DeliveriesService {
       delivery.status = DeliveryStatus.ACCEPTED;
       delivery.acceptedAt = new Date();
       delivery.courierId = courier.id;
+      // DISP-01: o ciclo de reoferta acabou aqui, e com o melhor desfecho.
+      // `DISP-03` vai medir "rodada e raio do aceite" a partir destes campos.
+      delivery.dispatchEndedAt = new Date();
+      delivery.dispatchEndReason = 'ACCEPTED';
       // PICK-01 / DEC-24: o código nasce no aceite e só então o cliente pode
       // vê-lo. Se o pedido já tiver um (reaceite após reabertura), mantém —
       // trocar o número deixaria o cliente com um código velho na mão.
@@ -674,10 +834,11 @@ export class DeliveriesService {
 
   /** Auto-dispatch REQUESTED deliveries whose scheduledAt has arrived. */
   async dispatchDueScheduled(): Promise<number> {
+    const now = new Date();
     const due = await this.deliveries.find({
       where: {
         status: DeliveryStatus.REQUESTED,
-        scheduledAt: LessThanOrEqual(new Date()),
+        scheduledAt: LessThanOrEqual(now),
       },
       take: 20,
       order: { scheduledAt: 'ASC' },
@@ -687,10 +848,47 @@ export class DeliveriesService {
     let count = 0;
     for (const delivery of withSchedule) {
       try {
-        await this.dispatch(delivery.id, delivery.createdById);
+        // DISP-01: a chegada da janela é ocasião nova — o ciclo que morreu na
+        // criação (aceite antecipado sem candidato) recomeça uma única vez.
+        // `shouldReopenForWindow` é auto-idempotente, então o tick de 10 s não
+        // vira um reinício perpétuo.
+        await this.dispatch(delivery.id, delivery.createdById, {
+          reopen: shouldReopenForWindow(delivery, now),
+        });
         count += 1;
       } catch {
         // skip if no couriers
+      }
+    }
+    return count;
+  }
+
+  /**
+   * DISP-01 — mantém o ciclo de anéis andando enquanto ele estiver vivo.
+   *
+   * Sem este job a ampliação de raio não aconteceria: um pedido imediato que
+   * nasceu sem ninguém por perto ficava `REQUESTED` para sempre, porque
+   * `expireStaleOffers` só olha oferta pendente e `dispatchDueScheduled` só
+   * olha agendado. Pedido com ciclo já encerrado é ignorado — é o que impede o
+   * loop infinito.
+   */
+  async redispatchPendingRequested(): Promise<number> {
+    const pending = await this.deliveries.find({
+      where: {
+        status: DeliveryStatus.REQUESTED,
+        dispatchEndReason: IsNull(),
+        scheduledAt: IsNull(),
+      },
+      take: 20,
+      order: { createdAt: 'ASC' },
+    });
+    let count = 0;
+    for (const delivery of pending) {
+      try {
+        await this.dispatch(delivery.id, delivery.createdById);
+        count += 1;
+      } catch {
+        // sem candidato agora, ou ciclo encerrado nesta tentativa
       }
     }
     return count;
@@ -714,7 +912,16 @@ export class DeliveriesService {
       userId,
       'Oferta recusada; aguardando novo despacho',
     );
-    return this.present(delivery, user);
+    // DISP-01 / plano §6.1.2: recusa dispara a rodada seguinte na hora, com o
+    // anel maior e sem este motoboy. Antes deste pacote, um imediato recusado
+    // ficava parado até um admin redespachar — nenhum job olhava para ele.
+    try {
+      await this.dispatch(delivery.id, userId);
+    } catch {
+      // sem candidato, rodadas esgotadas ou tempo esgotado: o pedido continua
+      // REQUESTED, agora com motivo de término registrado.
+    }
+    return this.present(await this.getById(delivery.id), user);
   }
 
   async updateStatus(
@@ -754,8 +961,15 @@ export class DeliveriesService {
       delivery.deliveryProofUrl = dto.proofUrl ?? null;
       delivery.deliveredAt = new Date();
     }
-    if (dto.status === DeliveryStatus.CANCELED)
+    if (dto.status === DeliveryStatus.CANCELED) {
       delivery.canceledAt = new Date();
+      // DISP-01: cancelar fecha o ciclo de reoferta; nenhum job deve continuar
+      // procurando motoboy para um pedido que não existe mais.
+      if (!delivery.dispatchEndReason) {
+        delivery.dispatchEndedAt = new Date();
+        delivery.dispatchEndReason = 'CANCELED';
+      }
+    }
     await this.deliveries.save(delivery);
     await this.recordEvent(delivery, user.id, dto.note ?? null, dto.proofUrl);
     if (
@@ -1052,6 +1266,9 @@ export class DeliveriesService {
     courier: Courier,
     actorId: string,
     note: string,
+    // DISP-01: presente quando a oferta veio de uma rodada de anel. Nulo no
+    // despacho dirigido do admin (`assign`), que escolhe a dedo e não é rodada.
+    ring?: RingSelection & { attemptedCount: number },
   ) {
     assertDeliveryTransition(delivery.status, DeliveryStatus.OFFERED);
     const platform = await this.settings.get();
@@ -1063,10 +1280,26 @@ export class DeliveriesService {
         status: OfferStatus.PENDING,
         expiresAt: new Date(Date.now() + ttlSeconds * 1000),
         respondedAt: null,
+        // Plano §6.2: a rodada registra raio, elegíveis e tentados. É a matéria
+        // -prima da telemetria de `DISP-03`.
+        dispatchRound: ring?.round ?? null,
+        radiusKm: ring?.radiusKm ?? null,
+        eligibleCount: ring?.eligibleCount ?? null,
+        attemptedCount: ring?.attemptedCount ?? null,
       }),
     );
     delivery.courierId = courier.id;
     delivery.status = DeliveryStatus.OFFERED;
+    if (ring) {
+      delivery.dispatchRound = ring.round;
+      if (!delivery.dispatchStartedAt) delivery.dispatchStartedAt = new Date();
+    } else {
+      // Despacho dirigido reabre a busca: existe oferta pendente de novo, então
+      // deixar o pedido marcado como "reoferta encerrada" seria mentira.
+      delivery.dispatchEndedAt = null;
+      delivery.dispatchEndReason = null;
+      if (!delivery.dispatchStartedAt) delivery.dispatchStartedAt = new Date();
+    }
     await this.deliveries.save(delivery);
     await this.recordEvent(delivery, actorId, note);
     await this.notifications.create({

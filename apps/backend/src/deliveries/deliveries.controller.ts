@@ -115,7 +115,10 @@ export class DeliveriesController {
     @Param('id') id: string,
     @Req() req: Request & { user: AuthenticatedUser },
   ) {
-    return this.deliveries.dispatch(id, req.user.id);
+    // DISP-01: o despacho manual do admin é a ação de recuperação do plano
+    // §6.1.5 — ele reabre o ciclo de anéis mesmo depois de esgotado. Quem já
+    // recusou continua excluído.
+    return this.deliveries.dispatch(id, req.user.id, { reopen: true });
   }
 
   @Patch('offers/:offerId/accept')

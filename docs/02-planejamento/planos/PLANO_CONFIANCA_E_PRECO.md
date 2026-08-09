@@ -193,6 +193,13 @@ Gate: cadastro público em produção exige telefone verificado, mas testes loca
 
 ## 6. `DISP-01/02/03` — oferta sem aceite
 
+> **Estado (2026-08-09):** os itens 1, 2, 3 e 5 do §6.1 e o §6.2 inteiro estão
+> **implementados** em `DISP-01` (evidência:
+> `docs/04-status/entregas/2026-08-09-EVIDENCIA-DISP-01.md`). O item 4 — avisar o
+> cliente — e o aumento com consentimento do §3.3 continuam em `DISP-02`. As
+> métricas do §6.3 continuam em `DISP-03`; `DISP-01` deixou o registro por
+> rodada (raio, elegíveis, tentados, timestamps) e o motivo de término.
+
 ### 6.1 Estratégia inicial
 
 1. oferecer ao candidato elegível mais próximo;

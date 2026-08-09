@@ -19,7 +19,8 @@
 | — | `COUR-01` | `DONE` (2026-08-09) | P1 | App prestador: Em andamento + Agenda | evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-COUR-01.md` |
 | — | `PICK-01` | `DONE` (2026-08-09) | P1 | Código de recolhimento + foto do prestador na coleta | evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-PICK-01.md` |
 | 3 | `B2C-03` | `BLOCKED` | P1 | Avaliação mútua por papel | baseline estável e migração de ratings definida |
-| 4 | `DISP-01` | `READY` | P1 | Reoferta limitada por anéis e recusas | `B2C-02` DONE; `DEC-03` decidida (ampliar raio + aumento com consentimento) |
+| — | `DISP-01` | `DONE` (2026-08-09) | P1 | Reoferta por anéis, exclusão de tentados, limite de rodadas e de tempo | evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-DISP-01.md` |
+| 4 | `DISP-02` | `READY` | P1 | Avisar o cliente da demora e oferecer ação explícita (inclui aumento com consentimento, `DEC-03`) | `DISP-01` ✅ DONE — única dependência |
 | 5 | `PAY-01` | `READY` | P2 | Ledger interno (cliente + prestador) sem gateway | autorização `DEC-05` ✅; `B2C-02` DONE; `DEC-23` |
 | 6 | `COUR-02` | `BLOCKED` | P2 | Cancelamento prestador + taxa no saldo | `COUR-01` ✅ DONE; falta `PAY-01`; `DEC-22` ✅ decidida |
 | 7 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-02B`, `B2C-03A`, `DISP-03` (`B2C-01B` ok) |
@@ -212,12 +213,18 @@ mostrava.
 
 Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-COUR-01.md`.
 
-## 3. Tarefa pronta — `UX-02` ou `DISP-01`
+## 3. Tarefa pronta — `DISP-02`, `PAY-01` ou `UX-02`
 
+- **`DISP-02`** — o ciclo de reoferta já termina com motivo explícito
+  (`dispatch_end_reason`) e já sabe reabrir (`dispatch(..., { reopen: true })`).
+  Falta o que é do cliente: ser avisado da demora e escolher — tentar de novo,
+  editar, cancelar ou aprovar um valor maior (`DEC-03`, nunca silencioso).
+- **`PAY-01`** — ledger interno; destrava `COUR-02`.
 - **`UX-02`** — QA visual e de acessibilidade dos fluxos. O dashboard já saiu em
   `UX-01C` + tema escuro; o que resta exige **dispositivo/emulador**, ainda
-  indisponível nesta máquina. Inclui o gráfico de pizza quebrado e a seção
-  "Modo agendado" do admin, que não passou por Chrome real.
+  indisponível nesta máquina. Inclui o gráfico de pizza quebrado e as seções
+  "Modo agendado" e "Reoferta por aneis" do admin, que não passaram por Chrome
+  real.
 
 ## 4. Pacotes do fluxo cliente↔prestador
 

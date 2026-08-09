@@ -170,6 +170,11 @@ export interface PlatformSettings {
   scheduleMaxWindowMinutes: number;
   scheduleCapacitySlackMinutes: number;
   immediateExecutionEstimateMinutes: number;
+  // DISP-01 / DEC-03 — reoferta por anéis. Valores provisórios e editáveis.
+  dispatchInitialRadiusKm: number;
+  dispatchRingIncrementKm: number;
+  dispatchMaxRounds: number;
+  dispatchTotalDurationMinutes: number;
 }
 
 export interface ReportRange {

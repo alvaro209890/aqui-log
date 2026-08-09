@@ -89,6 +89,20 @@ export function SettingsPage({ token }: { token: string }) {
     });
   };
 
+  // DISP-01: o último anel é o que o operador precisa enxergar — é ele que
+  // decide se a busca cobre a cidade. E o servidor recusa duração total abaixo
+  // do TTL de uma oferta; melhor avisar antes.
+  const lastRingKm = form
+    ? Number(
+        (
+          form.dispatchInitialRadiusKm +
+          (form.dispatchMaxRounds - 1) * form.dispatchRingIncrementKm
+        ).toFixed(2),
+      )
+    : 0;
+  const dispatchTimeboxInvalid =
+    !!form && form.dispatchTotalDurationMinutes * 60 < form.offerTtlSeconds;
+
   // DEC-19: o painel avisa antes de o servidor recusar.
   const kmRateInvalid =
     !!form &&
@@ -368,6 +382,82 @@ export function SettingsPage({ token }: { token: string }) {
               A folga e a duracao estimada decidem quando um agendado ja aceito
               bloqueia uma oferta imediata. Valores provisorios de SCHED-01.
             </p>
+          </section>
+
+          <section className="panel settings-panel">
+            <div className="panel-heading">
+              <div>
+                <h2>Reoferta por aneis</h2>
+                <p>
+                  Quando ninguem aceita, o sistema amplia o raio em aneis e
+                  reoferta a quem ainda nao foi tentado. Valores provisorios de
+                  DISP-01 (DEC-03).
+                </p>
+              </div>
+            </div>
+            <div className="settings-form">
+              <label>
+                Raio inicial (km)
+                <input
+                  type="number"
+                  min={0.5}
+                  max={200}
+                  step={0.5}
+                  value={form.dispatchInitialRadiusKm}
+                  onChange={(e) =>
+                    setNum('dispatchInitialRadiusKm', e.target.value)
+                  }
+                />
+              </label>
+              <label>
+                Incremento por anel (km)
+                <input
+                  type="number"
+                  min={0}
+                  max={200}
+                  step={0.5}
+                  value={form.dispatchRingIncrementKm}
+                  onChange={(e) =>
+                    setNum('dispatchRingIncrementKm', e.target.value)
+                  }
+                />
+              </label>
+              <label>
+                Maximo de rodadas
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={form.dispatchMaxRounds}
+                  onChange={(e) => setNum('dispatchMaxRounds', e.target.value)}
+                />
+              </label>
+              <label>
+                Duracao total da busca (minutos)
+                <input
+                  type="number"
+                  min={1}
+                  max={180}
+                  value={form.dispatchTotalDurationMinutes}
+                  onChange={(e) =>
+                    setNum('dispatchTotalDurationMinutes', e.target.value)
+                  }
+                />
+              </label>
+            </div>
+            {dispatchTimeboxInvalid ? (
+              <p className="settings-warning">
+                A duracao total ({form.dispatchTotalDurationMinutes} min) e
+                menor que o TTL de uma oferta ({form.offerTtlSeconds}s): o
+                servidor vai recusar como esta.
+              </p>
+            ) : (
+              <p className="settings-note">
+                Ultimo anel: {lastRingKm} km na rodada {form.dispatchMaxRounds}.
+                Ao esgotar, o pedido continua aguardando e o cliente pode tentar
+                de novo, editar ou cancelar. O preco NAO muda sozinho (DEC-03).
+              </p>
+            )}
           </section>
 
           <section className="panel settings-panel">

@@ -253,4 +253,114 @@ api PATCH /settings "$admin_token" "$(jq -nc --argjson value "$km_original" '{pr
 api GET "/deliveries?fulfillmentMode=SCHEDULED&limit=50" "$admin_token" | jq -e --arg id "$scheduled_id" '[.items[].id] | index($id) != null' >/dev/null
 api GET "/deliveries?fulfillmentMode=IMMEDIATE&limit=50" "$admin_token" | jq -e --arg id "$scheduled_id" '[.items[].id] | index($id) == null' >/dev/null
 
-printf 'Smoke test aprovado: %s (%s) + agendado %s (%s)\n' "$delivery_code" "$delivery_id" "$scheduled_code" "$scheduled_id"
+# ---------------------------------------------------------------------------
+# DISP-01 — reoferta por aneis, exclusao de recusas e limite de rodadas.
+# ---------------------------------------------------------------------------
+
+# O cenario roda 55 km ao norte do ponto base e, antes de comecar, SUSPENDE os
+# motoboys de execucoes anteriores do smoke. Sem isso o resultado dependeria do
+# historico do banco: execucoes seguidas deixam motoboys a poucos metros uns dos
+# outros, e a rodada 2 poderia cair em qualquer um deles. Como este e o ultimo
+# bloco do smoke, suspender nao afeta nenhuma outra assercao.
+# Os aneis vem das settings (Redis), que sobrevivem entre execucoes. Fixar aqui
+# os valores do cenario torna o bloco idempotente mesmo depois de uma execucao
+# interrompida no meio.
+api PATCH /settings "$admin_token" '{"dispatchInitialRadiusKm":3,"dispatchRingIncrementKm":3,"dispatchMaxRounds":4,"dispatchTotalDurationMinutes":20}' >/dev/null
+
+api GET /couriers "$admin_token" \
+  | jq -r --arg atual "$courier_id" '.[] | select(.status == "ACTIVE") | select(.id != $atual) | .id' \
+  | while read -r residual; do
+      api PATCH "/couriers/$residual/suspend" "$admin_token" >/dev/null
+    done
+
+DISP_LATITUDE="$(awk -v value="$PICKUP_LATITUDE" 'BEGIN { printf "%.6f", value + 0.5 }')"
+DISP_LONGITUDE="$PICKUP_LONGITUDE"
+# ~5 km ao norte do ponto de coleta: fora do anel 1 (3 km), dentro do anel 2 (6 km).
+DISP_FAR_LATITUDE="$(awk -v value="$DISP_LATITUDE" 'BEGIN { printf "%.6f", value + 0.045 }')"
+
+disp_payload() {
+  new_order_payload | jq -c \
+    --argjson pickupLatitude "$DISP_LATITUDE" \
+    --argjson pickupLongitude "$DISP_LONGITUDE" \
+    --argjson deliveryLatitude "$DISP_FAR_LATITUDE" \
+    --argjson deliveryLongitude "$DISP_LONGITUDE" \
+    '.pickupLatitude=$pickupLatitude | .pickupLongitude=$pickupLongitude | .deliveryLatitude=$deliveryLatitude | .deliveryLongitude=$deliveryLongitude'
+}
+
+# O motoboy do fluxo principal vai para cima da coleta (anel 1).
+api PATCH /couriers/me/location "$courier_token" "$(jq -nc --argjson latitude "$DISP_LATITUDE" --argjson longitude "$DISP_LONGITUDE" '{latitude:$latitude,longitude:$longitude}')" >/dev/null
+api PATCH /couriers/me/availability "$courier_token" '{"available":true}' >/dev/null
+
+# Um segundo motoboy, a 5 km: so alcancavel quando o raio ampliar.
+COURIER2_EMAIL="entregador2.${RUN_ID}@aquilog.test"
+courier2="$(api POST /auth/register/courier "" "$(jq -nc --arg name 'Entregador Anel 2' --arg email "$COURIER2_EMAIL" --arg password "$TEST_PASSWORD" --arg document "$(printf '%011d' $((RUN_ID + 1)))" '{name:$name,email:$email,password:$password,document:$document,vehicleType:"MOTORCYCLE",vehiclePlate:"AQL2T34",documentUrls:["https://example.com/documento-teste.pdf"]}')")"
+courier2_id="$(jq -er '.courierId' <<<"$courier2")"
+api PATCH "/couriers/$courier2_id/approve" "$admin_token" >/dev/null
+courier2_token="$(api POST /auth/login "" "$(jq -nc --arg email "$COURIER2_EMAIL" --arg password "$TEST_PASSWORD" '{email:$email,password:$password}')" | jq -er '.accessToken')"
+api PATCH /couriers/me/location "$courier2_token" "$(jq -nc --argjson latitude "$DISP_FAR_LATITUDE" --argjson longitude "$DISP_LONGITUDE" '{latitude:$latitude,longitude:$longitude}')" >/dev/null
+api PATCH /couriers/me/availability "$courier2_token" '{"available":true}' >/dev/null
+
+disp="$(api POST /deliveries "$customer_token" "$(disp_payload)")"
+disp_id="$(jq -er '.id' <<<"$disp")"
+disp_price="$(jq -er '.priceCents' <<<"$disp")"
+
+# Rodada 1: a oferta tem de ir para quem esta em cima da coleta, no anel de 3 km.
+disp_offer1="$(api GET /deliveries/offers/mine "$courier_token" | jq -er --arg deliveryId "$disp_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
+if [[ -z "$disp_offer1" ]]; then
+  disp_offer1="$(api POST "/deliveries/$disp_id/dispatch" "$admin_token" | jq -er '.offer.id')"
+fi
+api GET /deliveries/offers/mine "$courier_token" | jq -e --arg offer "$disp_offer1" 'map(select(.id == $offer)) | .[0] | .dispatchRound == 1 and (.radiusKm | tonumber) == 3 and .eligibleCount == 1 and .attemptedCount == 1' >/dev/null
+# Rodada 1 nao alcanca quem esta a 5 km: o unico elegivel era o de cima da coleta.
+api GET /deliveries/offers/mine "$courier2_token" | jq -e --arg deliveryId "$disp_id" 'map(select(.delivery.id == $deliveryId)) | length == 0' >/dev/null
+
+# Enquanto ha oferta pendente, o job repetido (aqui: um segundo despacho) nao
+# pode criar outra oferta para o mesmo pedido.
+duplicado="$(api_status POST "/deliveries/$disp_id/dispatch" "$admin_token")"
+if [[ "$(tail -n1 <<<"$duplicado")" != "409" ]]; then
+  printf 'Despacho repetido com oferta pendente deveria dar 409, veio %s.\n' "$(tail -n1 <<<"$duplicado")" >&2
+  exit 1
+fi
+
+# Recusa: o mesmo motoboy nao pode receber de volta, e o raio amplia para 6 km,
+# alcancando o segundo motoboy.
+api PATCH "/deliveries/offers/$disp_offer1/reject" "$courier_token" >/dev/null
+api GET /deliveries/offers/mine "$courier_token" | jq -e --arg deliveryId "$disp_id" 'map(select(.delivery.id == $deliveryId)) | length == 0' >/dev/null
+disp_offer2="$(api GET /deliveries/offers/mine "$courier2_token" | jq -er --arg deliveryId "$disp_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
+if [[ -z "$disp_offer2" ]]; then
+  printf 'Apos a recusa, a rodada 2 deveria ter ofertado ao motoboy de 5 km.\n' >&2
+  api GET "/deliveries/$disp_id" "$admin_token" >&2
+  exit 1
+fi
+api GET /deliveries/offers/mine "$courier2_token" | jq -e --arg offer "$disp_offer2" 'map(select(.id == $offer)) | .[0] | .dispatchRound == 2 and (.radiusKm | tonumber) == 6 and .attemptedCount == 2' >/dev/null
+# DEC-03: reoferta usa o snapshot; o preco do cliente nao muda sozinho.
+api GET "/deliveries/$disp_id" "$customer_token" | jq -e --argjson price "$disp_price" '.priceCents == $price and .dispatchRound == 2 and .dispatchEndReason == null' >/dev/null
+
+# Limite de rodadas: com 1 rodada, a recusa esgota o ciclo e o pedido fica em
+# estado recuperavel (continua REQUESTED, com motivo registrado).
+api PATCH /settings "$admin_token" '{"dispatchMaxRounds":1}' >/dev/null
+limite="$(api POST /deliveries "$customer_token" "$(disp_payload)")"
+limite_id="$(jq -er '.id' <<<"$limite")"
+limite_offer="$(api GET /deliveries/offers/mine "$courier_token" | jq -er --arg deliveryId "$limite_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
+if [[ -z "$limite_offer" ]]; then
+  limite_offer="$(api POST "/deliveries/$limite_id/dispatch" "$admin_token" | jq -er '.offer.id')"
+fi
+api PATCH "/deliveries/offers/$limite_offer/reject" "$courier_token" >/dev/null
+api GET "/deliveries/$limite_id" "$admin_token" | jq -e '.status == "REQUESTED" and .dispatchEndReason == "MAX_ROUNDS" and .dispatchEndedAt != null' >/dev/null
+# Nenhum motoboy recebeu a corrida por reoferta automatica depois do limite.
+api GET /deliveries/offers/mine "$courier2_token" | jq -e --arg deliveryId "$limite_id" 'map(select(.delivery.id == $deliveryId)) | length == 0' >/dev/null
+# Acao de recuperacao: com o limite restaurado, o despacho do admin reabre o
+# ciclo do zero — e quem recusou continua de fora.
+api PATCH /settings "$admin_token" '{"dispatchMaxRounds":4}' >/dev/null
+api PATCH /couriers/me/location "$courier2_token" "$(jq -nc --argjson latitude "$DISP_LATITUDE" --argjson longitude "$DISP_LONGITUDE" '{latitude:$latitude,longitude:$longitude}')" >/dev/null
+api POST "/deliveries/$limite_id/dispatch" "$admin_token" | jq -e '.offer.dispatchRound == 1 and (.offer.radiusKm | tonumber) == 3' >/dev/null
+api GET "/deliveries/$limite_id" "$admin_token" | jq -e '.dispatchEndReason == null and .dispatchRound == 1' >/dev/null
+api GET /deliveries/offers/mine "$courier2_token" | jq -e --arg deliveryId "$limite_id" 'map(select(.delivery.id == $deliveryId)) | length == 1' >/dev/null
+
+# A duracao total precisa caber ao menos uma oferta (validacao de settings).
+curta="$(api_status PATCH /settings "$admin_token" '{"dispatchTotalDurationMinutes":1,"offerTtlSeconds":600}')"
+if [[ "$(tail -n1 <<<"$curta")" != "400" ]]; then
+  printf 'Duracao total menor que o TTL deveria ser recusada com 400, veio %s.\n' "$(tail -n1 <<<"$curta")" >&2
+  exit 1
+fi
+
+printf 'Smoke test aprovado: %s (%s) + agendado %s (%s) + reoferta %s\n' "$delivery_code" "$delivery_id" "$scheduled_code" "$scheduled_id" "$disp_id"

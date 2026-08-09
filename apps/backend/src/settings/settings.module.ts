@@ -80,6 +80,13 @@ export type PlatformSettings = {
   scheduleMaxWindowMinutes: number;
   scheduleCapacitySlackMinutes: number;
   immediateExecutionEstimateMinutes: number;
+  // DISP-01 / DEC-03 — reoferta por anéis. Os quatro valores são PROVISÓRIOS
+  // (padrão DEC-02: editáveis no admin, sem deploy) e definem o único freio do
+  // ciclo: raio, quanto ele cresce, quantas rodadas e por quanto tempo.
+  dispatchInitialRadiusKm: number;
+  dispatchRingIncrementKm: number;
+  dispatchMaxRounds: number;
+  dispatchTotalDurationMinutes: number;
 };
 
 const REDIS_KEY = 'aqui:settings:platform';
@@ -232,6 +239,35 @@ class UpdateSettingsDto {
   @Min(5)
   @Max(480)
   immediateExecutionEstimateMinutes?: number;
+
+  // DISP-01 / DEC-03 — anéis de reoferta.
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.5)
+  @Max(200)
+  dispatchInitialRadiusKm?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(200)
+  dispatchRingIncrementKm?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  dispatchMaxRounds?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(180)
+  dispatchTotalDurationMinutes?: number;
 }
 
 @Injectable()
@@ -290,6 +326,20 @@ export class SettingsService {
       immediateExecutionEstimateMinutes: Number(
         this.config.get('IMMEDIATE_EXECUTION_ESTIMATE_MINUTES') ?? 45,
       ),
+      // DISP-01 / DEC-03: 3 km no primeiro anel, +3 km por anel, 4 rodadas
+      // (o DEC-02 pede 3–5) e 20 min de duração total (pede 15–30). Com isso o
+      // último anel chega a 12 km — cobre uma cidade média sem oferecer uma
+      // corrida que ninguém aceita.
+      dispatchInitialRadiusKm: Number(
+        this.config.get('DISPATCH_INITIAL_RADIUS_KM') ?? 3,
+      ),
+      dispatchRingIncrementKm: Number(
+        this.config.get('DISPATCH_RING_INCREMENT_KM') ?? 3,
+      ),
+      dispatchMaxRounds: Number(this.config.get('DISPATCH_MAX_ROUNDS') ?? 4),
+      dispatchTotalDurationMinutes: Number(
+        this.config.get('DISPATCH_TOTAL_DURATION_MINUTES') ?? 20,
+      ),
     };
   }
 
@@ -319,6 +369,14 @@ export class SettingsService {
     if (next.scheduleMaxWindowMinutes < SCHEDULE_MIN_WINDOW_MINUTES) {
       throw new BadRequestException(
         `A janela máxima de coleta não pode ser menor que ${SCHEDULE_MIN_WINDOW_MINUTES} minutos.`,
+      );
+    }
+    // DISP-01: a duração total precisa caber ao menos uma oferta inteira.
+    // Abaixo do TTL, o ciclo terminaria antes de a primeira oferta expirar —
+    // o limite de rodadas viraria enfeite e ninguém entenderia por quê.
+    if (next.dispatchTotalDurationMinutes * 60 < next.offerTtlSeconds) {
+      throw new BadRequestException(
+        'A duração total da reoferta precisa ser maior ou igual ao TTL de uma oferta.',
       );
     }
   }

@@ -63,6 +63,10 @@ const SETTINGS: PlatformSettings = {
   scheduleMaxWindowMinutes: 480,
   scheduleCapacitySlackMinutes: 15,
   immediateExecutionEstimateMinutes: 45,
+  dispatchInitialRadiusKm: 3,
+  dispatchRingIncrementKm: 3,
+  dispatchMaxRounds: 4,
+  dispatchTotalDurationMinutes: 20,
 };
 
 const inMinutes = (minutes: number) => new Date(Date.now() + minutes * 60_000);

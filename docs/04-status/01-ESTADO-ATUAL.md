@@ -2,7 +2,7 @@
 
 > **Data de referência:** 2026-08-09
 > **Ambiente:** desenvolvimento local no PC `acer`; nada produtivo roda aqui.
-> **Baseline de código:** `531a432` no início da sessão de `COUR-01`.
+> **Baseline de código:** `d0761c2` no início da sessão de `DISP-01`.
 
 ## 1. Produto vigente
 
@@ -16,14 +16,49 @@ coluna `company_id`).
 
 | Superfície | Estado observado na última rodada técnica | Limitação aberta |
 | --- | --- | --- |
-| Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso/modo**), **modo agendado com janela e aceite antecipado**, ofertas com **reserva de agenda**, tracking, **preço v2 versionado com breakdown congelado**, **código de recolhimento na coleta**, dashboard e storage local | migrations revalidadas em banco vivo em 2026-08-09 (11 migrations) |
+| Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso/modo**), **modo agendado com janela e aceite antecipado**, ofertas com **reserva de agenda** e **reoferta por anéis de raio com limite de rodadas e de tempo**, tracking, **preço v2 versionado com breakdown congelado**, **código de recolhimento na coleta**, dashboard e storage local | migrations revalidadas em banco vivo em 2026-08-09 (**12 migrations**) |
 | App cliente Flutter | Cadastro/login, pedido estruturado **com foto obrigatória**, **escolha entre agora e agendar (com janela)**, **código de recolhimento visível após o aceite**, histórico e acompanhamento | QA recente em dispositivo/emulador pendente |
 | App motoboy Flutter | Cadastro, disponibilidade, oferta (**agendada mostra a janela e aceita antecipado**), **abas Em andamento / Agenda / Concluídas**, **coleta com código de recolhimento**, prova, entrega e carteira básica | sem botão de cancelar (é `COUR-02`); QA em dispositivo/emulador pendente |
-| Dashboard React | KPIs, entregas (**filtro e coluna de modo**), mapa, motoboys, usuários, auditoria, **configurações completas de preço/multas/agendamento** e relatórios; identidade laranja + **tema claro/escuro** | seção "Modo agendado" ainda **sem QA de navegador**; busca da `TopBar` decorativa; **gráfico de pizza não renderiza setores** (Recharts 3.9 + React 19) — em `UX-02` |
+| Dashboard React | KPIs, entregas (**filtro e coluna de modo**), mapa, motoboys, usuários, auditoria, **configurações completas de preço/multas/agendamento/reoferta** e relatórios; identidade laranja + **tema claro/escuro** | seções "Modo agendado" e **"Reoferta por aneis"** ainda **sem QA de navegador**; busca da `TopBar` decorativa; **gráfico de pizza não renderiza setores** (Recharts 3.9 + React 19) — em `UX-02` |
 | Postgres/Redis | Containers `aqui-log-postgres` (5433) e `aqui-log-redis` (6379) ativos | banco de teste é descartável; nenhum dado tem valor |
 | Cloud | Scaffolds Render/Vercel/Firebase; alvos **decididos** (`DEC-25`) | nenhum projeto ou credencial conectado |
 
 ## 3. Evidência das rodadas técnicas
+
+### `DISP-01` (rodada de 2026-08-09)
+
+Executado no banco descartável `aqui_log_disp01` com API em `PORT=3011`:
+
+- **12 migrations**, com a nova (`DispatchRounds`) revertida e reaplicada **com
+  um pedido legado, um motoboy e 4 ofertas dentro das tabelas**, todos
+  sobreviventes; todas as colunas novas são opcionais (nenhum `NOT NULL`,
+  nenhum `DEFAULT`);
+- o pedido sem aceite agora tem **ciclo de reoferta**: rodada = oferta que
+  existiu, anel = `inicial + (rodada − 1) × incremento` (provisórios: 3 km,
+  +3 km, 4 rodadas, 20 min — último anel 12 km, tudo editável no admin);
+- **quem já foi tentado não recebe de volta** — recusa e expiração contam igual,
+  mesmo quando o excluído é o único disponível;
+- **anel vazio não consome rodada**; provado em HTTP vivo: ~60 s de tentativas a
+  cada 10 s sem candidato terminaram com `dispatchRound = 0` e
+  `dispatchEndReason = NO_CANDIDATE`. Com uma oferta expirada no meio, o mesmo
+  relógio terminou em `TIMEBOX` com `dispatchRound = 1`;
+- **o ciclo termina em estado recuperável**: o pedido continua `REQUESTED`, com
+  motivo gravado, e nenhum job insiste; `POST /deliveries/:id/dispatch` (admin)
+  reabre do zero mantendo a exclusão de quem recusou;
+- **preço não muda em nenhuma rodada** (`DEC-03`/`DEC-19`): a reoferta usa o
+  snapshot congelado;
+- idempotência provada nas duas camadas: `409` no despacho repetido com oferta
+  pendente e **erro do banco** na duplicata de `(pedido, motoboy, rodada)`,
+  barrada pelo índice único parcial;
+- duas correções que o pacote exigiu: pedido **imediato recusado** ficava parado
+  para sempre (nenhum job olhava para ele) e o **agendado** passou a reabrir o
+  ciclo uma única vez quando a janela chega;
+- `pnpm build`, `pnpm lint` e `pnpm test` verdes (**21 suítes / 197 testes**);
+- `pnpm smoke` aprovado 3×, agora com o cenário DISP-01;
+- `flutter analyze`/`flutter test` verdes nos dois apps e `dart analyze`/`dart test`
+  no core — **nenhum arquivo Dart foi tocado**.
+
+Documento: `docs/04-status/entregas/2026-08-09-EVIDENCIA-DISP-01.md`.
 
 ### `COUR-01` (rodada de 2026-08-09)
 
@@ -176,7 +211,8 @@ Evidência anterior (mobile, 2026-08-07):
 - [x] Aplicar e reverter a migration do preço v2 em banco descartável.
 - [x] Aplicar e reverter `1785400000000-DeliveryPickupCode` em banco descartável.
 - [x] Aplicar e reverter `1785500000000-DeliveryScheduling` em banco descartável.
-- [ ] Fazer QA de navegador da seção "Modo agendado" do painel.
+- [x] Aplicar e reverter `1785600000000-DispatchRounds` em banco descartável.
+- [ ] Fazer QA de navegador das seções "Modo agendado" e "Reoferta por aneis" do painel.
 - [ ] Gerar APKs atuais.
 - [ ] Fazer QA visual dos apps em emulador/dispositivo — pendente **e agora mais
       relevante**, porque `B2C-05` mudou a tela de novo pedido do app cliente.
@@ -184,11 +220,17 @@ Evidência anterior (mobile, 2026-08-07):
 ## 5. Próximo passo
 
 `BASE-04`, `B2C-01B`, `B2C-05`, `UX-01C`, `B2C-02`, `PICK-01`, `B2C-06`,
-`SCHED-01` e `COUR-01` estão `DONE`. `COUR-02` (cancelamento com taxa no saldo)
-tem agora só **uma** dependência aberta: `PAY-01`, o ledger interno — que está
-`READY`. A fila também tem `UX-02` (QA visual — a parte mobile exige
-dispositivo/emulador e inclui o gráfico de pizza quebrado) e `DISP-01` (reoferta
-por anéis). Escolher um único ID, conforme o backlog.
+`SCHED-01`, `COUR-01` e `DISP-01` estão `DONE`. `DISP-02` (avisar o cliente da
+demora e oferecer ação explícita, incluindo o aumento com consentimento do
+`DEC-03`) ficou `READY`: sua única dependência era `DISP-01`. `COUR-02` continua
+esperando só `PAY-01`, o ledger interno, que está `READY`. A fila também tem
+`UX-02` (QA visual — a parte mobile exige dispositivo/emulador e inclui o
+gráfico de pizza quebrado). Escolher um único ID, conforme o backlog.
+
+Pendência aberta de `DISP-01`: varredura de anel **sem candidato** não vira
+linha em lugar nenhum (não cria oferta e não gera evento, para não inundar
+`delivery_events` a cada 10 s). Contar essas varreduras exige a telemetria do
+`DISP-03`. O raio também é distância **em linha reta**, não rota real.
 
 Pendência aberta de `COUR-01`: a classificação das abas roda no **relógio do
 aparelho**. O servidor continua sendo a autoridade (recusa `AT_PICKUP` fora da
@@ -213,6 +255,9 @@ A tela é trabalho de `SUP-*`/`ADMIN-*` e não foi criada aqui.
 - Código de recolhimento: `DEC-24` + `FLOW-DEC-03` implementados em `PICK-01`
   (2026-08-09). A duração do bloqueio (15 min) é fixa em código e não foi
   exposta no admin.
+- Reoferta sem aceite: `DEC-03` implementada **em parte** por `DISP-01`
+  (2026-08-09) — a ampliação de raio com limite está de pé; o aumento de preço
+  com consentimento explícito continua em `DISP-02` e **não existe** no código.
 - Migração banco cloud Firestore: `OPS-DB-01`.
 - Modo agendado: `DEC-18`/`DEC-19`/`DEC-20` + `FLOW-DEC-02` implementados em
   `SCHED-01`+`B2C-06` (2026-08-09). Janela mínima de 15 min e horizonte de 30

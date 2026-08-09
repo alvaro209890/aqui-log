@@ -199,3 +199,28 @@ Registro append-only. Nada acima foi alterado.
 | APK / QA em emulador ou dispositivo | Não executado | Segue em `UX-02` |
 
 Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-COUR-01.md`.
+
+## `DISP-01` — reoferta por anéis de raio (2026-08-09) ✅
+
+Registro append-only. Nada acima foi alterado.
+
+| Funcionalidade | Estado | Observação |
+| --- | --- | --- |
+| Rodadas de reoferta numeradas por pedido | Funcional | `dispatch_round` no pedido e na oferta; rodada só é consumida quando uma oferta existe |
+| Anéis de raio configuráveis | Funcional | `inicial + (rodada − 1) × incremento`; provisórios 3 km / +3 km (último anel 12 km) |
+| Exclusão de quem já foi tentado | Funcional | Recusa e expiração contam igual; vale mesmo se o excluído for o único disponível |
+| Limite de rodadas | Funcional | `dispatchMaxRounds` = 4 (provisório, `DEC-02` pede 3–5) |
+| Duração total do ciclo | Funcional | `dispatchTotalDurationMinutes` = 20 (provisório, `DEC-02` pede 15–30); é o freio quando não há candidato |
+| Motivo de término no pedido | Funcional | `ACCEPTED`, `MAX_ROUNDS`, `TIMEBOX`, `NO_CANDIDATE`, `CANCELED` |
+| Estado recuperável ao esgotar | Funcional | Continua `REQUESTED`, sem loop; admin reabre por `POST /deliveries/:id/dispatch` |
+| Preço congelado na reoferta | Funcional | `DEC-03`/`DEC-19`: nenhuma rodada recalcula valor |
+| Idempotência do job | Funcional | Lock por pedido + índice único parcial `(delivery_id, courier_id, dispatch_round)` |
+| Registro por rodada (raio, elegíveis, tentados) | Funcional | Colunas na oferta; base para `DISP-03` |
+| Settings de reoferta no painel | Funcional | Seção "Reoferta por aneis"; valida duração total ≥ TTL da oferta |
+| Aviso ao cliente e ação explícita na demora | Planejado | `DISP-02` — depende só de `DISP-01` |
+| Aumento de preço com consentimento | Planejado | `DISP-02` (`DEC-03`); a estrutura de rodadas já permite |
+| Telemetria e relatórios de despacho | Planejado | `DISP-03`; varredura sem candidato ainda não vira linha |
+| Raio por rota real | Planejado | Hoje é distância em linha reta; calibragem depende de `DISP-03` |
+| QA de navegador da seção nova do painel | Não executado | Validada por build e API |
+
+Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-DISP-01.md`.
