@@ -77,6 +77,56 @@ void main() {
     expect(find.text('AQL-DETAIL'), findsWidgets);
   });
 
+  // PICK-01 / DEC-24: é o cliente que mostra o código na coleta, então ele
+  // aparece no detalhe assim que o servidor o envia.
+  testWidgets('DeliveryDetailScreen mostra o codigo de recolhimento', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DeliveryDetailScreen(
+          delivery: DeliverySummary.fromJson(const {
+            'id': 'abc',
+            'code': 'AQL-PICK',
+            'status': 'AT_PICKUP',
+            'pickupCode': '4207',
+            'pickupCodeRequired': true,
+          }),
+          loadHistory: () async => [],
+          onRate: (score, comment) async {},
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Código de recolhimento'), findsOneWidget);
+    expect(find.text('4207'), findsOneWidget);
+  });
+
+  testWidgets('Pedido legado nao mostra codigo de recolhimento', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DeliveryDetailScreen(
+          delivery: DeliverySummary.fromJson(const {
+            'id': 'abc',
+            'code': 'AQL-LEGADO',
+            'status': 'AT_PICKUP',
+          }),
+          loadHistory: () async => [],
+          onRate: (score, comment) async {},
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Código de recolhimento'), findsNothing);
+  });
+
   testWidgets('NewOrderScreen has B2C fields', (tester) async {
     tester.view.physicalSize = const Size(1080, 2600);
     tester.view.devicePixelRatio = 1.0;

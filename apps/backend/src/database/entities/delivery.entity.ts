@@ -132,6 +132,35 @@ export class Delivery {
   })
   fulfillmentMode!: string;
 
+  // PICK-01 / DEC-24: código de recolhimento. Nulo em pedido legado e em
+  // pedido ainda não aceito; a partir do aceite, é exigido na coleta.
+  @Column({ name: 'pickup_code', type: 'varchar', length: 8, nullable: true })
+  pickupCode!: string | null;
+
+  @Column({ name: 'pickup_code_attempts', type: 'integer', default: 0 })
+  pickupCodeAttempts!: number;
+
+  @Column({
+    name: 'pickup_code_blocked_until',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  pickupCodeBlockedUntil!: Date | null;
+
+  @Column({
+    name: 'pickup_code_verified_at',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  pickupCodeVerifiedAt!: Date | null;
+
+  // Fallback de código perdido/ilegível: só admin/suporte, com motivo (DEC-24).
+  @Column({ name: 'pickup_code_override_by_id', type: 'uuid', nullable: true })
+  pickupCodeOverrideById!: string | null;
+
+  @Column({ name: 'pickup_code_override_reason', type: 'text', nullable: true })
+  pickupCodeOverrideReason!: string | null;
+
   @Column({ name: 'collection_proof_url', type: 'varchar', nullable: true })
   collectionProofUrl!: string | null;
 

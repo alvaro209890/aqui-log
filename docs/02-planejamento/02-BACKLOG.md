@@ -1,6 +1,6 @@
 # Backlog executável por agentes
 
-> **Atualizado:** 2026-08-08
+> **Atualizado:** 2026-08-09
 > **Papel:** converter o roadmap em pacotes pequenos, ordenados e verificáveis.
 > **Regra:** um agente executa um único ID por sessão, salvo autorização explícita.
 
@@ -17,16 +17,16 @@
 | 2 | `B2C-06` | `READY` | P1 | Dual km imediato/agendado + settings admin | tarifa dual e admin **já entregues** em `B2C-02`; falta a escolha do modo (implementa junto com `SCHED-01`); gates `DEC-02/18/19/20` + `FLOW-DEC-02` ✅ |
 | 3 | `SCHED-01` | `READY` | P1 | Modo `SCHEDULED` individual + aceite antecipado | implementa com `B2C-06`; gates `DEC-18`, `DEC-20`, `FLOW-DEC-02` ✅ (30 min de lead) |
 | 4 | `COUR-01` | `BLOCKED` | P1 | App prestador: Em andamento + Agenda | `SCHED-01`; `DEC-21` |
-| 5 | `PICK-01` | `READY` | P1 | Código de recolhimento na coleta | `B2C-05` DONE; `DEC-24` + `FLOW-DEC-03` decididas |
-| 6 | `B2C-03` | `BLOCKED` | P1 | Avaliação mútua por papel | baseline estável e migração de ratings definida |
-| 7 | `DISP-01` | `READY` | P1 | Reoferta limitada por anéis e recusas | `B2C-02` DONE; `DEC-03` decidida (ampliar raio + aumento com consentimento) |
-| 8 | `PAY-01` | `READY` | P2 | Ledger interno (cliente + prestador) sem gateway | autorização `DEC-05` ✅; `B2C-02` DONE; `DEC-23` |
-| 9 | `COUR-02` | `BLOCKED` | P2 | Cancelamento prestador + taxa no saldo | `PAY-01`, `COUR-01`; `DEC-22` |
-| 10 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-02B`, `B2C-03A`, `DISP-03` (`B2C-01B` ok) |
-| 11 | `OPS-DB-01` | `BLOCKED` | P2 | Modelo + migração Postgres → Firestore | `DEC-25`; credenciais Firebase |
-| 12 | `OPS-02` | `BLOCKED` | P2 | Firebase Firestore/Storage/FCM reais | pedido + credenciais; ver `PLANO_HOSPEDAGEM.md` |
-| 13 | `OPS-03` | `BLOCKED` | P2 | Deploy Render + Vercel + smoke público | `OPS-01`, `OPS-02`, credenciais |
-| 14 | `LOT-01` | `BLOCKED` | P3 | Aceite atômico de lote manual | código: `B2C-02B`, `B2C-03A`, `DISP-03`; gates `DEC-08/10/11` ✅ decididas 2026-08-09 |
+| — | `PICK-01` | `DONE` (2026-08-09) | P1 | Código de recolhimento + foto do prestador na coleta | evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-PICK-01.md` |
+| 5 | `B2C-03` | `BLOCKED` | P1 | Avaliação mútua por papel | baseline estável e migração de ratings definida |
+| 6 | `DISP-01` | `READY` | P1 | Reoferta limitada por anéis e recusas | `B2C-02` DONE; `DEC-03` decidida (ampliar raio + aumento com consentimento) |
+| 7 | `PAY-01` | `READY` | P2 | Ledger interno (cliente + prestador) sem gateway | autorização `DEC-05` ✅; `B2C-02` DONE; `DEC-23` |
+| 8 | `COUR-02` | `BLOCKED` | P2 | Cancelamento prestador + taxa no saldo | `PAY-01`, `COUR-01`; `DEC-22` |
+| 9 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-02B`, `B2C-03A`, `DISP-03` (`B2C-01B` ok) |
+| 10 | `OPS-DB-01` | `BLOCKED` | P2 | Modelo + migração Postgres → Firestore | `DEC-25`; credenciais Firebase |
+| 11 | `OPS-02` | `BLOCKED` | P2 | Firebase Firestore/Storage/FCM reais | pedido + credenciais; ver `PLANO_HOSPEDAGEM.md` |
+| 12 | `OPS-03` | `BLOCKED` | P2 | Deploy Render + Vercel + smoke público | `OPS-01`, `OPS-02`, credenciais |
+| 13 | `LOT-01` | `BLOCKED` | P3 | Aceite atômico de lote manual | código: `B2C-02B`, `B2C-03A`, `DISP-03`; gates `DEC-08/10/11` ✅ decididas 2026-08-09 |
 
 Cloud: alvos **decididos** (`DEC-25` — Render / Vercel / Firebase). Ligar projetos
 ainda exige credenciais e pacote OPS. PIX (Pagar.me) definido; falta conta/credenciais. SMS e lote automático idem.
@@ -135,12 +135,31 @@ pré-existente e fora do escopo.
 
 Evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-02-E-TEMA-ESCURO.md`.
 
-## 3. Tarefa pronta — `PICK-01` (ou `UX-02`)
+## 2b. Concluído em 2026-08-09
 
-- **`PICK-01`** — `pickup_code` na coleta (`DEC-24`). A transição
-  `AT_PICKUP → PICKED_UP` passa a exigir código válido **e** foto de prova do
-  prestador (distinta da foto do cliente na criação). Exige migration, backend
-  e app do motoboy.
+### `PICK-01` — `DONE`
+
+`AT_PICKUP → PICKED_UP` passa a exigir **código de recolhimento válido** e
+**foto do prestador**, distinta da foto do cliente. O código nasce no aceite,
+vai para o cliente (e para admin/suporte) e **nunca** para o app do motoboy.
+
+| Critério | Resultado |
+| --- | --- |
+| Código de 4 dígitos gerado no servidor no aceite | ✅ CSPRNG; 500 amostras no teste |
+| Cliente vê o código; prestador vê só a exigência | ✅ provado no smoke (o campo some para o entregador) |
+| Coleta sem código ou com código errado é recusada | ✅ `400` em HTTP vivo |
+| 5 tentativas erradas → bloqueio temporário + alerta | ✅ `429` na 5ª, notificação ao cliente e auditoria |
+| Foto do prestador obrigatória e distinta da do cliente | ✅ `400` ao reapresentar a foto da criação |
+| Fallback só admin/suporte, com motivo e auditoria | ✅ `403` para o entregador; motivo curto recusado |
+| Pedido legado sem código segue por foto | ✅ `200` sem código, em HTTP vivo |
+| Migration aditiva com rollback ensaiado | ✅ 10 migrations; revert + reapply com linha legada preservada |
+| `build`/`lint`/`test`/`smoke` + Flutter/Dart | ✅ 96 testes backend; smoke 3× |
+| APK e QA em emulador/dispositivo | ❌ NÃO EXECUTADO (segue em `UX-02`) |
+
+Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-PICK-01.md`.
+
+## 3. Tarefa pronta — `UX-02`, `B2C-06`/`SCHED-01` ou `DISP-01`
+
 - **`UX-02`** — QA visual e de acessibilidade dos fluxos. O dashboard já saiu em
   `UX-01C` + tema escuro; o que resta exige **dispositivo/emulador**, ainda
   indisponível nesta máquina. Inclui o gráfico de pizza quebrado.
@@ -152,7 +171,8 @@ dela já existem desde `B2C-02`; falta o cliente **escolher** o modo.
 
 Detalhe e aceite em
 `docs/02-planejamento/planos/PLANO_FLUXO_CLIENTE_PRESTADOR.md`.
-`B2C-05` está `DONE`; `PICK-01` passou a `READY`; os demais continuam `BLOCKED`.
+`B2C-05` e `PICK-01` estão `DONE`; os demais continuam `BLOCKED` ou `READY`
+conforme a fila da seção 1.
 
 | ID | Resumo | Não misturar com |
 | --- | --- | --- |
@@ -160,7 +180,7 @@ Detalhe e aceite em
 | `B2C-06` | Km imediato vs agendado + admin | tela agenda, cancelamento |
 | `SCHED-01` | Modo agendado individual + aceite antecipado | lote `LOT-02` |
 | `COUR-01` | UI Em andamento / Agenda | taxa financeira |
-| `PICK-01` | `pickup_code` na coleta | saque/gateway |
+| `PICK-01` | ✅ `DONE` — `pickup_code` + foto do prestador na coleta | — |
 | `COUR-02` | Cancelamento prestador + taxa no saldo | exige `PAY-01` |
 
 ## 5. Regras para promover uma tarefa

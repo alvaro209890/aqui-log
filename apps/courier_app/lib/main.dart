@@ -110,10 +110,16 @@ class _CourierShellState extends State<CourierShell> {
               MaterialPageRoute(
                 builder: (_) => ProofScreen(
                   deliveryId: d.id,
+                  // PICK-01: a exigência vem do servidor; pedido legado segue
+                  // sem código e a tela não pede nada a mais.
+                  pickupCodeRequired: full.pickupCodeRequired,
+                  pickupCodeAttemptsLeft: full.pickupCodeAttemptsLeft,
+                  pickupCodeBlockedUntil: full.pickupCodeBlockedUntil,
                   onSubmit: ({
                     required bytes,
                     required contentType,
                     required status,
+                    String? pickupCode,
                   }) async {
                     final url = await widget.state.api.uploadBytes(
                       bytes: bytes,
@@ -125,6 +131,7 @@ class _CourierShellState extends State<CourierShell> {
                       d.id,
                       status,
                       proofUrl: url,
+                      pickupCode: pickupCode,
                     );
                   },
                 ),

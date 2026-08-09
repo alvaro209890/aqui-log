@@ -20,6 +20,7 @@ import { DeliveriesService } from './deliveries.service';
 import {
   AssignCourierDto,
   CreateDeliveryDto,
+  PickupCodeOverrideDto,
   RateDeliveryDto,
   UpdateDeliveryStatusDto,
 } from './dto/delivery.dto';
@@ -77,7 +78,7 @@ export class DeliveriesController {
   @Get('offers/mine')
   @Roles(UserRole.COURIER)
   findOffers(@Req() req: Request & { user: AuthenticatedUser }) {
-    return this.deliveries.findOffers(req.user.id);
+    return this.deliveries.findOffers(req.user.id, req.user);
   }
 
   @Get(':id/history')
@@ -121,7 +122,7 @@ export class DeliveriesController {
     @Param('offerId') offerId: string,
     @Req() req: Request & { user: AuthenticatedUser },
   ) {
-    return this.deliveries.acceptOffer(offerId, req.user.id);
+    return this.deliveries.acceptOffer(offerId, req.user);
   }
 
   @Patch('offers/:offerId/reject')
@@ -130,7 +131,21 @@ export class DeliveriesController {
     @Param('offerId') offerId: string,
     @Req() req: Request & { user: AuthenticatedUser },
   ) {
-    return this.deliveries.rejectOffer(offerId, req.user.id);
+    return this.deliveries.rejectOffer(offerId, req.user);
+  }
+
+  /**
+   * PICK-01 / DEC-24: fallback de código perdido ou ilegível. Só admin/suporte,
+   * com motivo obrigatório e auditoria; não avança o status sozinho.
+   */
+  @Post(':id/pickup-code/override')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SUPPORT)
+  overridePickupCode(
+    @Param('id') id: string,
+    @Body() dto: PickupCodeOverrideDto,
+    @Req() req: Request & { user: AuthenticatedUser },
+  ) {
+    return this.deliveries.overridePickupCode(id, dto, req.user);
   }
 
   @Patch(':id/status')

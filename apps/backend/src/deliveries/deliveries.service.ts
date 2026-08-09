@@ -2,6 +2,8 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -35,13 +37,24 @@ import {
 } from './delivery-locks';
 import { assertDeliveryTransition, distanceInKm } from './delivery-rules';
 import {
+  PICKUP_CODE_MAX_ATTEMPTS,
+  generatePickupCode,
+  isPickupCodeBlocked,
+  pickupCodeBlockSecondsLeft,
+  pickupCodeMatches,
+  registerPickupCodeFailure,
+} from './pickup-code';
+import {
   AssignCourierDto,
   CreateDeliveryDto,
   PACKAGE_SIZES,
+  PickupCodeOverrideDto,
   PRODUCT_TYPES,
   RateDeliveryDto,
   UpdateDeliveryStatusDto,
 } from './dto/delivery.dto';
+
+const STAFF_ROLES = [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SUPPORT];
 
 /** UUID canônico (qualquer versão), case-insensitive. */
 const UUID_RE =
@@ -170,7 +183,7 @@ export class DeliveriesService {
     } catch {
       // sem motoboy disponível no momento — segue REQUESTED
     }
-    return delivery;
+    return this.present(delivery, user);
   }
 
   async findAll(
@@ -274,10 +287,15 @@ export class DeliveriesService {
       const p = parsePagination(filters.page, filters.limit);
       qb.skip(p.skip).take(p.limit);
       const [items, total] = await qb.getManyAndCount();
-      return toPageResult(items, total, p.page, p.limit);
+      return toPageResult(
+        items.map((item) => this.present(item, user)),
+        total,
+        p.page,
+        p.limit,
+      );
     }
 
-    return qb.getMany();
+    return (await qb.getMany()).map((item) => this.present(item, user));
   }
 
   async listRatings() {
@@ -287,7 +305,7 @@ export class DeliveriesService {
   async findOne(id: string, user: AuthenticatedUser) {
     const delivery = await this.getById(id);
     await this.ensureCanView(delivery, user);
-    return delivery;
+    return this.present(delivery, user);
   }
 
   async history(id: string, user: AuthenticatedUser) {
@@ -299,7 +317,7 @@ export class DeliveriesService {
     });
   }
 
-  async findOffers(userId: string) {
+  async findOffers(userId: string, user: AuthenticatedUser) {
     const courier = await this.getCourierByUser(userId);
     const offers = await this.offers.find({
       where: { courierId: courier.id, status: OfferStatus.PENDING },
@@ -311,10 +329,15 @@ export class DeliveriesService {
         })
       : [];
     const byId = new Map(deliveries.map((delivery) => [delivery.id, delivery]));
-    return offers.map((offer) => ({
-      ...offer,
-      delivery: byId.get(offer.deliveryId),
-    }));
+    return offers.map((offer) => {
+      const delivery = byId.get(offer.deliveryId);
+      return {
+        ...offer,
+        // PICK-01: a oferta também carrega a entrega; passa pelo mesmo recorte
+        // para não vazar `pickupCode` pela porta lateral.
+        delivery: delivery ? this.present(delivery, user) : undefined,
+      };
+    });
   }
 
   async assign(id: string, dto: AssignCourierDto, actorId: string) {
@@ -378,7 +401,8 @@ export class DeliveriesService {
     );
   }
 
-  async acceptOffer(offerId: string, userId: string) {
+  async acceptOffer(offerId: string, user: AuthenticatedUser) {
+    const userId = user.id;
     const lockKey = offerAcceptLockKey(offerId);
     const locked = await this.redis.acquireLock(
       lockKey,
@@ -400,6 +424,15 @@ export class DeliveriesService {
       delivery.status = DeliveryStatus.ACCEPTED;
       delivery.acceptedAt = new Date();
       delivery.courierId = courier.id;
+      // PICK-01 / DEC-24: o código nasce no aceite e só então o cliente pode
+      // vê-lo. Se o pedido já tiver um (reaceite após reabertura), mantém —
+      // trocar o número deixaria o cliente com um código velho na mão.
+      if (delivery.pickupCode === null) {
+        delivery.pickupCode = generatePickupCode();
+        delivery.pickupCodeAttempts = 0;
+        delivery.pickupCodeBlockedUntil = null;
+        delivery.pickupCodeVerifiedAt = null;
+      }
       courier.available = false;
       // Expire sibling pending offers for this delivery
       await this.offers
@@ -416,19 +449,29 @@ export class DeliveriesService {
         this.couriers.save(courier),
       ]);
       await this.recordEvent(delivery, userId, 'Corrida aceita');
+      // O código vai para o cliente na notificação do aceite: é ele quem
+      // precisa ter o número em mãos quando o motoboy chegar.
       await this.notifyCreator(
         delivery,
         'Corrida aceita',
-        `O entregador aceitou a entrega ${delivery.code}`,
+        delivery.pickupCode
+          ? `O entregador aceitou a entrega ${delivery.code}. Mostre o código de recolhimento ${delivery.pickupCode} na coleta.`
+          : `O entregador aceitou a entrega ${delivery.code}`,
       );
       await this.audit.record({
         actorId: userId,
         action: 'DELIVERY_OFFER_ACCEPTED',
         resourceType: 'delivery',
         resourceId: delivery.id,
-        metadata: { offerId, courierId: courier.id },
+        // O valor do código nunca entra na auditoria: o log é lido por gente
+        // que não deveria precisar dele para trabalhar.
+        metadata: {
+          offerId,
+          courierId: courier.id,
+          pickupCodeIssued: delivery.pickupCode !== null,
+        },
       });
-      return delivery;
+      return this.present(delivery, user);
     } finally {
       await this.redis.releaseLock(lockKey);
     }
@@ -499,7 +542,8 @@ export class DeliveriesService {
     return count;
   }
 
-  async rejectOffer(offerId: string, userId: string) {
+  async rejectOffer(offerId: string, user: AuthenticatedUser) {
+    const userId = user.id;
     const courier = await this.getCourierByUser(userId);
     const offer = await this.getPendingOffer(offerId, courier.id);
     const delivery = await this.getById(offer.deliveryId);
@@ -516,7 +560,7 @@ export class DeliveriesService {
       userId,
       'Oferta recusada; aguardando novo despacho',
     );
-    return delivery;
+    return this.present(delivery, user);
   }
 
   async updateStatus(
@@ -536,6 +580,16 @@ export class DeliveriesService {
       throw new BadRequestException('Comprovante obrigatorio para esta etapa');
     }
     if (dto.proofUrl) this.storage.assertAllowedProofUrl(dto.proofUrl);
+    if (dto.status === DeliveryStatus.PICKED_UP) {
+      // DEC-24: a prova da coleta é do prestador; reapresentar a foto que o
+      // cliente enviou na criação não prova recolhimento nenhum.
+      if (dto.proofUrl && delivery.productPhotoUrls.includes(dto.proofUrl)) {
+        throw new BadRequestException(
+          'A foto de coleta precisa ser do prestador, diferente da foto enviada pelo cliente',
+        );
+      }
+      await this.assertPickupCode(delivery, dto, user);
+    }
     delivery.status = dto.status;
     if (dto.status === DeliveryStatus.PICKED_UP)
       delivery.collectionProofUrl = dto.proofUrl ?? null;
@@ -569,7 +623,7 @@ export class DeliveriesService {
       resourceId: delivery.id,
       metadata: { status: dto.status },
     });
-    return delivery;
+    return this.present(delivery, user);
   }
 
   async rate(id: string, dto: RateDeliveryDto, user: AuthenticatedUser) {
@@ -601,6 +655,216 @@ export class DeliveriesService {
         score: dto.score,
         comment: dto.comment ?? null,
       }),
+    );
+  }
+
+  /**
+   * PICK-01 / DEC-24 — recorta a entrega conforme quem lê.
+   *
+   * O prestador **nunca** recebe o valor de `pickupCode`: é ele quem tem de
+   * digitar o que o cliente mostrou. Devolver o número ao app do motoboy
+   * transformaria o controle em enfeite. O que o app dele recebe é o que
+   * precisa para desenhar a tela: se o código é exigido, quantas tentativas
+   * restam e até quando está bloqueado.
+   *
+   * O plano diz "revelado ao prestador no fluxo de coleta"; o que se revela
+   * ali é a **exigência** do código, não o segredo — a regra 3 da mesma seção
+   * ("prestador informa o código; servidor valida") só fecha assim.
+   */
+  private present(delivery: Delivery, user: AuthenticatedUser) {
+    const {
+      pickupCode,
+      pickupCodeAttempts,
+      pickupCodeOverrideById,
+      pickupCodeOverrideReason,
+      ...rest
+    } = delivery;
+    const required = pickupCode !== null;
+    const shared = {
+      ...rest,
+      pickupCodeRequired: required,
+      pickupCodeAttemptsLeft: required
+        ? Math.max(0, PICKUP_CODE_MAX_ATTEMPTS - pickupCodeAttempts)
+        : null,
+    };
+    if (user.role === UserRole.COURIER) return shared;
+    if (STAFF_ROLES.includes(user.role)) {
+      return {
+        ...shared,
+        pickupCode,
+        pickupCodeAttempts,
+        pickupCodeOverrideById,
+        pickupCodeOverrideReason,
+      };
+    }
+    // Cliente: vê o código para mostrar ao prestador na coleta.
+    return { ...shared, pickupCode };
+  }
+
+  /**
+   * PICK-01 / DEC-24 — libera a coleta sem o código, só para admin/suporte,
+   * com motivo obrigatório, auditoria e prova alternativa quando existir.
+   * Não avança o status: apenas destrava a próxima transição de coleta.
+   */
+  async overridePickupCode(
+    id: string,
+    dto: PickupCodeOverrideDto,
+    user: AuthenticatedUser,
+  ) {
+    if (!STAFF_ROLES.includes(user.role)) {
+      throw new ForbiddenException(
+        'Somente admin ou suporte pode liberar a coleta sem código',
+      );
+    }
+    const delivery = await this.getById(id);
+    if (delivery.pickupCode === null) {
+      throw new BadRequestException(
+        'Este pedido nao usa codigo de recolhimento',
+      );
+    }
+    if (delivery.status !== DeliveryStatus.AT_PICKUP) {
+      throw new ConflictException(
+        'A liberacao so vale com o pedido em AT_PICKUP',
+      );
+    }
+    if (dto.alternativeProofUrl) {
+      this.storage.assertAllowedProofUrl(dto.alternativeProofUrl);
+    }
+    delivery.pickupCodeVerifiedAt = new Date();
+    delivery.pickupCodeAttempts = 0;
+    delivery.pickupCodeBlockedUntil = null;
+    delivery.pickupCodeOverrideById = user.id;
+    delivery.pickupCodeOverrideReason = dto.reason;
+    await this.deliveries.save(delivery);
+    await this.recordEvent(
+      delivery,
+      user.id,
+      `Coleta liberada sem codigo pelo suporte: ${dto.reason}`,
+      dto.alternativeProofUrl,
+    );
+    await this.audit.record({
+      actorId: user.id,
+      action: 'DELIVERY_PICKUP_CODE_OVERRIDE',
+      resourceType: 'delivery',
+      resourceId: delivery.id,
+      metadata: {
+        code: delivery.code,
+        reason: dto.reason,
+        alternativeProofUrl: dto.alternativeProofUrl ?? null,
+        courierId: delivery.courierId,
+      },
+    });
+    await this.notifyCreator(
+      delivery,
+      'Coleta liberada pelo suporte',
+      `A coleta de ${delivery.code} foi liberada sem o código de recolhimento.`,
+    );
+    return this.present(delivery, user);
+  }
+
+  /**
+   * PICK-01 — porteiro de `AT_PICKUP → PICKED_UP`.
+   *
+   * Pedido legado (`pickupCode` nulo) segue pelo comportamento atual: só a foto
+   * de coleta. Pedido novo exige código válido **e** foto, e cada erro conta.
+   */
+  private async assertPickupCode(
+    delivery: Delivery,
+    dto: UpdateDeliveryStatusDto,
+    user: AuthenticatedUser,
+  ) {
+    if (delivery.pickupCode === null) return;
+    if (delivery.pickupCodeVerifiedAt !== null) return;
+
+    const now = new Date();
+    if (
+      isPickupCodeBlocked(
+        {
+          attempts: delivery.pickupCodeAttempts,
+          blockedUntil: delivery.pickupCodeBlockedUntil,
+        },
+        now,
+      )
+    ) {
+      const seconds = pickupCodeBlockSecondsLeft(
+        {
+          attempts: delivery.pickupCodeAttempts,
+          blockedUntil: delivery.pickupCodeBlockedUntil,
+        },
+        now,
+      );
+      throw new HttpException(
+        `Muitas tentativas erradas. Tente de novo em ${Math.ceil(seconds / 60)} min ou peca liberacao ao suporte.`,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    if (!dto.pickupCode) {
+      throw new BadRequestException(
+        STAFF_ROLES.includes(user.role)
+          ? 'Informe o codigo de recolhimento ou use a liberacao do suporte'
+          : 'Informe o codigo de recolhimento que o cliente mostrou',
+      );
+    }
+
+    if (pickupCodeMatches(delivery.pickupCode, dto.pickupCode)) {
+      delivery.pickupCodeVerifiedAt = now;
+      delivery.pickupCodeAttempts = 0;
+      delivery.pickupCodeBlockedUntil = null;
+      await this.audit.record({
+        actorId: user.id,
+        action: 'DELIVERY_PICKUP_CODE_VERIFIED',
+        resourceType: 'delivery',
+        resourceId: delivery.id,
+        metadata: { code: delivery.code, courierId: delivery.courierId },
+      });
+      return;
+    }
+
+    const failure = registerPickupCodeFailure(
+      {
+        attempts: delivery.pickupCodeAttempts,
+        blockedUntil: delivery.pickupCodeBlockedUntil,
+      },
+      now,
+    );
+    delivery.pickupCodeAttempts = failure.attempts;
+    delivery.pickupCodeBlockedUntil = failure.blockedUntil;
+    await this.deliveries.save(delivery);
+    await this.audit.record({
+      actorId: user.id,
+      action: failure.blockedNow
+        ? 'DELIVERY_PICKUP_CODE_BLOCKED'
+        : 'DELIVERY_PICKUP_CODE_FAILED',
+      resourceType: 'delivery',
+      resourceId: delivery.id,
+      metadata: {
+        code: delivery.code,
+        courierId: delivery.courierId,
+        attemptsLeft: failure.attemptsLeft,
+        blockedUntil: failure.blockedUntil?.toISOString() ?? null,
+      },
+    });
+    if (failure.blockedNow) {
+      // FLOW-DEC-03: o bloqueio vem com alerta. O cliente é quem está na porta
+      // com a encomenda, então é ele quem precisa saber agora.
+      await this.recordEvent(
+        delivery,
+        user.id,
+        'Codigo de recolhimento bloqueado apos 5 tentativas erradas',
+      );
+      await this.notifyCreator(
+        delivery,
+        'Código de recolhimento bloqueado',
+        `${delivery.code}: houve 5 tentativas erradas do código. A coleta ficou bloqueada temporariamente.`,
+      );
+      throw new HttpException(
+        'Muitas tentativas erradas. A coleta ficou bloqueada temporariamente; peca liberacao ao suporte.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+    throw new BadRequestException(
+      `Codigo de recolhimento invalido. Restam ${failure.attemptsLeft} tentativas.`,
     );
   }
 

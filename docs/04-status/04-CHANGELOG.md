@@ -4,6 +4,33 @@ Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
 ## Fluxo cliente↔prestador nos planos — 2026-08-07
 
+## `PICK-01`: código de recolhimento na coleta — 2026-08-09
+
+- **`AT_PICKUP → PICKED_UP` exige código válido + foto do prestador** (`DEC-24`).
+  A foto tem de ser do prestador: reapresentar a foto que o cliente enviou na
+  criação é recusada com `400`.
+- **Código de 4 dígitos** (`FLOW-DEC-03`) gerado no servidor **no aceite**, com
+  `crypto.randomInt`. Vai na notificação de aceite e no detalhe do pedido do
+  cliente; **o app do entregador nunca recebe o valor** — só
+  `pickupCodeRequired`, `pickupCodeAttemptsLeft` e `pickupCodeBlockedUntil`.
+  O valor também não entra na auditoria.
+- **Rate limit:** 4 erros devolvem `400` com as tentativas restantes; o 5º
+  bloqueia por 15 min com `429`, alerta ao cliente e auditoria
+  (`DELIVERY_PICKUP_CODE_FAILED` / `_BLOCKED`). Durante o bloqueio nem o código
+  certo passa.
+- **Fallback de código perdido:** `POST /deliveries/:id/pickup-code/override`,
+  só admin/suporte, motivo obrigatório (≥ 10 caracteres), prova alternativa
+  opcional, auditado. Ele destrava a coleta, não avança o status.
+- **Pedido legado sem código** continua avançando só com a foto — leitura e
+  escrita legadas intactas. Migration `1785400000000` aditiva, revertida e
+  reaplicada com uma linha legada dentro da tabela.
+- App do motoboy: a tela de coleta pede os 4 dígitos e só libera o envio com a
+  foto e o código completos; bloqueada, ela recusa nova tentativa. App do
+  cliente: o código aparece em destaque no detalhe do pedido.
+- Smoke passou a reprovar se o entregador receber o campo `pickupCode`.
+- Testes: backend 70 → **96**; core Dart 6 → 10; motoboy 7 → 11; cliente 11 → 13.
+- Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-PICK-01.md`.
+
 ## `DEC-02` + `B2C-02`: preço v2 e tema escuro — 2026-08-08
 
 - **`DEC-02` DECIDIDA** pelo Álvaro com valores **provisórios**, todos editáveis

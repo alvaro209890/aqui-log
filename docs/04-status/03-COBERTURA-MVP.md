@@ -56,6 +56,20 @@ cliente e admin**.
 | API publica e integracoes | Planejado | ERP, e-commerce e marketplaces ficam para fase futura |
 | IA, BI, calor, roteirizacao e agrupamento | Planejado | Explicitamente fora do MVP estrutural |
 
+## `PICK-01` (2026-08-09) ✅
+
+| Item | Estado | Evidência |
+| --- | --- | --- |
+| Código de recolhimento de 4 dígitos gerado no aceite | ✅ | HTTP vivo + 500 amostras no teste |
+| Cliente vê o código; prestador não | ✅ | asserção no `scripts/smoke-test.sh` |
+| Coleta exige código válido **e** foto do prestador | ✅ | `400` sem código, com código errado e com a foto do cliente |
+| Bloqueio após 5 erros, com alerta e auditoria | ✅ | `429` na 5ª tentativa; notificação ao cliente |
+| Fallback só admin/suporte, com motivo e auditoria | ✅ | `403` para o entregador; motivo curto recusado |
+| Pedido legado sem código segue por foto | ✅ | `200` em HTTP vivo |
+| Migration aditiva com rollback ensaiado | ✅ | revert + reapply com linha legada preservada |
+| QA em emulador/dispositivo | ❌ NÃO EXECUTADO | segue em `UX-02` |
+| Tela de suporte no painel para o fallback | ❌ não existe | chamada por API; escopo `SUP-*`/`ADMIN-*` |
+
 ## `BASE-04` + `B2C-01B` (2026-08-08) ✅
 
 - Baseline provado em banco descartável (`aqui_log_base04`): 8 migrations sem

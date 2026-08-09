@@ -1,10 +1,11 @@
 # Aqui Log — Roadmap executivo B2C
 
-> **Atualizado:** 2026-08-08
+> **Atualizado:** 2026-08-09
 > **Status:** fonte de verdade para prioridade, dependências e ordem de execução
-> **Rodada atual:** `BASE-04` e `B2C-01B` fechados com evidência de runtime local
-> (migrations + rollback, health, smoke B2C vivo e QA de navegador do dashboard).
-> **Próximo pacote:** `PICK-01` (código de recolhimento) ou `UX-02` (QA visual).
+> **Rodada atual:** `PICK-01` fechado com evidência de runtime local (código de
+> recolhimento + foto do prestador na coleta, rate limit, fallback auditado,
+> migration com rollback ensaiado e smoke vivo).
+> **Próximo pacote:** `UX-02` (QA visual), `B2C-06`+`SCHED-01` ou `DISP-01`.
 > **Produto principal:** cliente pessoa física → motoboy, sem intermediário no fluxo
 > **Regra operacional:** desenvolvimento e validação local primeiro; nenhuma cloud é ligada sem pedido explícito do Álvaro
 
@@ -68,7 +69,7 @@ Plano detalhado do fluxo: [PLANO_FLUXO_CLIENTE_PRESTADOR.md](planos/PLANO_FLUXO_
 | Cloud | Alvos **travados** (`DEC-25`): API **Render**, dashboard **Vercel**, banco **Firebase**. Scaffold existe; **não provisionar** sem credenciais e pacote OPS. |
 | Encomenda | Campos próprios entregues; **foto obrigatória** em pedidos novos (`DEC-01`). Fallback de `notes` permanece até medir legado. |
 | Modos | `IMMEDIATE` vs `SCHEDULED` (`DEC-18`); aceite antecipado do agendado (`DEC-20`); tela Agenda no app prestador (`DEC-21`). |
-| Prestador / dinheiro | Cancelamento pré-coleta com taxa no saldo (`DEC-22`); pagamento = saldo interno sacável (`DEC-23`); coleta com `pickup_code` (`DEC-24`). |
+| Prestador / dinheiro | Cancelamento pré-coleta com taxa no saldo (`DEC-22`); pagamento = saldo interno sacável (`DEC-23`); coleta com `pickup_code` (`DEC-24`) **implementada em `PICK-01`, 2026-08-09**. |
 | Tempo | Persistência em UTC; janelas de negócio em `America/Sao_Paulo`. |
 
 ## 5. Estado atual confirmado
@@ -80,7 +81,7 @@ Plano detalhado do fluxo: [PLANO_FLUXO_CLIENTE_PRESTADOR.md](planos/PLANO_FLUXO_
 | Oferta/aceite do motoboy | ✅ | Apenas um candidato por rodada; baixa transparência quando ninguém aceita |
 | Preço server-side | ✅ básico | Sem dual km imediato/agendado; sem versão/breakdown persistido |
 | Modo agendado individual | ❌ | Só `scheduledAt` legado / blocos `LOT-02` em design; falta `SCHED-01` |
-| Código de recolhimento | ❌ | Só código público `AQL-*` + foto de coleta |
+| Código de recolhimento | ✅ (`PICK-01`, 2026-08-09) | Fallback do suporte só por API; sem tela no painel |
 | Provas, GPS e tracking | ✅ piloto | Storage local; retenção e push real pendentes |
 | Avaliação | ✅ unilateral | Falta avaliação mútua com origem explícita |
 | Carteira do motoboy | ✅ básica | Crédito MVP; falta ledger + taxa cancelamento + saque (`DEC-22/23`) |
@@ -166,7 +167,7 @@ Nenhuma integração PIX/cartão entra nesta fase. O objetivo é provar a contab
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
 | COUR-01 | ⏳ | `SCHED-01`, `DEC-21` | App prestador: Em andamento + Agenda |
-| PICK-01 | ▶️ | `B2C-05` ✅, `DEC-24` ✅ | `pickup_code` na transição de coleta (+ foto de prova) |
+| PICK-01 | ✅ | `B2C-05` ✅, `DEC-24` ✅, `FLOW-DEC-03` ✅ | `pickup_code` de 4 dígitos + foto do prestador em `AT_PICKUP → PICKED_UP`, com rate limit e fallback auditado (2026-08-09) |
 
 ### Fase 6 — prontidão operacional e publicação
 
@@ -304,21 +305,23 @@ ser simplesmente omitida.
 
 ## 11. Próximo pacote recomendado
 
-`BASE-04`, `B2C-01B`, `B2C-05` e `UX-01C` fecharam em 2026-08-08 com evidência
-de runtime local. Três IDs estão `READY`:
+`BASE-04`, `B2C-01B`, `B2C-05`, `UX-01C` e `B2C-02` fecharam em 2026-08-08 e
+`PICK-01` em 2026-08-09, todos com evidência de runtime local. Os `READY` agora:
 
-- **`PICK-01`** — `pickup_code` na coleta; liberado porque `B2C-05` fechou e
-  `DEC-24` já estava decidida;
 - **`UX-02`** — QA visual e de acessibilidade dos fluxos; a parte do dashboard
-  saiu em `UX-01C`, o que resta exige dispositivo/emulador;
-- **`B2C-02`** — preço v2 versionado, com os **valores finais** atrás de `DEC-02`.
+  saiu em `UX-01C`, o que resta exige dispositivo/emulador — e agora inclui a
+  tela de coleta com código;
+- **`B2C-06` + `SCHED-01`** — falta o cliente **escolher** o modo; a tarifa dual
+  e o admin dela já existem desde `B2C-02`;
+- **`DISP-01`** — reoferta por anéis de raio e limite de rodadas (`DEC-03` ✅);
+- **`PAY-01`** — ledger interno sem gateway (`DEC-05` ✅).
 
 Ao retomar:
 
 1. escolher **um** ID e não misturar com os outros;
-2. em `PICK-01`, o código de recolhimento é distinto do `AQL-*` e a coleta exige
-   **código válido e foto de prova do prestador** (`DEC-24`); a foto de prova é
-   diferente da foto que o cliente manda na criação (`B2C-05`);
+2. `PICK-01` está entregue: qualquer rota nova que devolva uma entrega precisa
+   passar pelo recorte por papel (`present()` em `deliveries.service.ts`), senão
+   vaza o `pickup_code` para o app do prestador;
 3. manter `notes` como fallback de leitura;
 4. reproduzir o ambiente de teste com banco descartável, `PORT` livre e
    `PUBLIC_API_URL` alinhado à API — receita em

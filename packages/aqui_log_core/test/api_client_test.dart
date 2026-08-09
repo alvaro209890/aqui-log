@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:aqui_log_core/aqui_log_core.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -87,6 +89,77 @@ void main() {
     expect(delivery.orderMeta!.weightKg, 8.25);
     expect(delivery.orderMeta!.photoUrl, 'http://storage/novo.jpg');
     expect(delivery.orderMeta!.notes, 'Manter na vertical');
+  });
+
+  test('DeliverySummary le o codigo de recolhimento do cliente (PICK-01)', () {
+    final delivery = DeliverySummary.fromJson({
+      'id': '4',
+      'code': 'AQL-4',
+      'status': 'AT_PICKUP',
+      'pickupCode': '4207',
+      'pickupCodeRequired': true,
+      'pickupCodeAttemptsLeft': 3,
+    });
+
+    expect(delivery.pickupCode, '4207');
+    expect(delivery.pickupCodeRequired, isTrue);
+    expect(delivery.pickupCodeAttemptsLeft, 3);
+    expect(delivery.pickupCodeBlocked, isFalse);
+  });
+
+  test('DeliverySummary do entregador nao traz o codigo, so a exigencia', () {
+    final delivery = DeliverySummary.fromJson({
+      'id': '5',
+      'code': 'AQL-5',
+      'status': 'AT_PICKUP',
+      'pickupCodeRequired': true,
+      'pickupCodeAttemptsLeft': 0,
+      'pickupCodeBlockedUntil': DateTime.now()
+          .toUtc()
+          .add(const Duration(minutes: 10))
+          .toIso8601String(),
+    });
+
+    expect(delivery.pickupCode, isNull);
+    expect(delivery.pickupCodeRequired, isTrue);
+    expect(delivery.pickupCodeBlocked, isTrue);
+  });
+
+  test('pedido legado nao passa a exigir codigo (PICK-01)', () {
+    final delivery = DeliverySummary.fromJson({
+      'id': '6',
+      'code': 'AQL-6',
+      'status': 'AT_PICKUP',
+    });
+
+    expect(delivery.pickupCodeRequired, isFalse);
+    expect(delivery.pickupCodeAttemptsLeft, isNull);
+    expect(delivery.pickupCodeBlocked, isFalse);
+  });
+
+  test('envia o codigo de recolhimento na transicao de coleta', () async {
+    Map<String, dynamic>? sent;
+    final client = MockClient((request) async {
+      sent = jsonDecode(request.body) as Map<String, dynamic>;
+      return http.Response('{}', 200);
+    });
+    final api = AquiLogApiClient(
+      baseUrl: 'http://localhost/api/v1',
+      client: client,
+    );
+
+    await api.updateDeliveryStatus(
+      'delivery-1',
+      'PICKED_UP',
+      proofUrl: 'http://localhost/api/v1/storage/files/proof.jpg',
+      pickupCode: '4207',
+    );
+
+    expect(sent!['pickupCode'], '4207');
+    expect(sent!['status'], 'PICKED_UP');
+
+    await api.updateDeliveryStatus('delivery-1', 'IN_TRANSIT');
+    expect(sent!.containsKey('pickupCode'), isFalse);
   });
 
   test('DeliverySummary mantem fallback para notes legado', () {

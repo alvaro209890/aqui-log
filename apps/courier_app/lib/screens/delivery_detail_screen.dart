@@ -178,6 +178,29 @@ class DeliveryDetailScreen extends StatelessWidget {
                 label: const Text('Abrir no Google Maps'),
               ),
           ],
+          if (d.pickupCodeRequired) ...[
+            const SizedBox(height: 12),
+            Card(
+              color: AquiLogColors.primarySoft,
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Row(
+                  children: [
+                    const Icon(Icons.pin_outlined, color: AquiLogColors.primaryDark),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        d.pickupCodeBlocked
+                            ? 'Coleta bloqueada por tentativas erradas do código. Fale com o suporte.'
+                            : 'A coleta exige o código de 4 dígitos que o cliente vai mostrar.',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: onProof,

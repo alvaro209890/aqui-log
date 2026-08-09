@@ -127,8 +127,41 @@ api GET /deliveries/offers/mine "$courier_token" | jq -e --arg offer "$offer_id"
 api PATCH "/deliveries/offers/$offer_id/accept" "$courier_token" >/dev/null
 api PATCH "/deliveries/$delivery_id/status" "$courier_token" '{"status":"AT_PICKUP"}' >/dev/null
 
+# PICK-01 / DEC-24: o código de recolhimento nasce no aceite. O cliente vê o
+# número; o entregador vê só a exigência — se ele receber o código, o controle
+# não vale nada e o smoke tem de reprovar.
+customer_view="$(api GET "/deliveries/$delivery_id" "$customer_token")"
+pickup_code="$(jq -er '.pickupCode' <<<"$customer_view")"
+if [[ ! "$pickup_code" =~ ^[0-9]{4}$ ]]; then
+  printf 'O cliente deveria ver um codigo de 4 digitos, veio "%s".\n' "$pickup_code" >&2
+  exit 1
+fi
+courier_view="$(api GET "/deliveries/$delivery_id" "$courier_token")"
+if jq -e 'has("pickupCode")' <<<"$courier_view" >/dev/null; then
+  printf 'O app do entregador NAO pode receber o codigo de recolhimento.\n' >&2
+  exit 1
+fi
+jq -e '.pickupCodeRequired == true and .pickupCodeAttemptsLeft == 5' <<<"$courier_view" >/dev/null
+
 proof_pickup="$(upload_file proof "$courier_token" pickup)" || exit 1
-api PATCH "/deliveries/$delivery_id/status" "$courier_token" "$(jq -nc --arg proofUrl "$proof_pickup" '{status:"PICKED_UP",proofUrl:$proofUrl}')" >/dev/null
+
+# Sem código: a coleta tem de ser recusada mesmo com a foto correta.
+sem_codigo="$(api_status PATCH "/deliveries/$delivery_id/status" "$courier_token" "$(jq -nc --arg proofUrl "$proof_pickup" '{status:"PICKED_UP",proofUrl:$proofUrl}')")"
+if [[ "$(tail -n1 <<<"$sem_codigo")" != "400" ]]; then
+  printf 'Coleta sem codigo deveria ser recusada com 400, veio %s.\n' "$(tail -n1 <<<"$sem_codigo")" >&2
+  exit 1
+fi
+
+# Código errado: recusa e consome uma tentativa (FLOW-DEC-03).
+wrong_code="$(printf '%04d' $(( (10#$pickup_code + 1) % 10000 )))"
+errado="$(api_status PATCH "/deliveries/$delivery_id/status" "$courier_token" "$(jq -nc --arg proofUrl "$proof_pickup" --arg pickupCode "$wrong_code" '{status:"PICKED_UP",proofUrl:$proofUrl,pickupCode:$pickupCode}')")"
+if [[ "$(tail -n1 <<<"$errado")" != "400" ]]; then
+  printf 'Coleta com codigo errado deveria ser recusada com 400, veio %s.\n' "$(tail -n1 <<<"$errado")" >&2
+  exit 1
+fi
+api GET "/deliveries/$delivery_id" "$courier_token" | jq -e '.pickupCodeAttemptsLeft == 4' >/dev/null
+
+api PATCH "/deliveries/$delivery_id/status" "$courier_token" "$(jq -nc --arg proofUrl "$proof_pickup" --arg pickupCode "$pickup_code" '{status:"PICKED_UP",proofUrl:$proofUrl,pickupCode:$pickupCode}')" >/dev/null
 api PATCH "/deliveries/$delivery_id/status" "$courier_token" '{"status":"IN_TRANSIT"}' >/dev/null
 proof_delivery="$(upload_file proof "$courier_token" delivery)" || exit 1
 api PATCH "/deliveries/$delivery_id/status" "$courier_token" "$(jq -nc --arg proofUrl "$proof_delivery" '{status:"DELIVERED",proofUrl:$proofUrl}')" >/dev/null

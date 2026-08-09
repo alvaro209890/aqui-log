@@ -124,15 +124,23 @@ class AquiLogApiClient {
   ) async =>
       await _request('POST', '/deliveries', body: form) as Map<String, dynamic>;
 
+  /// PICK-01: `pickupCode` é o código de 4 dígitos que o cliente mostra na
+  /// coleta. Só a transição `AT_PICKUP → PICKED_UP` o utiliza.
   Future<void> updateDeliveryStatus(
     String deliveryId,
     String status, {
     String? proofUrl,
     String? note,
+    String? pickupCode,
   }) => _request(
     'PATCH',
     '/deliveries/$deliveryId/status',
-    body: {'status': status, 'proofUrl': ?proofUrl, 'note': ?note},
+    body: {
+      'status': status,
+      'proofUrl': ?proofUrl,
+      'note': ?note,
+      'pickupCode': ?pickupCode,
+    },
   );
 
   Future<Map<String, dynamic>> rateDelivery(

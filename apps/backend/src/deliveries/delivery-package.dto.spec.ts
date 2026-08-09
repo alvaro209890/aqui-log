@@ -1,6 +1,10 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { CreateDeliveryDto } from './dto/delivery.dto';
+import {
+  CreateDeliveryDto,
+  PickupCodeOverrideDto,
+  UpdateDeliveryStatusDto,
+} from './dto/delivery.dto';
 
 const addressPayload = {
   pickupAddress: 'Rua A, 10',
@@ -129,5 +133,45 @@ describe('CreateDeliveryDto obrigatoriedade da criação (B2C-05)', () => {
     await expect(failedProperties(missing)).resolves.toContain(
       'pickupLatitude',
     );
+  });
+});
+
+/** PICK-01 / DEC-24 — o fallback de código exige motivo escrito, não um "ok". */
+describe('PickupCodeOverrideDto', () => {
+  it('aceita um motivo descritivo', async () => {
+    const dto = plainToInstance(PickupCodeOverrideDto, {
+      reason: 'Etiqueta rasgada; cliente confirmou por telefone',
+    });
+
+    await expect(validate(dto)).resolves.toEqual([]);
+  });
+
+  it('recusa motivo vazio, curto ou so de espacos', async () => {
+    for (const reason of ['', '   ', 'perdeu']) {
+      const dto = plainToInstance(PickupCodeOverrideDto, { reason });
+      const errors = await validate(dto);
+      expect(errors.map((error) => error.property)).toContain('reason');
+    }
+  });
+});
+
+/** PICK-01 — o código chega junto da mudança de status. */
+describe('UpdateDeliveryStatusDto pickupCode', () => {
+  it('aceita a coleta com codigo e comprovante', async () => {
+    const dto = plainToInstance(UpdateDeliveryStatusDto, {
+      status: 'PICKED_UP',
+      proofUrl: 'http://localhost:3001/api/v1/storage/files/proof.jpg',
+      pickupCode: '4207',
+    });
+
+    await expect(validate(dto)).resolves.toEqual([]);
+  });
+
+  it('segue opcional, para nao quebrar as demais transicoes', async () => {
+    const dto = plainToInstance(UpdateDeliveryStatusDto, {
+      status: 'IN_TRANSIT',
+    });
+
+    await expect(validate(dto)).resolves.toEqual([]);
   });
 });

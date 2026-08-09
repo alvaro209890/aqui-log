@@ -1,8 +1,8 @@
 # Estado atual observado
 
-> **Data de referência:** 2026-08-08
+> **Data de referência:** 2026-08-09
 > **Ambiente:** desenvolvimento local no PC `acer`; nada produtivo roda aqui.
-> **Baseline de código:** `f987e26` no início da sessão (`B2C-05`, `UX-01C`, `B2C-02` + tema escuro).
+> **Baseline de código:** `a5e5909` no início da sessão de `PICK-01`.
 
 ## 1. Produto vigente
 
@@ -16,16 +16,40 @@ coluna `company_id`).
 
 | Superfície | Estado observado na última rodada técnica | Limitação aberta |
 | --- | --- | --- |
-| Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso**), ofertas, tracking, **preço v2 versionado com breakdown congelado**, dashboard e storage local | — migrations revalidadas em banco vivo em 2026-08-08 |
-| App cliente Flutter | Cadastro/login, pedido estruturado **com foto obrigatória**, histórico e acompanhamento | QA recente em dispositivo/emulador pendente |
-| App motoboy Flutter | Cadastro, disponibilidade, oferta, coleta, prova, entrega e carteira básica | QA recente em dispositivo/emulador pendente |
+| Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso**), ofertas, tracking, **preço v2 versionado com breakdown congelado**, **código de recolhimento na coleta**, dashboard e storage local | migrations revalidadas em banco vivo em 2026-08-09 (10 migrations) |
+| App cliente Flutter | Cadastro/login, pedido estruturado **com foto obrigatória**, **código de recolhimento visível após o aceite**, histórico e acompanhamento | QA recente em dispositivo/emulador pendente |
+| App motoboy Flutter | Cadastro, disponibilidade, oferta, **coleta com código de recolhimento**, prova, entrega e carteira básica | QA recente em dispositivo/emulador pendente |
 | Dashboard React | KPIs, entregas, mapa, motoboys, usuários, auditoria, **configurações completas de preço/multas** e relatórios; identidade laranja + **tema claro/escuro** | busca da `TopBar` decorativa; **gráfico de pizza não renderiza setores** (Recharts 3.9 + React 19) — ambos em `UX-02` |
 | Postgres/Redis | Containers `aqui-log-postgres` (5433) e `aqui-log-redis` (6379) ativos | banco de teste é descartável; nenhum dado tem valor |
 | Cloud | Scaffolds Render/Vercel/Firebase; alvos **decididos** (`DEC-25`) | nenhum projeto ou credencial conectado |
 
-## 3. Evidência das rodadas técnicas de 2026-08-08
+## 3. Evidência das rodadas técnicas
 
-### `B2C-05` (esta rodada)
+### `PICK-01` (rodada de 2026-08-09)
+
+Executado no banco descartável `aqui_log_pick01` com API em `PORT=3011`:
+
+- 10 migrations, com a nova (`DeliveryPickupCode`) revertida e reaplicada **com
+  um pedido legado dentro da tabela**, que sobreviveu ao ciclo;
+- `AT_PICKUP → PICKED_UP` só passa com **código de 4 dígitos válido e foto do
+  prestador**; reapresentar a foto do cliente é recusada com `400`;
+- rate limit provado em HTTP vivo: `400` nas 4 primeiras tentativas erradas,
+  `429` na 5ª, com bloqueio de 15 min, alerta ao cliente e auditoria
+  (`DELIVERY_PICKUP_CODE_FAILED` ×4 + `DELIVERY_PICKUP_CODE_BLOCKED`);
+- durante o bloqueio, **nem o código certo passa**;
+- fallback só admin/suporte: `403` para o entregador, motivo curto recusado,
+  liberação auditada com o motivo escrito;
+- o app do entregador **nunca** recebe o valor do código — o smoke reprova se
+  receber;
+- pedido legado sem código continua avançando só com a foto;
+- `pnpm build`, `pnpm lint` e `pnpm test` verdes (14 suítes / 96 testes);
+- `pnpm smoke` aprovado 3×, agora com as asserções do código de recolhimento;
+- `flutter analyze`/`flutter test` verdes nos dois apps e `dart analyze`/`dart test`
+  no core.
+
+Documento: `docs/04-status/entregas/2026-08-09-EVIDENCIA-PICK-01.md`.
+
+### `B2C-05` (rodada de 2026-08-08)
 
 Executado no banco descartável `aqui_log_b2c05` com API em `PORT=3011`:
 
@@ -41,7 +65,7 @@ Executado no banco descartável `aqui_log_b2c05` com API em `PORT=3011`:
 
 Documento de evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-05.md`.
 
-### `B2C-02` + tema escuro (esta rodada)
+### `B2C-02` + tema escuro (rodada de 2026-08-08)
 
 Executado no banco descartável `aqui_log_b2c02` com API em `PORT=3011`:
 
@@ -55,7 +79,7 @@ Executado no banco descartável `aqui_log_b2c02` com API em `PORT=3011`:
 
 Documento: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-02-E-TEMA-ESCURO.md`.
 
-### `UX-01C` (esta rodada)
+### `UX-01C` (rodada de 2026-08-08)
 
 QA em Chrome real contra a API viva, com dashboard em `vite --port 5199`:
 
@@ -94,16 +118,22 @@ Evidência anterior (mobile, 2026-08-07):
 - [x] Fazer QA do dashboard no navegador (filtros B2C de `B2C-01B`).
 - [x] Rodar `flutter analyze`/`flutter test` após a mudança mobile de `B2C-05`.
 - [x] Aplicar e reverter a migration do preço v2 em banco descartável.
+- [x] Aplicar e reverter `1785400000000-DeliveryPickupCode` em banco descartável.
 - [ ] Gerar APKs atuais.
 - [ ] Fazer QA visual dos apps em emulador/dispositivo — pendente **e agora mais
       relevante**, porque `B2C-05` mudou a tela de novo pedido do app cliente.
 
 ## 5. Próximo passo
 
-`BASE-04`, `B2C-01B`, `B2C-05`, `UX-01C` e `B2C-02` estão `DONE`. A fila libera
-`PICK-01` (código de recolhimento) e `UX-02` (QA visual — a parte mobile exige
-dispositivo/emulador, e inclui o gráfico de pizza quebrado). Escolher um único
-ID, conforme o backlog.
+`BASE-04`, `B2C-01B`, `B2C-05`, `UX-01C`, `B2C-02` e `PICK-01` estão `DONE`. A
+fila livre é `UX-02` (QA visual — a parte mobile exige dispositivo/emulador e
+inclui o gráfico de pizza quebrado), `B2C-06`+`SCHED-01` (escolha do modo pelo
+cliente) e `DISP-01` (reoferta por anéis). Escolher um único ID, conforme o
+backlog.
+
+Pendência aberta de `PICK-01`: o painel admin **não tem tela** para o fallback de
+código perdido — hoje ele é chamado por API (`POST /deliveries/:id/pickup-code/override`).
+A tela é trabalho de `SUP-*`/`ADMIN-*` e não foi criada aqui.
 
 ## 6. Bloqueios externos
 
@@ -111,6 +141,9 @@ ID, conforme o backlog.
 - Verificação de telefone: por **código no app** (`DEC-04`, 2026-08-09); SMS/WhatsApp seguem como opção futura.
 - Pagamentos/PIX: `DEC-05` (ledger sem gateway) e `DEC-06` (**Pagar.me v5**) decididas 2026-08-09; falta conta/credenciais Pagar.me e `PAY-01`.
 - Cutoffs/taxa de cancelamento do prestador: `FLOW-DEC-01` decidida (R$ 3,00; 5/60 min).
+- Código de recolhimento: `DEC-24` + `FLOW-DEC-03` implementados em `PICK-01`
+  (2026-08-09). A duração do bloqueio (15 min) é fixa em código e não foi
+  exposta no admin.
 - Migração banco cloud Firestore: `OPS-DB-01`.
 
 ## 7. Armadilha conhecida do ambiente local

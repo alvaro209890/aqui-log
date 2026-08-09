@@ -34,6 +34,10 @@ class DeliverySummary {
     this.courierFeeCents,
     this.notes,
     this.orderMeta,
+    this.pickupCode,
+    this.pickupCodeRequired = false,
+    this.pickupCodeAttemptsLeft,
+    this.pickupCodeBlockedUntil,
   });
 
   final String id;
@@ -55,6 +59,25 @@ class DeliverySummary {
   /// Dados estruturados da encomenda, com fallback automático para `notes`.
   final OrderMeta? orderMeta;
 
+  /// PICK-01 / DEC-24: código de recolhimento. O servidor só manda para o
+  /// cliente e para admin/suporte — no app do entregador vem sempre nulo, e é
+  /// ele quem digita o que o cliente mostrar.
+  final String? pickupCode;
+
+  /// Se a coleta deste pedido exige código. Falso em pedido legado.
+  final bool pickupCodeRequired;
+
+  /// Tentativas restantes antes do bloqueio temporário (`FLOW-DEC-03`).
+  final int? pickupCodeAttemptsLeft;
+
+  /// Fim do bloqueio temporário por tentativas erradas, quando houver.
+  final DateTime? pickupCodeBlockedUntil;
+
+  /// Bloqueio ainda em vigor neste instante.
+  bool get pickupCodeBlocked =>
+      pickupCodeBlockedUntil != null &&
+      pickupCodeBlockedUntil!.isAfter(DateTime.now());
+
   factory DeliverySummary.fromJson(Map<String, dynamic> json) =>
       DeliverySummary(
         id: json['id'] as String,
@@ -71,7 +94,17 @@ class DeliverySummary {
         courierFeeCents: json['courierFeeCents'] as int?,
         notes: json['notes'] as String?,
         orderMeta: OrderMeta.fromDeliveryJson(json),
+        pickupCode: json['pickupCode'] as String?,
+        pickupCodeRequired: json['pickupCodeRequired'] == true,
+        pickupCodeAttemptsLeft: (json['pickupCodeAttemptsLeft'] as num?)
+            ?.toInt(),
+        pickupCodeBlockedUntil: _toDate(json['pickupCodeBlockedUntil']),
       );
+}
+
+DateTime? _toDate(dynamic value) {
+  if (value is! String || value.isEmpty) return null;
+  return DateTime.tryParse(value)?.toLocal();
 }
 
 double? _toDouble(dynamic value) {

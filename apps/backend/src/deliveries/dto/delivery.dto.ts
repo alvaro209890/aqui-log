@@ -17,6 +17,7 @@ import {
   IsUrl,
   MaxLength,
   Min,
+  MinLength,
   Max,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
@@ -148,6 +149,33 @@ export class UpdateDeliveryStatusDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  // PICK-01 / DEC-24: informado pelo prestador na coleta. O formato exato é
+  // conferido no service, junto com o contador de tentativas — recusar aqui,
+  // no DTO, não contaria a tentativa errada.
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  pickupCode?: string;
+}
+
+/**
+ * PICK-01 / DEC-24: fallback de código perdido ou ilegível. Só admin/suporte,
+ * sempre com motivo escrito, e com prova alternativa quando existir.
+ */
+export class PickupCodeOverrideDto {
+  @TrimmedString()
+  @IsString({ message: 'Descreva o motivo da liberação' })
+  @IsNotEmpty({ message: 'Descreva o motivo da liberação' })
+  @MinLength(10, {
+    message: 'O motivo precisa ter ao menos 10 caracteres',
+  })
+  @MaxLength(500, { message: 'O motivo é longo demais' })
+  reason!: string;
+
+  @IsOptional()
+  @IsString()
+  alternativeProofUrl?: string;
 }
 
 export class AssignCourierDto {

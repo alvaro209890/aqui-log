@@ -111,6 +111,44 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
               ),
             ),
           ),
+          // PICK-01 / DEC-24: o cliente é quem mostra o código na coleta, então
+          // ele precisa estar visível assim que o entregador aceita.
+          if (d.pickupCode != null) ...[
+            const SizedBox(height: 16),
+            Card(
+              color: AquiLogColors.primarySoft,
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Código de recolhimento',
+                      style: TextStyle(
+                        color: AquiLogColors.muted,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      d.pickupCode!,
+                      style: const TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 8,
+                        color: AquiLogColors.primaryDark,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Mostre estes 4 dígitos ao entregador na hora da coleta.',
+                      style: TextStyle(color: AquiLogColors.muted),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           if (hasCoords) ...[
             const SizedBox(height: 16),
             SizedBox(
