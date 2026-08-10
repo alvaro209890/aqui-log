@@ -24,6 +24,7 @@
 | 5 | `PAY-01` | `READY` | P2 | Ledger interno (cliente + prestador) sem gateway | autorização `DEC-05` ✅; `B2C-02` DONE; `DEC-23` |
 | 6 | `COUR-02` | `BLOCKED` | P2 | Cancelamento prestador + taxa no saldo | `COUR-01` ✅ DONE; falta `PAY-01`; `DEC-22` ✅ decidida |
 | 7 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-02B`, `B2C-03A`, `DISP-03` (`B2C-01B` ok) |
+| 7b | `OPS-01A` | `READY` (plano) | P1 | **Runtime de distribuição no acer via Cloudflare Tunnel** (`DEC-26` ✅ 2026-08-10): API + dashboard + Postgres/Redis + storage neste PC, domínio `*.cursar.space`, sem derrubar serviços existentes; banco em `~/Documentos/Bando_de_dados/Aqui_Log`; smoke público | `DEC-26` ✅; `OPS-01` (parcial — pode iniciar quando FKs/índices/backup locais estiverem de pé); antecede `OPS-02`/`OPS-03` |
 | 8 | `OPS-DB-01` | `BLOCKED` | P2 | Modelo + migração Postgres → Firestore | `DEC-25`; credenciais Firebase |
 | 9 | `OPS-02` | `BLOCKED` | P2 | Firebase Firestore/Storage/FCM reais | pedido + credenciais; ver `PLANO_HOSPEDAGEM.md` |
 | 10 | `OPS-03` | `BLOCKED` | P2 | Deploy Render + Vercel + smoke público | `OPS-01`, `OPS-02`, credenciais |

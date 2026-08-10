@@ -1,11 +1,32 @@
-# Plano — Hospedagem cloud (Render + Vercel + Firebase)
+# Plano — Hospedagem (runtime local via Cloudflare Tunnel → cloud)
 
-> **Atualizado:** 2026-08-07
+> **Atualizado:** 2026-08-10
 > **Papel:** especificação subordinada ao [roadmap](../01-ROADMAP.md)
-> **Decisão:** `DEC-25` em [`03-DECISOES.md`](../03-DECISOES.md)
+> **Decisões:** `DEC-26` (distribuição inicial no acer via CF Tunnel) e `DEC-25`
+> (alvos cloud) em [`03-DECISOES.md`](../03-DECISOES.md)
 > **Referência operacional:** [`04-ALVOS-DE-DEPLOY.md`](../../03-referencia/04-ALVOS-DE-DEPLOY.md)
 > **Não autoriza:** criar projetos, colar secrets, ligar `FIREBASE_ENABLED` ou
 > publicar URL pública sem credenciais e pedido de execução do Álvaro
+
+## 0. Runtime de distribuição — acer via Cloudflare Tunnel (`DEC-26`, 2026-08-10)
+
+**Antes de publicar/distribuir o aplicativo**, o backend, o banco de dados e a
+pilha inteira devem rodar **neste PC (acer)** — expostos por **Cloudflare
+Tunnel** sob o domínio próprio já comprado (`*.cursar.space`) — **sem derrubar
+nada que já roda atualmente** no acer (serviços existentes seguem intactos:
+túneis, ports, systemd, etc.).
+
+- **Banco de dados:** PostgreSQL do Aqui Log em
+  `~/Documentos/Bando_de_dados/Aqui_Log` (padrão das pastas de dados do acer;
+  ver `INV-02` — Postgres continua a fonte de verdade local).
+- **Exposição:** `cloudflared` com rota para API e dashboard do Aqui Log no
+  domínio próprio; portas/serviços já ocupados não são tocados.
+- **Gate de distribuição:** `OPS-01A` — só fecha com health real no domínio do
+  túnel, API + dashboard + Postgres/Redis + storage no acer, e serviços
+  pré-existentes do PC intactos.
+- **Cloud (`DEC-25`)**: continua como **evolução posterior** (Render/Vercel/
+  Firebase), atrás de credenciais + pacotes `OPS-*` — nada de cloud antes do
+  runtime local de distribuição estar de pé.
 
 ## 1. Alvos travados (2026-08-07, Álvaro)
 
@@ -37,13 +58,28 @@ Compose local enquanto o runtime cloud Firestore não estiver validado.
 | ID | Status | Entrega | Gate |
 | --- | --- | --- | --- |
 | `OPS-01` | ⏳ | Prontidão local (índices, backup, smoke) | features B2C estáveis |
+| `OPS-01A` | ⏳ | **Runtime de distribuição no acer** (CF Tunnel, domínio próprio, banco em `~/Documentos/Bando_de_dados/Aqui_Log`) | `DEC-26` ✅, `OPS-01` parcial |
 | `OPS-DB-01` | ⏸️ | Desenho + migração/dual-write Postgres → Firestore | `DEC-25`, modelo de coleções, aceite do dono |
 | `OPS-02` | ⏸️ | Firebase: projeto, Firestore rules, Storage, FCM; adapters reais | pedido + credenciais |
 | `OPS-03` | ⏸️ | Deploy API Render + dashboard Vercel + smoke público | `OPS-01`, `OPS-02`, URL API estável |
 
-Ordem: local estável → desenho Firestore → ligar Firebase → publicar Render/Vercel.
+Ordem: local estável → **runtime de distribuição no acer via CF Tunnel
+(`OPS-01A`)** → desenho Firestore → ligar Firebase → publicar Render/Vercel.
 
-## 4. Diagrama alvo
+## 4. Diagramas
+
+### Fase 0 — distribuição inicial (acer, `DEC-26`)
+
+```text
+[ customer_app / courier_app ] ──HTTPS──► [ *.cursar.space — Cloudflare Tunnel ]
+[ Vercel: Dashboard (futuro) ] ─────────►        │
+                                                  ├── [ acer: Nest API ] (porta local)
+                                                  ├── PostgreSQL  ← ~/Documentos/Bando_de_dados/Aqui_Log
+                                                  ├── Redis (locks/jobs)
+                                                  └── Storage local (adapter local)
+```
+
+### Fase 1 — cloud (alvo, `DEC-25`)
 
 ```text
 [ customer_app / courier_app ] ──HTTPS──► [ Render: Nest API ]

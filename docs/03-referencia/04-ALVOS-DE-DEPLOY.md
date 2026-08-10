@@ -1,13 +1,32 @@
 # Alvos de deploy (estrutura — sem vínculo ativo)
 
-> **Atualizado:** 2026-08-07
-> **Decisão canônica:** `DEC-25` — API **Render**, dashboard **Vercel**, banco
-> cloud **Firebase** (Firestore) + Storage/FCM.
+> **Atualizado:** 2026-08-10
+> **Decisões canônicas:**
+> - `DEC-26` — **distribuição inicial roda no acer** via Cloudflare Tunnel sob
+>   domínio próprio (`*.cursar.space`), sem derrubar serviços existentes; banco
+>   em `~/Documentos/Bando_de_dados/Aqui_Log` (gate `OPS-01A`).
+> - `DEC-25` — evolução posterior: API **Render**, dashboard **Vercel**, banco
+>   cloud **Firebase** (Firestore) + Storage/FCM.
 > **Status:** scaffold apenas. Nenhum projeto Render, Vercel ou Firebase está
 > ligado a este repositório com credenciais. Secrets **não** devem ser commitados.
 > Plano: [`PLANO_HOSPEDAGEM.md`](../02-planejamento/planos/PLANO_HOSPEDAGEM.md).
 
-## Decisão de arquitetura cloud (Álvaro)
+## Decisão de arquitetura (Álvaro)
+
+### Fase 0 — distribuição inicial (acer, `DEC-26`)
+
+| Camada | Alvo | Estado |
+| --- | --- | --- |
+| API NestJS | **acer** (porta local) | exposta via Cloudflare Tunnel em `*.cursar.space` |
+| Dashboard React | **acer** (Vite) | mesma rota de túnel (path ou subdomínio) |
+| Banco de dados | **PostgreSQL** em `~/Documentos/Bando_de_dados/Aqui_Log` | padrão `INV-02`; fonte de verdade local |
+| Redis | Docker/local (porta existente) | auxiliar |
+| Storage | adapter local | até `OPS-02` |
+
+Nada que já roda no acer é derrubado: túneis, ports e systemd existentes
+seguem intactos. Gate: `OPS-01A` (health real no domínio + smoke público).
+
+### Fase 1 — cloud (evolução, `DEC-25`)
 
 | Camada | Alvo | Estado |
 | --- | --- | --- |

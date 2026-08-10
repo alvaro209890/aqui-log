@@ -15,7 +15,7 @@ consequência; os planos passam apenas a apontar para este registro.
 | `INV-02` | `DECIDIDA` (atualizada 2026-08-07) | **Local/dev:** PostgreSQL é fonte de verdade; Redis é auxiliar. **Produção cloud:** banco alvo = **Firebase Firestore** (`DEC-25`); Storage/FCM no mesmo Firebase. Migração = `OPS-DB-01` — não remover Postgres local antes disso. |
 | `INV-03` | `DECIDIDA` | Preço calculado e congelado pelo servidor |
 | `INV-04` | `DECIDIDA` | Mobile usa identidade laranja; dashboard ainda pendente |
-| `INV-05` | `DECIDIDA` (atualizada 2026-08-07) | Alvos cloud **decididos** (`DEC-25`: Render + Vercel + Firebase). **Provisionar/ligar** ainda exige pedido explícito + credenciais. SMS e pagamentos/gateway idem. |
+| `INV-05` | `DECIDIDA` (atualizada 2026-08-10) | Alvos cloud **decididos** (`DEC-25`: Render + Vercel + Firebase). **Provisionar/ligar** ainda exige pedido explícito + credenciais. **Distribuição inicial = runtime local no acer via Cloudflare Tunnel** (`DEC-26`, domínio `*.cursar.space`) — cloud fica como evolução posterior. SMS e pagamentos/gateway idem. |
 | `INV-06` | `DECIDIDA` | Persistência UTC; regras locais em `America/Sao_Paulo` |
 
 ## 2. Decisões do roadmap
@@ -47,6 +47,7 @@ consequência; os planos passam apenas a apontar para este registro.
 | `DEC-23` | `DECIDIDA` (2026-08-07, Álvaro) | Álvaro | Pagamento do prestador = **saldo interno** (ledger); dinheiro real só via **saque**. Modelo decidido; implementação atrás de `DEC-05`/`DEC-06`/`PAY-*`. | `PAY-01`, `PAY-02` |
 | `DEC-24` | `DECIDIDA` (2026-08-07, Álvaro) | Álvaro | Coleta exige **foto de prova do prestador** **e** `pickup_code` (distinto de `AQL-*`) para `AT_PICKUP→PICKED_UP`. Foto de prova ≠ foto do cliente na criação. Fallback de código só admin/suporte. | `PICK-01` |
 | `DEC-25` | `DECIDIDA` (2026-08-07, Álvaro) | Álvaro | Hospedagem cloud: **backend → Render**, **frontend (dashboard) → Vercel**, **banco de dados → Firebase (Firestore)**. Storage/FCM no mesmo Firebase. Redis continua auxiliar. Provisionar/ligar ainda exige credenciais + pacotes `OPS-*`. | `OPS-02`, `OPS-03`, `OPS-DB-01` |
+| `DEC-26` | `DECIDIDA` (2026-08-10, Álvaro) | Álvaro | **Distribuição inicial roda neste PC (acer)**: antes de publicar/distribuir o app, o backend, o banco de dados e o resto da pilha sobem aqui, expostos via **Cloudflare Tunnel** sob o domínio próprio já comprado (`*.cursar.space`), **sem derrubar nada que já roda** no acer hoje (serviços existentes seguem intactos). Banco de dados do Aqui Log fica em `~/Documentos/Bando_de_dados/Aqui_Log` (PostgreSQL local, padrão `INV-02`). Cloud (`DEC-25`) continua como evolução posterior, atrás de credenciais + `OPS-*`. | Novo pacote `OPS-01A` (runtime local via CF Tunnel) como gate de distribuição; antecede `OPS-02`/`OPS-03` |
 
 ## 3. IDs de decisões específicas dos planos
 

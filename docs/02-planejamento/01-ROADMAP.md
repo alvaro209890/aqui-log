@@ -172,12 +172,17 @@ Nenhuma integração PIX/cartão entra nesta fase. O objetivo é provar a contab
 
 ### Fase 6 — prontidão operacional e publicação
 
-Alvos cloud travados em `DEC-25` / [PLANO_HOSPEDAGEM.md](planos/PLANO_HOSPEDAGEM.md):
-API **Render**, dashboard **Vercel**, banco **Firebase Firestore**.
+**Distribuição inicial = runtime local no acer** via Cloudflare Tunnel sob domínio
+próprio (`DEC-26`, 2026-08-10): antes de publicar/distribuir o app, backend +
+banco + pilha sobem neste PC, sem derrubar nada que já roda. Banco em
+`~/Documentos/Bando_de_dados/Aqui_Log`. Alvos cloud travados em `DEC-25` /
+[PLANO_HOSPEDAGEM.md](planos/PLANO_HOSPEDAGEM.md) permanecem como **evolução
+posterior** (API **Render**, dashboard **Vercel**, banco **Firebase Firestore**).
 
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
 | OPS-01 | ⏳ | `B2C-01B`, `B2C-02B`, `B2C-03A`, `DISP-03` | FKs, índices, logs, auditoria, retenção, backup e restauração testada (local) |
+| OPS-01A | ⏳ | `OPS-01` ✅, `DEC-26` ✅ | **Runtime de distribuição no acer**: API + dashboard + Postgres/Redis + storage rodando neste PC, expostos via Cloudflare Tunnel em `*.cursar.space`, sem derrubar serviços existentes; banco em `~/Documentos/Bando_de_dados/Aqui_Log`; smoke público pelo domínio |
 | OPS-DB-01 | ⏸️ | `DEC-25`, modelo de coleções, aceite do dono | Migração/dual-write Postgres local → Firestore cloud |
 | OPS-02 | ⏸️ | Pedido + credenciais Firebase | Projeto Firebase: Firestore, Storage, FCM; adapters reais; fallback local |
 | OPS-03 | ⏸️ | Pedido + credenciais, `OPS-01`, `OPS-02` | Deploy API **Render** + dashboard **Vercel** + smoke público |
@@ -185,6 +190,8 @@ API **Render**, dashboard **Vercel**, banco **Firebase Firestore**.
 
 Build verde não comprova deploy. `OPS-03` só fecha com health real na API Render,
 dashboard Vercel apontando para ela, Firestore/Storage operacionais e smoke B2C público.
+`OPS-01A` só fecha com health real no domínio do túnel, API + dashboard +
+Postgres/Redis/storage no acer, e os serviços pré-existentes do PC intactos.
 
 ### Fase 7 — lote multi-pedido, agendamento e frota
 
