@@ -102,7 +102,9 @@ class _CustomerShellState extends State<CustomerShell> {
       full = await widget.state.api.delivery(d.id);
     } catch (_) {}
     if (!mounted) return;
-    await Navigator.of(context).push(
+    // DISP-02: as ações da busca esgotada/atrasada voltam atualizadas para a
+    // tela de detalhe fechar e a lista recarregar com o estado novo.
+    final result = await Navigator.of(context).push<DeliverySummary>(
       MaterialPageRoute(
         builder: (_) => DeliveryDetailScreen(
           delivery: full,
@@ -112,9 +114,27 @@ class _CustomerShellState extends State<CustomerShell> {
             score: score,
             comment: comment,
           ),
+          onRetry: () => widget.state.api.retryDelivery(d.id),
+          onUpdate: (form) => widget.state.api.updateDelivery(d.id, form),
+          onConsentBoost: () => widget.state.api.consentPriceBoost(d.id),
+          onCancel: (reason) => widget.state.api.updateDeliveryStatus(
+            d.id,
+            'CANCELED',
+            note: reason ?? 'Cancelado pelo cliente',
+          ),
         ),
       ),
     );
+    if (result != null) full = result;
+    if (!mounted) return;
+    setState(() {
+      final idx = deliveries.indexWhere((item) => item.id == full.id);
+      if (idx >= 0) {
+        deliveries[idx] = full;
+      } else {
+        deliveries.add(full);
+      }
+    });
     await _load();
   }
 

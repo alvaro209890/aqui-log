@@ -22,6 +22,7 @@ import {
   CreateDeliveryDto,
   PickupCodeOverrideDto,
   RateDeliveryDto,
+  UpdateDeliveryDto,
   UpdateDeliveryStatusDto,
 } from './dto/delivery.dto';
 
@@ -119,6 +120,49 @@ export class DeliveriesController {
     // §6.1.5 — ele reabre o ciclo de anéis mesmo depois de esgotado. Quem já
     // recusou continua excluído.
     return this.deliveries.dispatch(id, req.user.id, { reopen: true });
+  }
+
+  /**
+   * DISP-02 / plano §6.1.5 — "tentar de novo" do cliente. Mesmo caminho de
+   * recuperação do admin (`dispatch(..., { reopen: true })`), mas só o dono do
+   * pedido pode chamar e só quando a busca esgotou (ou nunca começou).
+   */
+  @Post(':id/retry')
+  @Roles(UserRole.CUSTOMER)
+  retry(
+    @Param('id') id: string,
+    @Req() req: Request & { user: AuthenticatedUser },
+  ) {
+    return this.deliveries.retry(id, req.user);
+  }
+
+  /**
+   * DISP-02 / plano §6.1.5 — "editar" do pedido com busca esgotada. Campos
+   * restritos (endereços, destinatário, telefone, observação, janelas do
+   * agendado); nunca preço, peso, tipo, tamanho ou foto (`DEC-19`).
+   */
+  @Patch(':id')
+  @Roles(UserRole.CUSTOMER)
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateDeliveryDto,
+    @Req() req: Request & { user: AuthenticatedUser },
+  ) {
+    return this.deliveries.updateDelivery(id, dto, req.user);
+  }
+
+  /**
+   * DISP-02 / DEC-03 §3.3 — consentimento explícito do aumento de valor para
+   * destravar a busca. Grava a trilha (evento + auditoria), reescreve o
+   * snapshot do pedido e reabre a busca com o novo preço. Nunca silencioso.
+   */
+  @Post(':id/price-boost/consent')
+  @Roles(UserRole.CUSTOMER)
+  consentPriceBoost(
+    @Param('id') id: string,
+    @Req() req: Request & { user: AuthenticatedUser },
+  ) {
+    return this.deliveries.consentPriceBoost(id, req.user);
   }
 
   @Patch('offers/:offerId/accept')

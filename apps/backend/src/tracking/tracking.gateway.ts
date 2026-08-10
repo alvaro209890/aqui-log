@@ -124,6 +124,57 @@ export class TrackingGateway
     return { received: true };
   }
 
+  /**
+   * `DISP-02` — emissões no canal `delivery:{id}`, o mesmo que o app já usa
+   * para tracking. O app cliente hoje acompanha por polling (`GET /deliveries
+   * /:id`), então o aviso real chega pelo próprio pedido e pelo histórico; o
+   * WebSocket é o canal que um app com socket (ou o painel) consumirá sem
+   * mudança de contrato.
+   */
+
+  /** Plano §6.1.4 — primeiro atraso significativo. */
+  emitFirstWarning(deliveryId: string, warningAt: Date) {
+    this.server.to(`delivery:${deliveryId}`).emit('delivery:warning', {
+      deliveryId,
+      warningAt: warningAt.toISOString(),
+    });
+  }
+
+  /** Plano §6.1.5 — busca esgotada; o cliente precisa agir. */
+  emitDispatchEnded(
+    deliveryId: string,
+    reason: string,
+    endedAt: Date,
+    rounds: number,
+  ) {
+    this.server.to(`delivery:${deliveryId}`).emit('delivery:dispatch-ended', {
+      deliveryId,
+      reason,
+      endedAt: endedAt.toISOString(),
+      rounds,
+    });
+  }
+
+  /** §3.3 / `DEC-03` — aumento de valor consentido e aplicado. */
+  emitPriceBoosted(
+    deliveryId: string,
+    previousPriceCents: number,
+    newPriceCents: number,
+  ) {
+    this.server.to(`delivery:${deliveryId}`).emit('delivery:price-boosted', {
+      deliveryId,
+      previousPriceCents,
+      newPriceCents,
+    });
+  }
+
+  /** Pedido editado pelo cliente (endereço, destinatário, janela…). */
+  emitDeliveryUpdated(deliveryId: string) {
+    this.server.to(`delivery:${deliveryId}`).emit('delivery:updated', {
+      deliveryId,
+    });
+  }
+
   private getUser(client: Socket) {
     const user = this.authenticatedUsers.get(client.id);
     if (!user) throw new WsException('Nao autenticado');

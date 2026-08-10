@@ -225,6 +225,13 @@ export class Delivery {
   })
   dispatchEndReason!: string | null;
 
+  // DISP-02 / plano §6.1.4 — marco do primeiro atraso significativo. O job de
+  // aviso grava aqui quando a busca ativa ultrapassa
+  // `dispatchFirstWarningMinutes`; a coluna é a trava de idempotência do aviso.
+  @Index()
+  @Column({ name: 'dispatch_warning_at', type: 'timestamptz', nullable: true })
+  dispatchWarningAt!: Date | null;
+
   @Column({ name: 'scheduled_at', type: 'timestamptz', nullable: true })
   scheduledAt!: Date | null;
 

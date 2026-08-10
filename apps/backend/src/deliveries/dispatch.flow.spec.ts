@@ -202,12 +202,18 @@ function buildHarness(options: HarnessOptions): Harness {
       acquireLock: jest.fn().mockResolvedValue(options.lockAvailable ?? true),
       releaseLock: jest.fn().mockResolvedValue(undefined),
     } as never,
-    {} as never,
+    { get: jest.fn(() => undefined) } as never,
     {
       assertAllowedProductPhotoUrl: jest.fn(),
       assertAllowedProofUrl: jest.fn(),
     } as never,
     { get: jest.fn(() => Promise.resolve(SETTINGS)) } as never,
+    {
+      emitFirstWarning: jest.fn(),
+      emitDispatchEnded: jest.fn(),
+      emitPriceBoosted: jest.fn(),
+      emitDeliveryUpdated: jest.fn(),
+    } as never,
   );
   return { service, delivery, offers, couriers, events };
 }

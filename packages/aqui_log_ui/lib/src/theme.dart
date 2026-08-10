@@ -23,6 +23,12 @@ abstract final class AquiLogColors {
   static const errorText = Color(0xFFB91C1C);
   static const info = Color(0xFF3B82F6);
   static const infoText = Color(0xFF1D4ED8);
+
+  // Fundos suaves dos estados — usados em cards de aviso (DISP-02).
+  static const successSoft = Color(0xFFECFDF5);
+  static const warningSoft = Color(0xFFFFFBEB);
+  static const errorSoft = Color(0xFFFEF2F2);
+  static const infoSoft = Color(0xFFEFF6FF);
 }
 
 abstract final class AquiLogTheme {

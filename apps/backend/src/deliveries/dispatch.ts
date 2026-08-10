@@ -214,3 +214,60 @@ export function describeEndReason(reason: DispatchEndReason): string {
       return 'pedido cancelado';
   }
 }
+
+/**
+ * `DISP-02` / `DEC-03` §3.3 — proposta de aumento de valor para destravar a
+ * busca esgotada.
+ *
+ * O aumento **nunca é aplicado**: este cálculo só monta a proposta (valor
+ * anterior → valor novo) para o cliente consentir. Aplicar é responsabilidade
+ * do serviço, que grava o consentimento em evento e auditoria antes de mudar o
+ * snapshot do pedido.
+ *
+ * `boostPercent` é inteiro (0–100). Percentual 0 devolve `null` — sem proposta,
+ * o cliente não vê card nenhum. O arredondamento usa a mesma regra do preço
+ * (meio para cima).
+ */
+export type PriceBoostProposal = {
+  /** Percentual configurado na proposta (inteiro). */
+  boostPercent: number;
+  /** Preço congelado antes do consentimento. */
+  previousPriceCents: number;
+  /** Preço proposto após o aumento, em centavos. */
+  newPriceCents: number;
+};
+
+export function priceBoostProposal(
+  currentPriceCents: number,
+  boostPercent: number,
+): PriceBoostProposal | null {
+  if (boostPercent <= 0) return null;
+  const newPriceCents = Math.round(
+    currentPriceCents * (1 + boostPercent / 100),
+  );
+  if (newPriceCents <= currentPriceCents) return null;
+  return {
+    boostPercent,
+    previousPriceCents: currentPriceCents,
+    newPriceCents,
+  };
+}
+
+/**
+ * `DISP-02` — o "primeiro atraso significativo" (plano §6.1.4) já passou?
+ *
+ * Conta do início do ciclo (`dispatchStartedAt`), não da criação do pedido:
+ * a busca é o que está demorando. `warningMinutes = 0` avisa no primeiro tick
+ * do job — é o valor usado pelos testes e pelo smoke, que não podem esperar
+ * minutos de relógio real.
+ */
+export function firstWarningDue(
+  startedAt: Date | null | undefined,
+  now: Date,
+  warningMinutes: number,
+): boolean {
+  if (!startedAt || warningMinutes < 0) return false;
+  const elapsedMinutes =
+    (now.getTime() - new Date(startedAt).getTime()) / MINUTE_MS;
+  return elapsedMinutes >= warningMinutes;
+}

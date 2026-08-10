@@ -3,8 +3,10 @@ import {
   RECOVERABLE_END_REASONS,
   describeEndReason,
   dispatchTimeboxExhausted,
+  firstWarningDue,
   hasRoundsLeft,
   maxRadiusKm,
+  priceBoostProposal,
   ringRadiusKm,
   roundsUsed,
   selectRingCandidate,
@@ -194,5 +196,55 @@ describe('DISP-01 — motivos de término', () => {
       'TIMEBOX',
       'NO_CANDIDATE',
     ]);
+  });
+});
+
+describe('DISP-02 — proposta de aumento de valor (DEC-03 §3.3)', () => {
+  it('com 20% sobre R$ 25,00 propõe R$ 30,00, congelando o anterior', () => {
+    expect(priceBoostProposal(2500, 20)).toEqual({
+      boostPercent: 20,
+      previousPriceCents: 2500,
+      newPriceCents: 3000,
+    });
+  });
+
+  it('percentual zero devolve null — sem proposta, sem card', () => {
+    expect(priceBoostProposal(2500, 0)).toBeNull();
+  });
+
+  it('percentual negativo devolve null (config inválida nunca vira aumento)', () => {
+    expect(priceBoostProposal(2500, -5)).toBeNull();
+  });
+
+  it('arredonda meio para cima, como o preço normal', () => {
+    expect(priceBoostProposal(1000, 15)?.newPriceCents).toBe(1150);
+    expect(priceBoostProposal(1000, 33)?.newPriceCents).toBe(1330);
+  });
+
+  it('nunca propõe valor menor ou igual ao atual', () => {
+    const proposal = priceBoostProposal(0, 20);
+    expect(proposal).toBeNull();
+  });
+});
+
+describe('DISP-02 — aviso do primeiro atraso significativo (plano §6.1.4)', () => {
+  const start = new Date('2026-08-10T10:00:00Z');
+
+  it('avisado só depois de passar o limite em minutos', () => {
+    expect(firstWarningDue(start, new Date('2026-08-10T10:04:59Z'), 5)).toBe(
+      false,
+    );
+    expect(firstWarningDue(start, new Date('2026-08-10T10:05:00Z'), 5)).toBe(
+      true,
+    );
+  });
+
+  it('warningMinutes = 0 avisa no primeiro tick (usado por teste e smoke)', () => {
+    expect(firstWarningDue(start, new Date(start.getTime() + 1), 0)).toBe(true);
+  });
+
+  it('sem início de ciclo ainda não há demora a avisar', () => {
+    expect(firstWarningDue(null, new Date(), 5)).toBe(false);
+    expect(firstWarningDue(undefined, new Date(), 5)).toBe(false);
   });
 });

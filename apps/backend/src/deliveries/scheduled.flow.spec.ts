@@ -200,7 +200,7 @@ function buildHarness(options: { reserved?: Delivery[] } = {}): Harness {
       acquireLock: jest.fn().mockResolvedValue(true),
       releaseLock: jest.fn().mockResolvedValue(undefined),
     } as never,
-    {} as never,
+    { get: jest.fn(() => undefined) } as never,
     {
       assertAllowedProductPhotoUrl: jest.fn(),
       assertAllowedProofUrl: jest.fn(),

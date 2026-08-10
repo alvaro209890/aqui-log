@@ -356,6 +356,72 @@ api POST "/deliveries/$limite_id/dispatch" "$admin_token" | jq -e '.offer.dispat
 api GET "/deliveries/$limite_id" "$admin_token" | jq -e '.dispatchEndReason == null and .dispatchRound == 1' >/dev/null
 api GET /deliveries/offers/mine "$courier2_token" | jq -e --arg deliveryId "$limite_id" 'map(select(.delivery.id == $deliveryId)) | length == 1' >/dev/null
 
+# DISP-02 — aviso de demora (plano §6.1.4), busca esgotada recuperável e
+# consentimento do aumento de valor (plano §6.1.5 e DEC-03 §3.3).
+
+# Aviso de demora: com 0 minutos, o primeiro tick do job grava o aviso — que é
+# idempotente (uma vez por ciclo). O job roda a cada 10 s, então 13 s bastam.
+# O despacho manual garante que o ciclo começou; sem candidato ele devolve 404
+# e o pedido segue em busca — o aviso vale nos dois casos.
+api PATCH /settings "$admin_token" '{"dispatchMaxRounds":1,"dispatchFirstWarningMinutes":0,"dispatchPriceBoostPercent":20}' >/dev/null
+atrasado="$(api POST /deliveries "$customer_token" "$(disp_payload)")"
+atrasado_id="$(jq -er '.id' <<<"$atrasado")"
+api POST "/deliveries/$atrasado_id/dispatch" "$admin_token" >/dev/null 2>&1 || true
+sleep 13
+api GET "/deliveries/$atrasado_id" "$customer_token" | jq -e '.dispatchWarningAt != null' >/dev/null
+
+# Com a busca ainda ativa, o cliente nao pode tentar de novo nem editar (409).
+ativo_id="$(jq -er '.id' <<<"$(api POST /deliveries "$customer_token" "$(disp_payload)")")"
+if [[ "$(tail -n1 <<<"$(api_status POST "/deliveries/$ativo_id/retry" "$customer_token")")" != "409" ]]; then
+  printf 'Retry com busca ativa deveria dar 409.\n' >&2
+  exit 1
+fi
+if [[ "$(tail -n1 <<<"$(api_status PATCH "/deliveries/$ativo_id" "$customer_token" '{"recipientName":"X"}')")" != "409" ]]; then
+  printf 'Editar com busca ativa deveria dar 409.\n' >&2
+  exit 1
+fi
+
+# Busca esgotada em MAX_ROUNDS: o cliente ve o motivo, a proposta de aumento
+# (anterior -> novo, nunca aplicada sem consentimento) e consegue editar.
+esgotado="$(api POST /deliveries "$customer_token" "$(disp_payload)")"
+esgotado_id="$(jq -er '.id' <<<"$esgotado")"
+esgotado_price="$(jq -er '.priceCents' <<<"$esgotado")"
+esgotado_offer="$(api GET /deliveries/offers/mine "$courier_token" | jq -er --arg deliveryId "$esgotado_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
+if [[ -z "$esgotado_offer" ]]; then
+  esgotado_offer="$(api POST "/deliveries/$esgotado_id/dispatch" "$admin_token" | jq -er '.offer.id')"
+fi
+api PATCH "/deliveries/offers/$esgotado_offer/reject" "$courier_token" >/dev/null
+api GET "/deliveries/$esgotado_id" "$customer_token" | jq -e \
+  --argjson price "$esgotado_price" \
+  '.dispatchEndReason == "MAX_ROUNDS" and .priceBoostProposal != null and .priceBoostProposal.previousPriceCents == $price and .priceBoostProposal.newPriceCents == (($price * 1.2) | round)' >/dev/null
+api PATCH "/deliveries/$esgotado_id" "$customer_token" '{"pickupAddress":"Rua Editada, 10","recipientName":"Nova Destinataria"}' \
+  | jq -e --argjson price "$esgotado_price" '.pickupAddress == "Rua Editada, 10" and .recipientName == "Nova Destinataria" and .priceCents == $price' >/dev/null
+# DEC-19: preco nunca vem do cliente; o servidor recusa o campo na edicao.
+if [[ "$(tail -n1 <<<"$(api_status PATCH "/deliveries/$esgotado_id" "$customer_token" '{"priceCents":1}')")" != "400" ]]; then
+  printf 'Editar preco pelo cliente deveria dar 400.\n' >&2
+  exit 1
+fi
+
+# "Tentar novamente": reabre do zero, sem mudar o preco (DEC-19).
+api POST "/deliveries/$esgotado_id/retry" "$customer_token" \
+  | jq -e --argjson price "$esgotado_price" '.dispatchEndReason == null and .priceCents == $price' >/dev/null
+
+# Consentimento do aumento: grava novo preco no snapshot e reabre a busca.
+esgotado2="$(api POST /deliveries "$customer_token" "$(disp_payload)")"
+esgotado2_id="$(jq -er '.id' <<<"$esgotado2")"
+esgotado2_offer="$(api GET /deliveries/offers/mine "$courier_token" | jq -er --arg deliveryId "$esgotado2_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
+if [[ -z "$esgotado2_offer" ]]; then
+  esgotado2_offer="$(api POST "/deliveries/$esgotado2_id/dispatch" "$admin_token" | jq -er '.offer.id')"
+fi
+api PATCH "/deliveries/offers/$esgotado2_offer/reject" "$courier_token" >/dev/null
+novo_preco="$(api GET "/deliveries/$esgotado2_id" "$customer_token" | jq -er '.priceBoostProposal.newPriceCents')"
+api POST "/deliveries/$esgotado2_id/price-boost/consent" "$customer_token" \
+  | jq -e --argjson novo "$novo_preco" '.priceCents == $novo and .dispatchEndReason == null' >/dev/null
+
+# Restaura as settings do cenario DISP-01 para nao vazar estado para a proxima
+# execucao (o Redis sobrevive entre execucoes).
+api PATCH /settings "$admin_token" '{"dispatchMaxRounds":4,"dispatchFirstWarningMinutes":5,"dispatchPriceBoostPercent":20}' >/dev/null
+
 # A duracao total precisa caber ao menos uma oferta (validacao de settings).
 curta="$(api_status PATCH /settings "$admin_token" '{"dispatchTotalDurationMinutes":1,"offerTtlSeconds":600}')"
 if [[ "$(tail -n1 <<<"$curta")" != "400" ]]; then

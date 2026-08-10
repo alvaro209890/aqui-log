@@ -92,7 +92,7 @@ function buildService(rows: Delivery[]) {
     {} as never,
     {} as never,
     {} as never,
-    {} as never,
+    { get: jest.fn(() => undefined) } as never,
     {} as never,
     {} as never,
   );

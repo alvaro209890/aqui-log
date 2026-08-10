@@ -36,6 +36,7 @@ import { PricingService } from '../pricing/pricing.service';
 import { RedisService } from '../redis/redis.module';
 import { SettingsService } from '../settings/settings.module';
 import { StorageService } from '../storage/storage.module';
+import { TrackingGateway } from '../tracking/tracking.gateway';
 import { parsePagination, toPageResult } from '../common/pagination';
 import { formatWindowInstant } from '../common/timezone';
 import { FULFILLMENT_MODES } from '../pricing/pricing.types';
@@ -59,8 +60,11 @@ import {
   type RingSelection,
   describeEndReason,
   dispatchTimeboxExhausted,
+  firstWarningDue,
   hasRoundsLeft,
   maxRadiusKm,
+  priceBoostProposal,
+  RECOVERABLE_END_REASONS,
   roundsUsed,
   selectRingCandidate,
   shouldReopenForWindow,
@@ -82,6 +86,7 @@ import {
   PickupCodeOverrideDto,
   PRODUCT_TYPES,
   RateDeliveryDto,
+  UpdateDeliveryDto,
   UpdateDeliveryStatusDto,
 } from './dto/delivery.dto';
 
@@ -131,6 +136,7 @@ export class DeliveriesService {
     private readonly config: ConfigService,
     private readonly storage: StorageService,
     private readonly settings: SettingsService,
+    private readonly tracking: TrackingGateway,
   ) {}
 
   async create(dto: CreateDeliveryDto, user: AuthenticatedUser) {
@@ -397,7 +403,10 @@ export class DeliveriesService {
   async findOne(id: string, user: AuthenticatedUser) {
     const delivery = await this.getById(id);
     await this.ensureCanView(delivery, user);
-    return this.present(delivery, user);
+    // DISP-02: o detalhe usa o percentual REAL das settings (Redis) para a
+    // proposta de aumento bater com o que o consentimento vai aplicar.
+    const platform = await this.settings.get();
+    return this.present(delivery, user, platform.dispatchPriceBoostPercent);
   }
 
   async history(id: string, user: AuthenticatedUser) {
@@ -602,7 +611,11 @@ export class DeliveriesService {
    *
    * O pedido **continua `REQUESTED`**: encerrar a busca não é cancelar. O que
    * muda é que nenhum job insiste mais, e o cliente tem um estado explicável
-   * para agir (plano §6.1.5). A notificação e o botão são `DISP-02`.
+   * para agir (plano §6.1.5).
+   *
+   * DISP-02 — o término sem aceite vira aviso ao cliente: evento, notificação
+   * e WebSocket `delivery:dispatch-ended`. O motivo `ACCEPTED` não passa por
+   * aqui (o aceite tem o próprio fluxo e já notifica); `CANCELED` também não.
    */
   private async endDispatchCycle(
     delivery: Delivery,
@@ -617,6 +630,17 @@ export class DeliveriesService {
       delivery,
       actorId,
       `Reoferta encerrada: ${describeEndReason(reason)} (rodadas usadas: ${roundsUsed(delivery)})`,
+    );
+    await this.notifyCreator(
+      delivery,
+      'Nao encontramos um entregador',
+      `${delivery.code}: ${describeEndReason(reason)}. Voce pode tentar de novo, editar ou cancelar o pedido.`,
+    );
+    this.tracking.emitDispatchEnded(
+      delivery.id,
+      reason,
+      delivery.dispatchEndedAt,
+      roundsUsed(delivery),
     );
     await this.audit.record({
       actorId: actorId ?? undefined,
@@ -894,6 +918,353 @@ export class DeliveriesService {
     return count;
   }
 
+  /**
+   * `DISP-02` / plano §6.1.4 — aviso do "primeiro atraso significativo".
+   *
+   * O job roda a cada 10 s; este passo olha só pedidos com busca **ativa**
+   * (ciclo começou e não terminou) que ainda não foram avisados. O marco fica
+   * em `dispatch_warning_at` — é a coluna que impede o aviso repetido.
+   *
+   * O cliente recebe o aviso por três canais: evento no histórico, notificação
+   * e WebSocket `delivery:{id}` (`delivery:warning`). Nada aqui reabre nem
+   * encerra ciclo: é aviso, não intervenção.
+   */
+  async warnSlowDispatch(): Promise<number> {
+    const platform = await this.settings.get();
+    const active = await this.deliveries.find({
+      where: {
+        status: DeliveryStatus.REQUESTED,
+        dispatchEndReason: IsNull(),
+        dispatchWarningAt: IsNull(),
+      },
+      take: 20,
+      order: { createdAt: 'ASC' },
+    });
+    let count = 0;
+    const now = new Date();
+    for (const delivery of active) {
+      if (
+        !firstWarningDue(
+          delivery.dispatchStartedAt,
+          now,
+          platform.dispatchFirstWarningMinutes,
+        )
+      ) {
+        continue;
+      }
+      delivery.dispatchWarningAt = now;
+      await this.deliveries.save(delivery);
+      await this.recordEvent(
+        delivery,
+        null,
+        'Aviso de demora: ainda procurando um entregador para o seu pedido',
+      );
+      await this.notifyCreator(
+        delivery,
+        'Ainda procurando um entregador',
+        `${delivery.code}: ainda nao encontramos um entregador. Continue acompanhando o pedido.`,
+      );
+      this.tracking.emitFirstWarning(delivery.id, now);
+      count += 1;
+    }
+    return count;
+  }
+
+  /**
+   * `DISP-02` / plano §6.1.5 — "tentar de novo" do cliente.
+   *
+   * É o mesmo caminho de recuperação do admin (`dispatch(id, actorId,
+   * { reopen: true })`, handoff de `DISP-01`): o ciclo esgotado recomeça do
+   * anel 1 e quem já foi tentado continua de fora. A diferença é a validação
+   * por papel: só o dono do pedido, e só quando há o que tentar de novo.
+   *
+   * Ciclo ainda ativo (motivo vazio e começado) não tem o que reabrir: o job
+   * já está tentando a cada 10 s — responder `409` evita colidir com o lock.
+   */
+  async retry(id: string, user: AuthenticatedUser) {
+    const delivery = await this.getById(id);
+    await this.ensureCanView(delivery, user);
+    if (delivery.status !== DeliveryStatus.REQUESTED) {
+      throw new ConflictException('A entrega nao esta aguardando despacho');
+    }
+    if (delivery.dispatchEndReason === null && delivery.dispatchStartedAt) {
+      throw new ConflictException(
+        'A busca por entregador ja esta em andamento; tente novamente em instantes.',
+      );
+    }
+    if (delivery.dispatchEndReason === 'CANCELED') {
+      throw new ConflictException('Pedido cancelado nao pode ser retentado');
+    }
+    // Motivo recuperável (`MAX_ROUNDS`/`TIMEBOX`/`NO_CANDIDATE`) ou ciclo que
+    // nunca começou: reabre. Sem candidato no momento, o `dispatch` devolve
+    // `404` e o pedido continua REQUESTED com o ciclo reaberto (o job segue).
+    await this.dispatch(id, user.id, { reopen: true });
+    // Devolve o pedido recortado por papel (sem `pickupCode` para o prestador,
+    // com proposta de aumento para o cliente), não o par cru do dispatch.
+    const platform = await this.settings.get();
+    return this.present(
+      await this.getById(id),
+      user,
+      platform.dispatchPriceBoostPercent,
+    );
+  }
+
+  /**
+   * `DISP-02` / plano §6.1.5 — "editar" do pedido com busca esgotada.
+   *
+   * Endereços, destinatário, telefone, observação e (no agendado) janelas. O
+   * que mexe em preço (peso, tipo, tamanho, fotos, escopo) fica de fora por
+   * `DEC-19`: o DTO nem aceita esses campos (`forbidNonWhitelisted`).
+   *
+   * Regras de segurança:
+   * - só em `REQUESTED` — aceito/em trânsito não se edita;
+   * - nunca com oferta pendente — o motoboy que viu a oferta leria o endereço
+   *   velho;
+   * - latitude e longitude andam juntas (o DTO valida cada uma; aqui o par);
+   * - janela no imediato é recusada; no agendado, o conjunto final é
+   *   revalidado com a mesma regra da criação (`resolveSchedule`);
+   * - editar NÃO reabre a busca e NÃO limpa o motivo de término: a ação de
+   *   reabrir é o "tentar de novo", explícita (plano §6.1.5).
+   */
+  async updateDelivery(
+    id: string,
+    dto: UpdateDeliveryDto,
+    user: AuthenticatedUser,
+  ) {
+    const delivery = await this.getById(id);
+    await this.ensureCanView(delivery, user);
+    if (delivery.status !== DeliveryStatus.REQUESTED) {
+      throw new ConflictException(
+        'O pedido so pode ser editado enquanto aguarda entregador',
+      );
+    }
+    const pending = await this.offers.findOneBy({
+      deliveryId: delivery.id,
+      status: OfferStatus.PENDING,
+    });
+    if (pending) {
+      throw new ConflictException(
+        'Ha uma oferta pendente para este pedido; aguarde a resposta do entregador',
+      );
+    }
+
+    const patch: Partial<Delivery> = {};
+    if (dto.pickupAddress !== undefined)
+      patch.pickupAddress = dto.pickupAddress;
+    if (dto.deliveryAddress !== undefined)
+      patch.deliveryAddress = dto.deliveryAddress;
+    if (dto.recipientName !== undefined)
+      patch.recipientName = dto.recipientName;
+    if (dto.recipientPhone !== undefined)
+      patch.recipientPhone = dto.recipientPhone;
+    if (dto.notes !== undefined) patch.notes = dto.notes;
+    if (dto.pickupLatitude !== undefined || dto.pickupLongitude !== undefined) {
+      if (
+        dto.pickupLatitude === undefined ||
+        dto.pickupLongitude === undefined
+      ) {
+        throw new BadRequestException(
+          'Informe latitude e longitude da coleta juntas',
+        );
+      }
+      patch.pickupLatitude = dto.pickupLatitude;
+      patch.pickupLongitude = dto.pickupLongitude;
+    }
+    if (
+      dto.deliveryLatitude !== undefined ||
+      dto.deliveryLongitude !== undefined
+    ) {
+      if (
+        dto.deliveryLatitude === undefined ||
+        dto.deliveryLongitude === undefined
+      ) {
+        throw new BadRequestException(
+          'Informe latitude e longitude da entrega juntas',
+        );
+      }
+      patch.deliveryLatitude = dto.deliveryLatitude;
+      patch.deliveryLongitude = dto.deliveryLongitude;
+    }
+
+    const hasWindowFields =
+      dto.pickupWindowStart !== undefined ||
+      dto.pickupWindowEnd !== undefined ||
+      dto.deliveryWindowStart !== undefined ||
+      dto.deliveryWindowEnd !== undefined;
+    if (hasWindowFields) {
+      if (delivery.fulfillmentMode !== 'SCHEDULED') {
+        throw new BadRequestException(
+          'Janela de coleta so faz sentido no modo agendado',
+        );
+      }
+      const platform = await this.settings.get();
+      const schedule = resolveSchedule(
+        {
+          fulfillmentMode: 'SCHEDULED',
+          pickupWindowStart:
+            dto.pickupWindowStart ??
+            delivery.pickupWindowStart?.toISOString() ??
+            undefined,
+          pickupWindowEnd:
+            dto.pickupWindowEnd ??
+            delivery.pickupWindowEnd?.toISOString() ??
+            undefined,
+          deliveryWindowStart:
+            dto.deliveryWindowStart ??
+            delivery.deliveryWindowStart?.toISOString() ??
+            undefined,
+          deliveryWindowEnd:
+            dto.deliveryWindowEnd ??
+            delivery.deliveryWindowEnd?.toISOString() ??
+            undefined,
+        },
+        {
+          minLeadMinutes: platform.minScheduleLeadMinutes,
+          maxWindowMinutes: platform.scheduleMaxWindowMinutes,
+        },
+        new Date(),
+      );
+      patch.pickupWindowStart = schedule.pickupWindowStart;
+      patch.pickupWindowEnd = schedule.pickupWindowEnd;
+      patch.deliveryWindowStart = schedule.deliveryWindowStart;
+      patch.deliveryWindowEnd = schedule.deliveryWindowEnd;
+      // `scheduledAt` (legado) continua espelhando o início da janela.
+      patch.scheduledAt = schedule.pickupWindowStart;
+    }
+
+    Object.assign(delivery, patch);
+    await this.deliveries.save(delivery);
+    await this.recordEvent(delivery, user.id, 'Pedido editado pelo cliente');
+    this.tracking.emitDeliveryUpdated(delivery.id);
+    await this.audit.record({
+      actorId: user.id,
+      action: 'DELIVERY_UPDATED',
+      resourceType: 'delivery',
+      resourceId: delivery.id,
+      metadata: {
+        code: delivery.code,
+        fields: Object.keys(patch),
+        windowsChanged: hasWindowFields,
+      },
+    });
+    const platform = await this.settings.get();
+    return this.present(delivery, user, platform.dispatchPriceBoostPercent);
+  }
+
+  /**
+   * `DISP-02` / `DEC-03` §3.3 — consentimento explícito do aumento de valor.
+   *
+   * Nunca silencioso: o cliente só chega aqui vendo a proposta (valor anterior
+   * → valor novo + motivo) no próprio pedido. Este endpoint aplica o novo
+   * snapshot **e reabre a busca** com ele — e grava a trilha completa:
+   *
+   * 1. evento no histórico com anterior → novo;
+   * 2. auditoria `DELIVERY_PRICE_BOOST_CONSENTED`;
+   * 3. WebSocket `delivery:price-boosted`;
+   * 4. breakdown do pedido anotado (`boost.previousPriceCents`).
+   *
+   * Requisitos: pedido `REQUESTED` com ciclo esgotado em motivo recuperável e
+   * percentual de aumento configurado (> 0). Sem candidato no momento, o
+   * `dispatch` devolve `404` e o pedido continua com o novo preço e o ciclo
+   * reaberto.
+   */
+  async consentPriceBoost(id: string, user: AuthenticatedUser) {
+    const delivery = await this.getById(id);
+    await this.ensureCanView(delivery, user);
+    if (delivery.status !== DeliveryStatus.REQUESTED) {
+      throw new ConflictException('A entrega nao esta aguardando despacho');
+    }
+    if (
+      !delivery.dispatchEndReason ||
+      !RECOVERABLE_END_REASONS.includes(
+        delivery.dispatchEndReason as DispatchEndReason,
+      )
+    ) {
+      throw new ConflictException(
+        'O aumento so pode ser consentido quando a busca esgotou sem entregador',
+      );
+    }
+    const platform = await this.settings.get();
+    const proposal = priceBoostProposal(
+      delivery.priceCents,
+      platform.dispatchPriceBoostPercent,
+    );
+    if (!proposal) {
+      throw new NotFoundException('Nenhum aumento de valor configurado');
+    }
+
+    const previousPrice = delivery.priceCents;
+    const newPrice = proposal.newPriceCents;
+    const platformFee = Math.round(
+      (newPrice * platform.pricingPlatformFeePercent) / 100,
+    );
+    const courierFee = newPrice - platformFee;
+    delivery.priceCents = newPrice;
+    delivery.courierFeeCents = courierFee;
+    delivery.pricingBreakdown = {
+      ...(delivery.pricingBreakdown ?? {
+        version: delivery.pricingVersion ?? 1,
+        fulfillmentMode: (delivery.fulfillmentMode ?? 'IMMEDIATE') as never,
+        distanceKm: 0,
+        kmRateCents: delivery.kmRateCents ?? 0,
+        baseFeeCents: 0,
+        distanceCents: 0,
+        weightKg: null,
+        weightBandUpToKg: null,
+        weightSurchargeCents: 0,
+        packageSize: null,
+        sizeSurchargeCents: 0,
+        subtotalCents: 0,
+        minFeeCents: 0,
+        minFeeApplied: false,
+        platformFeePercent: platform.pricingPlatformFeePercent,
+      }),
+      platformFeePercent: platform.pricingPlatformFeePercent,
+      boost: {
+        previousPriceCents: previousPrice,
+        boostPercent: proposal.boostPercent,
+        boostedAt: new Date().toISOString(),
+      },
+    };
+    await this.deliveries.save(delivery);
+    await this.recordEvent(
+      delivery,
+      user.id,
+      `Aumento consentido: ${this.brl(previousPrice)} para ${this.brl(newPrice)} (+${proposal.boostPercent}%) para destravar a busca`,
+    );
+    this.tracking.emitPriceBoosted(delivery.id, previousPrice, newPrice);
+    await this.audit.record({
+      actorId: user.id,
+      action: 'DELIVERY_PRICE_BOOST_CONSENTED',
+      resourceType: 'delivery',
+      resourceId: delivery.id,
+      metadata: {
+        code: delivery.code,
+        previousPriceCents: previousPrice,
+        newPriceCents: newPrice,
+        boostPercent: proposal.boostPercent,
+        platformFeeCents: platformFee,
+        courierFeeCents: courierFee,
+      },
+    });
+    // O novo preço vale para a busca que recomeça agora.
+    try {
+      await this.dispatch(delivery.id, user.id, { reopen: true });
+    } catch {
+      // sem candidato agora — o pedido segue REQUESTED, com o novo preço e o
+      // ciclo reaberto; o job continua tentando.
+    }
+    return this.present(
+      await this.getById(id),
+      user,
+      platform.dispatchPriceBoostPercent,
+    );
+  }
+
+  private brl(cents: number): string {
+    return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
+  }
+
   async rejectOffer(offerId: string, user: AuthenticatedUser) {
     const userId = user.id;
     const courier = await this.getCourierByUser(userId);
@@ -1042,7 +1413,11 @@ export class DeliveriesService {
    * ali é a **exigência** do código, não o segredo — a regra 3 da mesma seção
    * ("prestador informa o código; servidor valida") só fecha assim.
    */
-  private present(delivery: Delivery, user: AuthenticatedUser) {
+  private present(
+    delivery: Delivery,
+    user: AuthenticatedUser,
+    boostPercent?: number,
+  ) {
     const {
       pickupCode,
       pickupCodeAttempts,
@@ -1051,13 +1426,37 @@ export class DeliveriesService {
       ...rest
     } = delivery;
     const required = pickupCode !== null;
-    const shared = {
+    const shared: {
+      [key: string]: unknown;
+      pickupCodeRequired: boolean;
+      pickupCodeAttemptsLeft: number | null;
+    } = {
       ...rest,
       pickupCodeRequired: required,
       pickupCodeAttemptsLeft: required
         ? Math.max(0, PICKUP_CODE_MAX_ATTEMPTS - pickupCodeAttempts)
         : null,
     };
+    // DISP-02 / DEC-03 §3.3 — a proposta de aumento de valor para destravar a
+    // busca esgotada. Só existe quando o ciclo terminou em motivo recuperável
+    // e há percentual configurado > 0. É ela que o app mostra antes de pedir
+    // consentimento — nunca o contrário. O percentual real (Redis) é passado
+    // por quem leu as settings; o default do env cobre os fluxos de lista.
+    const effectiveBoostPercent = boostPercent ?? this.settingsBoostPercent();
+    if (
+      delivery.status === DeliveryStatus.REQUESTED &&
+      delivery.dispatchEndReason &&
+      RECOVERABLE_END_REASONS.includes(
+        delivery.dispatchEndReason as DispatchEndReason,
+      )
+    ) {
+      shared.priceBoostProposal = priceBoostProposal(
+        delivery.priceCents,
+        effectiveBoostPercent,
+      );
+    } else {
+      shared.priceBoostProposal = null;
+    }
     if (user.role === UserRole.COURIER) return shared;
     if (STAFF_ROLES.includes(user.role)) {
       return {
@@ -1072,6 +1471,18 @@ export class DeliveriesService {
     return { ...shared, pickupCode };
   }
 
+  /**
+   * DISP-02 — leitura síncrona do percentual de aumento. O `present` não é
+   * assíncrono; o valor só participa de decisão aqui e a proposta é
+   * recalculada no consentimento (que lê settings de verdade).
+   */
+  private settingsBoostPercent(): number {
+    const raw = this.config.get<string | undefined>(
+      'DISPATCH_PRICE_BOOST_PERCENT',
+    );
+    const parsed = Number(raw ?? 20);
+    return Number.isFinite(parsed) && parsed >= 0 ? Math.trunc(parsed) : 0;
+  }
   /**
    * PICK-01 / DEC-24 — libera a coleta sem o código, só para admin/suporte,
    * com motivo obrigatório, auditoria e prova alternativa quando existir.

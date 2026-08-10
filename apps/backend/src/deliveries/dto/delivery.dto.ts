@@ -224,3 +224,82 @@ export class RateDeliveryDto {
   @IsString()
   comment?: string;
 }
+
+/**
+ * `DISP-02` / plano §6.1.5 — "editar" do pedido com busca esgotada.
+ *
+ * Só campos que NÃO mudam o que foi combinado financeiramente: endereços,
+ * destinatário, telefone e observação. Peso, tipo, tamanho, fotos e escopo
+ * ficam de fora — mudariam o preço congelado (`DEC-19`) e exigiriam recotação,
+ * o que é evolução futura e não `DISP-02`.
+ *
+ * `forbidNonWhitelisted` (global) recusa com `400` qualquer campo fora desta
+ * lista — o app não pode "achar" que editou preço ou peso.
+ *
+ * Latitude e longitude são pares: o serviço exige as duas juntas por campo.
+ */
+export class UpdateDeliveryDto {
+  @IsOptional()
+  @TrimmedString()
+  @IsString()
+  @IsNotEmpty({ message: 'Informe o endereço de coleta' })
+  @MaxLength(500, { message: 'O endereço de coleta é longo demais' })
+  pickupAddress?: string;
+
+  @IsOptional()
+  @IsLatitude()
+  pickupLatitude?: number;
+
+  @IsOptional()
+  @IsLongitude()
+  pickupLongitude?: number;
+
+  @IsOptional()
+  @TrimmedString()
+  @IsString()
+  @IsNotEmpty({ message: 'Informe o endereço de entrega' })
+  @MaxLength(500, { message: 'O endereço de entrega é longo demais' })
+  deliveryAddress?: string;
+
+  @IsOptional()
+  @IsLatitude()
+  deliveryLatitude?: number;
+
+  @IsOptional()
+  @IsLongitude()
+  deliveryLongitude?: number;
+
+  @IsOptional()
+  @TrimmedString()
+  @IsString()
+  @IsNotEmpty({ message: 'Informe quem recebe a encomenda' })
+  @MaxLength(200, { message: 'O nome de quem recebe é longo demais' })
+  recipientName?: string;
+
+  @IsOptional()
+  @IsPhoneNumber('BR')
+  recipientPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  notes?: string;
+
+  // Janelas: só fazem sentido no agendado; o serviço revalida o conjunto final
+  // com `resolveSchedule` (antecedência de 30 min, ordem, duração).
+  @IsOptional()
+  @IsDateString()
+  pickupWindowStart?: string;
+
+  @IsOptional()
+  @IsDateString()
+  pickupWindowEnd?: string;
+
+  @IsOptional()
+  @IsDateString()
+  deliveryWindowStart?: string;
+
+  @IsOptional()
+  @IsDateString()
+  deliveryWindowEnd?: string;
+}

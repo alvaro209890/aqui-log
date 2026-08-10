@@ -101,6 +101,43 @@ class AquiLogApiClient {
   Future<List<dynamic>> offers() async =>
       await _request('GET', '/deliveries/offers/mine') as List<dynamic>;
 
+  /// DISP-02 / plano §6.1.5 — "tentar de novo" do cliente. Reabre o ciclo de
+  /// busca esgotado (`MAX_ROUNDS`/`TIMEBOX`/`NO_CANDIDATE`). O servidor
+  /// devolve o pedido atualizado (e a proposta de aumento, quando aplicável).
+  Future<DeliverySummary> retryDelivery(String deliveryId) async {
+    final data = await _request(
+      'POST',
+      '/deliveries/$deliveryId/retry',
+    ) as Map<String, dynamic>;
+    return DeliverySummary.fromJson(data);
+  }
+
+  /// DISP-02 / plano §6.1.5 — "editar" do pedido com busca esgotada. Campos
+  /// restritos (endereços, destinatário, telefone, observação, janelas do
+  /// agendado); preço, peso e foto não podem ser mudados aqui (`DEC-19`).
+  Future<DeliverySummary> updateDelivery(
+    String deliveryId,
+    Map<String, dynamic> form,
+  ) async {
+    final data = await _request(
+      'PATCH',
+      '/deliveries/$deliveryId',
+      body: form,
+    ) as Map<String, dynamic>;
+    return DeliverySummary.fromJson(data);
+  }
+
+  /// DISP-02 / DEC-03 §3.3 — consentimento explícito do aumento de valor para
+  /// destravar a busca. Só deve ser chamado depois de o cliente ver a proposta
+  /// (`priceBoostProposal`); nunca é um aumento silencioso.
+  Future<DeliverySummary> consentPriceBoost(String deliveryId) async {
+    final data = await _request(
+      'POST',
+      '/deliveries/$deliveryId/price-boost/consent',
+    ) as Map<String, dynamic>;
+    return DeliverySummary.fromJson(data);
+  }
+
   Future<void> acceptOffer(String offerId) =>
       _request('PATCH', '/deliveries/offers/$offerId/accept');
 

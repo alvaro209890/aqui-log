@@ -87,6 +87,12 @@ export type PlatformSettings = {
   dispatchRingIncrementKm: number;
   dispatchMaxRounds: number;
   dispatchTotalDurationMinutes: number;
+  // DISP-02 / DEC-03 — o lado do cliente da busca demorada (plano §6.1.4/§6.1.5
+  // e §3.3). Também provisórios e editáveis no admin, padrão DEC-02.
+  /** Minutos de busca ativa antes do aviso de demora. 0 = avisa já. */
+  dispatchFirstWarningMinutes: number;
+  /** Percentual inteiro do aumento proposto com consentimento. 0 = sem proposta. */
+  dispatchPriceBoostPercent: number;
 };
 
 const REDIS_KEY = 'aqui:settings:platform';
@@ -268,6 +274,21 @@ class UpdateSettingsDto {
   @Min(1)
   @Max(180)
   dispatchTotalDurationMinutes?: number;
+
+  // DISP-02 / DEC-03 — aviso de demora e aumento com consentimento.
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(60)
+  dispatchFirstWarningMinutes?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  dispatchPriceBoostPercent?: number;
 }
 
 @Injectable()
@@ -339,6 +360,15 @@ export class SettingsService {
       dispatchMaxRounds: Number(this.config.get('DISPATCH_MAX_ROUNDS') ?? 4),
       dispatchTotalDurationMinutes: Number(
         this.config.get('DISPATCH_TOTAL_DURATION_MINUTES') ?? 20,
+      ),
+      // DISP-02 / DEC-03 (provisórios, editáveis no admin): o aviso de demora
+      // sai após 5 min de busca ativa, e a proposta de aumento é de 20% sobre o
+      // preço congelado — sempre com consentimento explícito do cliente.
+      dispatchFirstWarningMinutes: Number(
+        this.config.get('DISPATCH_FIRST_WARNING_MINUTES') ?? 5,
+      ),
+      dispatchPriceBoostPercent: Number(
+        this.config.get('DISPATCH_PRICE_BOOST_PERCENT') ?? 20,
       ),
     };
   }

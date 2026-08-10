@@ -444,6 +444,30 @@ export function SettingsPage({ token }: { token: string }) {
                   }
                 />
               </label>
+              <label>
+                Aviso de demora (minutos)
+                <input
+                  type="number"
+                  min={0}
+                  max={60}
+                  value={form.dispatchFirstWarningMinutes}
+                  onChange={(e) =>
+                    setNum('dispatchFirstWarningMinutes', e.target.value)
+                  }
+                />
+              </label>
+              <label>
+                Aumento para destravar a busca (%)
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={form.dispatchPriceBoostPercent}
+                  onChange={(e) =>
+                    setNum('dispatchPriceBoostPercent', e.target.value)
+                  }
+                />
+              </label>
             </div>
             {dispatchTimeboxInvalid ? (
               <p className="settings-warning">
@@ -458,6 +482,13 @@ export function SettingsPage({ token }: { token: string }) {
                 de novo, editar ou cancelar. O preco NAO muda sozinho (DEC-03).
               </p>
             )}
+            <p className="settings-note">
+              Com {form.dispatchFirstWarningMinutes} min de busca ativa, o
+              cliente recebe o aviso de demora. Com{" "}
+              {form.dispatchPriceBoostPercent}%, a busca esgotada vira uma
+              proposta de aumento que so vale com o aceite dele (DEC-03 §3.3).
+              0% desliga a proposta e 0 min avisa imediatamente.
+            </p>
           </section>
 
           <section className="panel settings-panel">

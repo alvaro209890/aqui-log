@@ -19,9 +19,11 @@ export class DeliveryJobsService {
       // DISP-01: é este passo que faz o raio crescer com o tempo em pedido
       // imediato que nasceu sem ninguém por perto.
       const reoffered = await this.deliveries.redispatchPendingRequested();
-      if (expired > 0 || scheduled > 0 || reoffered > 0) {
+      // DISP-02 / plano §6.1.4: aviso do primeiro atraso significativo.
+      const warned = await this.deliveries.warnSlowDispatch();
+      if (expired > 0 || scheduled > 0 || reoffered > 0 || warned > 0) {
         this.logger.log(
-          `jobs: expiredOffers=${expired} scheduledDispatched=${scheduled} reoffered=${reoffered}`,
+          `jobs: expiredOffers=${expired} scheduledDispatched=${scheduled} reoffered=${reoffered} warned=${warned}`,
         );
       }
     } catch (err) {

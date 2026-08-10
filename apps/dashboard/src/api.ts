@@ -175,6 +175,9 @@ export interface PlatformSettings {
   dispatchRingIncrementKm: number;
   dispatchMaxRounds: number;
   dispatchTotalDurationMinutes: number;
+  // DISP-02 — aviso de demora e proposta de aumento para o cliente.
+  dispatchFirstWarningMinutes: number;
+  dispatchPriceBoostPercent: number;
 }
 
 export interface ReportRange {

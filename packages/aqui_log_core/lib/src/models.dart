@@ -30,6 +30,7 @@ class DeliverySummary {
     this.deliveryLatitude,
     this.deliveryLongitude,
     this.recipientName,
+    this.recipientPhone,
     this.priceCents,
     this.courierFeeCents,
     this.notes,
@@ -44,6 +45,10 @@ class DeliverySummary {
     this.deliveryWindowStart,
     this.deliveryWindowEnd,
     this.kmRateCents,
+    this.dispatchStartedAt,
+    this.dispatchEndReason,
+    this.dispatchWarningAt,
+    this.priceBoostProposal,
   });
 
   final String id;
@@ -56,6 +61,7 @@ class DeliverySummary {
   final double? deliveryLatitude;
   final double? deliveryLongitude;
   final String? recipientName;
+  final String? recipientPhone;
   final int? priceCents;
   final int? courierFeeCents;
 
@@ -94,6 +100,22 @@ class DeliverySummary {
   /// Tarifa por km congelada na criação (`DEC-19`).
   final int? kmRateCents;
 
+  /// DISP-01: início do ciclo de busca de entregador (null antes de despachar).
+  final DateTime? dispatchStartedAt;
+
+  /// DISP-01: motivo do término do ciclo — `ACCEPTED`, `MAX_ROUNDS`, `TIMEBOX`,
+  /// `NO_CANDIDATE` ou `CANCELED`. Só aparece com o ciclo encerrado.
+  final String? dispatchEndReason;
+
+  /// DISP-02: quando o primeiro aviso de demora da busca foi disparado (null
+  /// antes). O servidor garante idempotência: só dispara uma vez por ciclo.
+  final DateTime? dispatchWarningAt;
+
+  /// DISP-02 / DEC-03 §3.3: proposta de aumento de valor para destravar a
+  /// busca esgotada. Só existe enquanto o ciclo terminou em motivo recuperável
+  /// e o percentual está configurado — nunca aplicado sem consentimento.
+  final PriceBoostProposal? priceBoostProposal;
+
   bool get isScheduled => fulfillmentMode == 'SCHEDULED';
 
   /// DEC-20: aceito, mas a janela ainda não começou — está na agenda, não em
@@ -113,6 +135,18 @@ class DeliverySummary {
       pickupCodeBlockedUntil != null &&
       pickupCodeBlockedUntil!.isAfter(DateTime.now());
 
+  /// DISP-02: a busca esgotou de forma recuperável — `MAX_ROUNDS`, `TIMEBOX`
+  /// ou `NO_CANDIDATE` (plano §6.1.5). É quando o cliente vê as ações
+  /// "tentar novamente", "editar" e "cancelar".
+  bool get dispatchExhausted =>
+      status == 'REQUESTED' &&
+      const {'MAX_ROUNDS', 'TIMEBOX', 'NO_CANDIDATE'}.contains(
+        dispatchEndReason,
+      );
+
+  /// DISP-02: já houve o primeiro aviso de demora desta busca.
+  bool get dispatchSlowWarned => dispatchWarningAt != null;
+
   factory DeliverySummary.fromJson(Map<String, dynamic> json) =>
       DeliverySummary(
         id: json['id'] as String,
@@ -125,6 +159,7 @@ class DeliverySummary {
         deliveryLatitude: _toDouble(json['deliveryLatitude']),
         deliveryLongitude: _toDouble(json['deliveryLongitude']),
         recipientName: json['recipientName'] as String?,
+        recipientPhone: json['recipientPhone'] as String?,
         priceCents: json['priceCents'] as int?,
         courierFeeCents: json['courierFeeCents'] as int?,
         notes: json['notes'] as String?,
@@ -141,6 +176,36 @@ class DeliverySummary {
         deliveryWindowStart: _toDate(json['deliveryWindowStart']),
         deliveryWindowEnd: _toDate(json['deliveryWindowEnd']),
         kmRateCents: (json['kmRateCents'] as num?)?.toInt(),
+        dispatchStartedAt: _toDate(json['dispatchStartedAt']),
+        dispatchEndReason: json['dispatchEndReason'] as String?,
+        dispatchWarningAt: _toDate(json['dispatchWarningAt']),
+        priceBoostProposal: json['priceBoostProposal'] is Map<String, dynamic>
+            ? PriceBoostProposal.fromJson(
+                json['priceBoostProposal'] as Map<String, dynamic>,
+              )
+            : null,
+      );
+}
+
+/// DISP-02 / DEC-03 §3.3 — a proposta de aumento exibida antes do
+/// consentimento. O servidor calcula; o app só mostra `previousPriceCents` e
+/// `newPriceCents` e pede o aceite explícito.
+class PriceBoostProposal {
+  const PriceBoostProposal({
+    required this.boostPercent,
+    required this.previousPriceCents,
+    required this.newPriceCents,
+  });
+
+  final int boostPercent;
+  final int previousPriceCents;
+  final int newPriceCents;
+
+  factory PriceBoostProposal.fromJson(Map<String, dynamic> json) =>
+      PriceBoostProposal(
+        boostPercent: (json['boostPercent'] as num?)?.toInt() ?? 0,
+        previousPriceCents: (json['previousPriceCents'] as num?)?.toInt() ?? 0,
+        newPriceCents: (json['newPriceCents'] as num?)?.toInt() ?? 0,
       );
 }
 

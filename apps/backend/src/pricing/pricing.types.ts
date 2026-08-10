@@ -56,6 +56,15 @@ export type PricingBreakdown = {
   minFeeCents: number;
   minFeeApplied: boolean;
   platformFeePercent: number;
+  // DISP-02 / DEC-03 §3.3 — quando o cliente consente o aumento para destravar
+  // a busca, o snapshot do pedido é reescrito e este bloco anota o que mudou.
+  // O pedido não guarda histórico (a trilha está em `delivery_events` +
+  // auditoria); aqui fica só o laço com o preço anterior.
+  boost?: {
+    previousPriceCents: number;
+    boostPercent: number;
+    boostedAt: string;
+  };
 };
 
 export type PricingResult = {

@@ -95,6 +95,12 @@ function buildService(delivery: Delivery) {
     assertAllowedProductPhotoUrl: jest.fn(),
   };
   const finance = { creditDelivery: jest.fn().mockResolvedValue(undefined) };
+  const settings = {
+    get: jest.fn().mockResolvedValue({
+      dispatchFirstWarningMinutes: 5,
+      dispatchPriceBoostPercent: 20,
+    }),
+  };
 
   const service = new DeliveriesService(
     deliveries as never,
@@ -107,9 +113,9 @@ function buildService(delivery: Delivery) {
     finance as never,
     {} as never,
     {} as never,
-    {} as never,
+    { get: jest.fn(() => undefined) } as never,
     storage as never,
-    {} as never,
+    settings as never,
   );
   return { service, audit, notifications, deliveries, storage };
 }
