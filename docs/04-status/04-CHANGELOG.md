@@ -4,6 +4,36 @@ Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
 ## Fluxo cliente↔prestador nos planos — 2026-08-07
 
+## `DISP-02`: aviso de demora e ações do cliente na busca — 2026-08-10
+
+- **O cliente passa a ser avisado quando a busca demora** (plano §6.1.4): o job
+  de 10 s marca `dispatch_warning_at` (uma vez por ciclo, índice próprio) após
+  `dispatchFirstWarningMinutes` (default 5; 0 = imediato), com evento,
+  notificação e WebSocket `delivery:warning`. Conta do início do ciclo, não da
+  criação do pedido.
+- **Busca esgotada virou ação, não beco sem saída** (plano §6.1.5): o cliente
+  vê o motivo e pode **tentar de novo** (`POST /deliveries/:id/retry`, mesmo
+  caminho de recuperação do admin — quem recusou continua excluído e o preço
+  não muda), **editar** (`PATCH /deliveries/:id` — só endereços, destinatário,
+  telefone, observação e janelas; preço/peso/tipo/foto são recusados com `400`)
+  ou **cancelar**.
+- **Aumento de valor com consentimento explícito** (`DEC-03` §3.3, agora
+  completo): a busca esgotada devolve `priceBoostProposal` (anterior → novo,
+  `+dispatchPriceBoostPercent`, default 20; 0 desliga) e só
+  `POST /deliveries/:id/price-boost/consent` aplica — com evento, auditoria
+  (anterior → novo) e reabertura da busca. **Nenhum aumento é silencioso.**
+- **Painel admin**: "Aviso de demora (minutos)" e "Aumento para destravar a
+  busca (%)" na seção "Reoferta por aneis" (`DEC-02` — provisórios, sem deploy).
+- **App cliente**: tela de detalhe com o status da busca (procurando → aviso de
+  demora → esgotada com ações) e card da proposta de aumento com aceite;
+  diálogos de edição e cancelamento.
+- **13 migrations** (nova: `DispatchClientNotice`, revertida e reaplicada com
+  o banco vivo); `pnpm build`/`lint`/`test` verdes (**205 testes**); `pnpm smoke`
+  aprovado 3× com o cenário DISP-02; `flutter analyze`/`flutter test` verdes
+  nos dois apps e `dart analyze` no core.
+
+Evidência: `docs/04-status/entregas/2026-08-10-EVIDENCIA-DISP-02.md`.
+
 ## `DISP-01`: reoferta por anéis de raio — 2026-08-09
 
 - **O pedido sem aceite ganhou um ciclo com fim** (`DEC-03`, plano §6.1). Cada

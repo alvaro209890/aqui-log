@@ -2,11 +2,10 @@
 
 > **Atualizado:** 2026-08-09
 > **Status:** fonte de verdade para prioridade, dependências e ordem de execução
-> **Rodada atual:** `SCHED-01`+`B2C-06` fechados com evidência de runtime local
-> (modo agendado com janela de 30 min de antecedência, tarifa dual congelada,
-> aceite antecipado, reserva de agenda, migration com rollback ensaiado e smoke
-> vivo com cenário agendado).
-> **Próximo pacote:** `DISP-02` (aviso e ação na demora), `PAY-01` (ledger) ou `UX-02` (QA visual).
+> **Rodada atual:** `DISP-02` fechado com evidência de runtime local (aviso de
+> demora idempotente, ações do cliente na busca esgotada e aumento com
+> consentimento — `DEC-03` completo).
+> **Próximo pacote:** `PAY-01` (ledger), `UX-02` (QA visual) ou `OPS-01A` (runtime de distribuição no acer, `DEC-26`).
 > **Produto principal:** cliente pessoa física → motoboy, sem intermediário no fluxo
 > **Regra operacional:** desenvolvimento e validação local primeiro; nenhuma cloud é ligada sem pedido explícito do Álvaro
 
@@ -147,7 +146,7 @@ SMS não bloqueia a fundação de dados nem o preço v2, mas é gate para abrir 
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
 | DISP-01 | ✅ | `B2C-02` ✅, `DEC-03` ✅ | Busca por anéis de raio, exclusão de tentados, limite de rodadas e duração total, com término em estado recuperável (2026-08-09) |
-| DISP-02 | ▶️ | `DISP-01` ✅ | Notificar cliente sobre demora e oferecer ação explícita (inclui aumento com consentimento, `DEC-03`) |
+| DISP-02 | ✅ | `DISP-01` ✅ | Aviso de demora da busca + ações explícitas do cliente (tentar de novo, editar, cancelar) + aumento com consentimento — `DEC-03` fechado (2026-08-10) |
 | DISP-03 | ⏳ | `DISP-02` | Telemetria de tempo até aceite, recusas, expiração e ausência de candidato |
 
 Falha de aceite deve terminar em estado recuperável e compreensível, nunca em loop infinito de reofertas.
@@ -321,7 +320,7 @@ ser simplesmente omitida.
   tela de coleta com código;
 - **`B2C-06` + `SCHED-01`** — falta o cliente **escolher** o modo; a tarifa dual
   e o admin dela já existem desde `B2C-02`;
-- **`DISP-02`** — aviso ao cliente e ação explícita na demora (`DEC-03` ✅; `DISP-01` entregue em 2026-08-09);
+- **`DISP-02`** — ✅ entregue 2026-08-10 (aviso de demora + ações explícitas + aumento com consentimento); `DEC-03` completo;
 - **`PAY-01`** — ledger interno sem gateway (`DEC-05` ✅).
 
 Ao retomar:

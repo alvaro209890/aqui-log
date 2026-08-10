@@ -4,7 +4,8 @@
 > **Ambiente:** desenvolvimento local no PC `acer`; nada produtivo roda aqui
 > (runtime de distribuição do Aqui Log no acer = `OPS-01A`, decidido em
 > `DEC-26`).
-> **Baseline de código:** `bc0d553` (DISP-01) + `DISP-02` em andamento.
+> **Baseline de código:** `DISP-02` entregue (2026-08-10) sobre `b57cfb6`; antes:
+> `bc0d553` (DISP-01).
 
 ## 1. Produto vigente
 
@@ -18,14 +19,54 @@ coluna `company_id`).
 
 | Superfície | Estado observado na última rodada técnica | Limitação aberta |
 | --- | --- | --- |
-| Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso/modo**), **modo agendado com janela e aceite antecipado**, ofertas com **reserva de agenda** e **reoferta por anéis de raio com limite de rodadas e de tempo**, tracking, **preço v2 versionado com breakdown congelado**, **código de recolhimento na coleta**, dashboard e storage local | migrations revalidadas em banco vivo em 2026-08-09 (**12 migrations**) |
-| App cliente Flutter | Cadastro/login, pedido estruturado **com foto obrigatória**, **escolha entre agora e agendar (com janela)**, **código de recolhimento visível após o aceite**, histórico e acompanhamento | QA recente em dispositivo/emulador pendente |
+| Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso/modo**), **modo agendado com janela e aceite antecipado**, ofertas com **reserva de agenda** e **reoferta por anéis de raio com limite de rodadas e de tempo**, tracking, **preço v2 versionado com breakdown congelado**, **código de recolhimento na coleta**, **aviso de demora da busca + ações do cliente (tentar de novo, editar, cancelar) + aumento com consentimento**, dashboard e storage local | migrations revalidadas em banco vivo em 2026-08-10 (**13 migrations**) |
+| App cliente Flutter | Cadastro/login, pedido estruturado **com foto obrigatória**, **escolha entre agora e agendar (com janela)**, **código de recolhimento visível após o aceite**, **status da busca com aviso de demora e ações de recuperação (tentar/editar/cancelar/aceitar aumento)**, histórico e acompanhamento | QA recente em dispositivo/emulador pendente |
 | App motoboy Flutter | Cadastro, disponibilidade, oferta (**agendada mostra a janela e aceita antecipado**), **abas Em andamento / Agenda / Concluídas**, **coleta com código de recolhimento**, prova, entrega e carteira básica | sem botão de cancelar (é `COUR-02`); QA em dispositivo/emulador pendente |
-| Dashboard React | KPIs, entregas (**filtro e coluna de modo**), mapa, motoboys, usuários, auditoria, **configurações completas de preço/multas/agendamento/reoferta** e relatórios; identidade laranja + **tema claro/escuro** | seções "Modo agendado" e **"Reoferta por aneis"** ainda **sem QA de navegador**; busca da `TopBar` decorativa; **gráfico de pizza não renderiza setores** (Recharts 3.9 + React 19) — em `UX-02` |
+| Dashboard React | KPIs, entregas (**filtro e coluna de modo**), mapa, motoboys, usuários, auditoria, **configurações completas de preço/multas/agendamento/reoferta** (inclui **aviso de demora** e **aumento de destrava da busca**), relatórios; identidade laranja + **tema claro/escuro** | seções "Modo agendado" e **"Reoferta por aneis"** ainda **sem QA de navegador**; busca da `TopBar` decorativa; **gráfico de pizza não renderiza setores** (Recharts 3.9 + React 19) — em `UX-02` |
 | Postgres/Redis | Containers `aqui-log-postgres` (5433) e `aqui-log-redis` (6379) ativos | banco de teste é descartável; nenhum dado tem valor |
 | Cloud | Scaffolds Render/Vercel/Firebase; alvos **decididos** (`DEC-25`) | nenhum projeto ou credencial conectado |
 
 ## 3. Evidência das rodadas técnicas
+
+### `DISP-02` (rodada de 2026-08-10)
+
+Executado no banco descartável `aqui_log` (5433) com API em `PORT=3011`,
+sobre `b57cfb6` (docs `DEC-26`):
+
+- **13 migrations**, com a nova (`DispatchClientNotice`) revertida e reaplicada
+  no banco vivo: coluna opcional `dispatch_warning_at` + índice — o **aviso de
+  demora é idempotente** (uma vez por ciclo de busca);
+- **aviso de demora** (`plano §6.1.4`): o job de 10 s marca `dispatchWarningAt`
+  quando a busca passa de `dispatchFirstWarningMinutes` (default 5; 0 =
+  imediato, usado pelo smoke), com evento, notificação ao cliente e WebSocket
+  `delivery:warning` — conta do **início do ciclo**, não da criação;
+- **busca esgotada em estado recuperável** (`§6.1.5`): o cliente vê o motivo,
+  a **proposta de aumento** (anterior → novo, `+dispatchPriceBoostPercent`,
+  default 20; 0 desliga) e as ações **tentar novamente / editar / cancelar**;
+- `POST /deliveries/:id/retry` (cliente) reabre pelo **mesmo caminho de
+  recuperação do admin** (`dispatch(..., { reopen: true })`) — quem recusou
+  continua excluído — **sem mudar o preço** (`DEC-19`); `409` com busca ativa
+  ou motivo não recuperável;
+- `PATCH /deliveries/:id` (cliente) edita só o que não muda valor (endereços,
+  destinatário, telefone, observação, janelas do agendado); **preço, peso,
+  tipo, tamanho e foto são recusados com `400`** (`DEC-19`); exige busca
+  encerrada sem oferta pendente (`409`); **não reabre** a busca;
+- **aumento com consentimento** (`DEC-03` §3.3, agora 100% implementada):
+  `POST /deliveries/:id/price-boost/consent` recalcula a proposta com a
+  settings real do Redis, grava o novo preço no snapshot, registra evento +
+  auditoria (anterior → novo) + notificação + WebSocket `delivery:price-boosted`
+  e reabre a busca — é o **único** caminho que muda o preço de um pedido em
+  busca;
+- `pnpm build`, `pnpm lint` e `pnpm test` verdes (**21 suítes / 205 testes**,
+  +8 das regras puras novas);
+- `pnpm smoke` aprovado 3× com o bloco DISP-02 (aviso, `409`s, proposta,
+  edição sem preço, retry e consentimento);
+- app cliente: tela de detalhe com cards de aviso/esgotamento/aumento e
+  diálogos de edição e cancelamento; dashboard: 2 campos novos em "Reoferta
+  por aneis"; `flutter analyze`/`flutter test` verdes nos dois apps
+  (cliente 15, motoboy 18) e `dart analyze` no core.
+
+Documento: `docs/04-status/entregas/2026-08-10-EVIDENCIA-DISP-02.md`.
 
 ### `DISP-01` (rodada de 2026-08-09)
 
@@ -214,6 +255,7 @@ Evidência anterior (mobile, 2026-08-07):
 - [x] Aplicar e reverter `1785400000000-DeliveryPickupCode` em banco descartável.
 - [x] Aplicar e reverter `1785500000000-DeliveryScheduling` em banco descartável.
 - [x] Aplicar e reverter `1785600000000-DispatchRounds` em banco descartável.
+- [x] Aplicar e reverter `1785700000000-DispatchClientNotice` em banco descartável.
 - [ ] Fazer QA de navegador das seções "Modo agendado" e "Reoferta por aneis" do painel.
 - [ ] Gerar APKs atuais.
 - [ ] Fazer QA visual dos apps em emulador/dispositivo — pendente **e agora mais
@@ -222,12 +264,22 @@ Evidência anterior (mobile, 2026-08-07):
 ## 5. Próximo passo
 
 `BASE-04`, `B2C-01B`, `B2C-05`, `UX-01C`, `B2C-02`, `PICK-01`, `B2C-06`,
-`SCHED-01`, `COUR-01` e `DISP-01` estão `DONE`. `DISP-02` (avisar o cliente da
-demora e oferecer ação explícita, incluindo o aumento com consentimento do
-`DEC-03`) ficou `READY`: sua única dependência era `DISP-01`. `COUR-02` continua
-esperando só `PAY-01`, o ledger interno, que está `READY`. A fila também tem
-`UX-02` (QA visual — a parte mobile exige dispositivo/emulador e inclui o
-gráfico de pizza quebrado). Escolher um único ID, conforme o backlog.
+`SCHED-01`, `COUR-01`, `DISP-01` e `DISP-02` estão `DONE`. `DISP-02` entregou o
+aviso de demora e as ações explícitas do cliente (tentar de novo, editar,
+cancelar) e fechou o `DEC-03` por completo com o **aumento com consentimento**
+(nunca silencioso). Com isso, a reoferta sem aceite está integralmente no
+produto; `DEC-03` deixa de ser pendência. `COUR-02` continua esperando só
+`PAY-01`, o ledger interno, que está `READY`. A fila também tem `UX-02` (QA
+visual — a parte mobile exige dispositivo/emulador e inclui o gráfico de pizza
+quebrado) e `OPS-01A` (runtime de distribuição no acer via Cloudflare Tunnel,
+`DEC-26`). Escolher um único ID, conforme o backlog.
+
+Pendência aberta de `DISP-02`: o app cliente acompanha a busca por
+**polling/refresh** — os eventos `delivery:warning`/`delivery:dispatch-ended`/
+`delivery:price-boosted` estão prontos no gateway, mas o app não consome socket.
+A proposta de aumento usa só o percentual da settings (o cliente não escolhe
+valor) e o cancelamento do cliente usa o endpoint de status existente (a taxa
+segue em `COUR-02`/`PAY-01`).
 
 Pendência aberta de `DISP-01`: varredura de anel **sem candidato** não vira
 linha em lugar nenhum (não cria oferta e não gera evento, para não inundar
@@ -262,9 +314,10 @@ A tela é trabalho de `SUP-*`/`ADMIN-*` e não foi criada aqui.
 - Código de recolhimento: `DEC-24` + `FLOW-DEC-03` implementados em `PICK-01`
   (2026-08-09). A duração do bloqueio (15 min) é fixa em código e não foi
   exposta no admin.
-- Reoferta sem aceite: `DEC-03` implementada **em parte** por `DISP-01`
-  (2026-08-09) — a ampliação de raio com limite está de pé; o aumento de preço
-  com consentimento explícito continua em `DISP-02` e **não existe** no código.
+- Reoferta sem aceite: `DEC-03` **100% implementada** (2026-08-10, `DISP-01` +
+  `DISP-02`): ampliação de raio com limite, término recuperável com motivo,
+  aviso de demora e aumento de preço **com consentimento explícito** (nunca
+  silencioso) — nada mais pendente desta decisão.
 - Migração banco cloud Firestore: `OPS-DB-01`.
 - Modo agendado: `DEC-18`/`DEC-19`/`DEC-20` + `FLOW-DEC-02` implementados em
   `SCHED-01`+`B2C-06` (2026-08-09). Janela mínima de 15 min e horizonte de 30

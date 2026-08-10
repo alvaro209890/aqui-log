@@ -20,7 +20,7 @@
 | — | `PICK-01` | `DONE` (2026-08-09) | P1 | Código de recolhimento + foto do prestador na coleta | evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-PICK-01.md` |
 | 3 | `B2C-03` | `BLOCKED` | P1 | Avaliação mútua por papel | baseline estável e migração de ratings definida |
 | — | `DISP-01` | `DONE` (2026-08-09) | P1 | Reoferta por anéis, exclusão de tentados, limite de rodadas e de tempo | evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-DISP-01.md` |
-| 4 | `DISP-02` | `READY` | P1 | Avisar o cliente da demora e oferecer ação explícita (inclui aumento com consentimento, `DEC-03`) | `DISP-01` ✅ DONE — única dependência |
+| 4 | `DISP-02` | `DONE` (2026-08-10) | P1 | Avisar o cliente da demora e oferecer ação explícita (inclui aumento com consentimento, `DEC-03`) | `DISP-01` ✅; evidência: `docs/04-status/entregas/2026-08-10-EVIDENCIA-DISP-02.md` |
 | 5 | `PAY-01` | `READY` | P2 | Ledger interno (cliente + prestador) sem gateway | autorização `DEC-05` ✅; `B2C-02` DONE; `DEC-23` |
 | 6 | `COUR-02` | `BLOCKED` | P2 | Cancelamento prestador + taxa no saldo | `COUR-01` ✅ DONE; falta `PAY-01`; `DEC-22` ✅ decidida |
 | 7 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-02B`, `B2C-03A`, `DISP-03` (`B2C-01B` ok) |
@@ -214,12 +214,8 @@ mostrava.
 
 Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-COUR-01.md`.
 
-## 3. Tarefa pronta — `DISP-02`, `PAY-01` ou `UX-02`
+## 3. Tarefa pronta — `PAY-01` ou `UX-02`
 
-- **`DISP-02`** — o ciclo de reoferta já termina com motivo explícito
-  (`dispatch_end_reason`) e já sabe reabrir (`dispatch(..., { reopen: true })`).
-  Falta o que é do cliente: ser avisado da demora e escolher — tentar de novo,
-  editar, cancelar ou aprovar um valor maior (`DEC-03`, nunca silencioso).
 - **`PAY-01`** — ledger interno; destrava `COUR-02`.
 - **`UX-02`** — QA visual e de acessibilidade dos fluxos. O dashboard já saiu em
   `UX-01C` + tema escuro; o que resta exige **dispositivo/emulador**, ainda
@@ -242,6 +238,7 @@ Detalhe e aceite em
 | `COUR-01` | ✅ `DONE` — UI Em andamento / Agenda | — |
 | `PICK-01` | ✅ `DONE` — `pickup_code` + foto do prestador na coleta | — |
 | `COUR-02` | Cancelamento prestador + taxa no saldo | exige `PAY-01` |
+| `DISP-02` | ✅ `DONE` — aviso de demora + ações explícitas (tentar/editar/cancelar) + aumento com consentimento | `DISP-01`; evidência 2026-08-10 |
 
 ## 5. Regras para promover uma tarefa
 

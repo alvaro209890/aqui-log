@@ -224,3 +224,21 @@ Registro append-only. Nada acima foi alterado.
 | QA de navegador da seção nova do painel | Não executado | Validada por build e API |
 
 Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-DISP-01.md`.
+
+## `DISP-02` — aviso de demora e ações do cliente na busca (2026-08-10) ✅
+
+Registro append-only. Nada acima foi alterado.
+
+| Funcionalidade | Estado | Observação |
+| --- | --- | --- |
+| Aviso de demora da busca | Funcional | `dispatchFirstWarningMinutes` (default 5; 0 = imediato); idempotente por ciclo (`dispatch_warning_at` + índice); evento + notificação + WebSocket `delivery:warning` |
+| "Tentar novamente" (cliente) | Funcional | `POST /deliveries/:id/retry` → mesmo caminho do admin (`reopen: true`); `409` com busca ativa; não muda preço (`DEC-19`) |
+| "Editar" (cliente) | Funcional | `PATCH /deliveries/:id`: endereços, destinatário, telefone, observação, janelas; preço/peso/tipo/foto recusados (`400`); exige busca sem oferta pendente |
+| "Cancelar" (cliente) | Funcional | via `PATCH /deliveries/:id/status` existente (com motivo opcional no app); taxa de cancelamento fica em `COUR-02`/`PAY-01` |
+| Aumento com consentimento (`DEC-03` §3.3) | Funcional | `POST /deliveries/:id/price-boost/consent`: proposta anterior → novo, aceite explícito, evento + auditoria, reabre a busca; `dispatchPriceBoostPercent` (default 20; 0 desliga) |
+| Proposta visível no app cliente | Funcional | Card com anterior → novo (+%) e botão de aceite; nunca aumento silencioso |
+| Settings no painel | Funcional | "Aviso de demora (minutos)" e "Aumento para destravar a busca (%)" na seção "Reoferta por aneis" |
+| Cliente recebe o aviso em tempo real | Não executado | app acompanha por polling; eventos de socket prontos no gateway |
+| QA de navegador do painel / QA visual do app | Não executado | segue em `UX-02` |
+
+Evidência: `docs/04-status/entregas/2026-08-10-EVIDENCIA-DISP-02.md`.
