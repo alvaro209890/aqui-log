@@ -1,6 +1,5 @@
 import 'package:aqui_log_cliente/app_state.dart';
 import 'package:aqui_log_cliente/main.dart';
-import 'package:aqui_log_cliente/session_store.dart';
 import 'package:aqui_log_cliente/screens/deliveries_screen.dart';
 import 'package:aqui_log_cliente/screens/wallet_screen.dart';
 import 'package:aqui_log_cliente/screens/delivery_detail_screen.dart';
