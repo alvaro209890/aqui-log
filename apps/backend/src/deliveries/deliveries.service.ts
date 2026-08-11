@@ -931,9 +931,15 @@ export class DeliveriesService {
    */
   async warnSlowDispatch(): Promise<number> {
     const platform = await this.settings.get();
+    // Busca ativa inclui `OFFERED`: o ciclo continua em andamento enquanto há
+    // oferta pendente aguardando o motoboy aceitar/recusar/expirar (o caso
+    // comum, já que o despacho roda logo na criação). Filtrar só por
+    // `REQUESTED` fazia o aviso nunca disparar com oferta pendente no
+    // instante da checagem — o cliente só veria o aviso nas raras janelas
+    // entre rodadas sem oferta ativa.
     const active = await this.deliveries.find({
       where: {
-        status: DeliveryStatus.REQUESTED,
+        status: In([DeliveryStatus.REQUESTED, DeliveryStatus.OFFERED]),
         dispatchEndReason: IsNull(),
         dispatchWarningAt: IsNull(),
       },
