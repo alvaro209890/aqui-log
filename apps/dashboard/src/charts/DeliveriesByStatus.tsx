@@ -17,6 +17,14 @@ export function DeliveriesByStatus({
     <div className="chart-wrap" data-testid="chart-deliveries-by-status">
       <ResponsiveContainer width="100%" height={240}>
         <PieChart>
+          {/*
+            UX-02 — Recharts 3.9 + React 19 (StrictMode): a animação padrão do
+            Pie usa um estado de raio interpolado por rAF que o double-invoke
+            de efeitos do StrictMode corrompe, colapsando os setores numa
+            linha quase invisível em vez do círculo. `isAnimationActive={false}`
+            evita a máquina de animação problemática; o gráfico é pequeno o
+            bastante para a perda de animação não ser sentida.
+          */}
           <Pie
             data={data}
             dataKey="value"
@@ -24,6 +32,7 @@ export function DeliveriesByStatus({
             cx="50%"
             cy="50%"
             outerRadius={80}
+            isAnimationActive={false}
             label={({ name, percent }) =>
               `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
             }

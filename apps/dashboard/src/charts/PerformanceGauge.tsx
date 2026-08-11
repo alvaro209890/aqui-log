@@ -22,6 +22,8 @@ export function PerformanceGauge({
     <div className="gauge-wrap" data-testid="chart-performance-gauge">
       <ResponsiveContainer width="100%" height={200}>
         <PieChart>
+          {/* UX-02 — mesmo achado de DeliveriesByStatus.tsx: a animação
+              padrão do Pie do Recharts 3.9 colapsa em React 19 StrictMode. */}
           <Pie
             data={data}
             dataKey="value"
@@ -32,6 +34,7 @@ export function PerformanceGauge({
             cx="50%"
             cy="90%"
             stroke="none"
+            isAnimationActive={false}
           >
             <Cell fill={themeColors.primary} />
             <Cell fill={themeColors.chartTrack} />
