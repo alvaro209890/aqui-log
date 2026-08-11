@@ -256,6 +256,77 @@ class PresignResult {
   );
 }
 
+/// PAY-01 / `DEC-05` — extrato da carteira interna (`GET /finance/statement`).
+///
+/// O produto é pré-pago: criar pedido reserva o preço no ledger. `available` é
+/// o que ainda dá para gastar, `reserved` é o que está preso em pedidos em
+/// andamento e `balance` é a soma dos dois.
+class WalletStatement {
+  const WalletStatement({
+    required this.availableCents,
+    required this.reservedCents,
+    required this.balanceCents,
+    this.entries = const [],
+  });
+
+  final int availableCents;
+  final int reservedCents;
+  final int balanceCents;
+  final List<WalletEntry> entries;
+
+  factory WalletStatement.fromJson(Map<String, dynamic> json) =>
+      WalletStatement(
+        availableCents: (json['availableCents'] as num?)?.toInt() ?? 0,
+        reservedCents: (json['reservedCents'] as num?)?.toInt() ?? 0,
+        balanceCents: (json['balanceCents'] as num?)?.toInt() ?? 0,
+        entries: ((json['entries'] as List<dynamic>?) ?? const [])
+            .map((item) => WalletEntry.fromJson(item as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
+/// Uma linha do extrato: o servidor já agrega a transação inteira e devolve o
+/// efeito dela no saldo **disponível** (negativo = saiu, positivo = entrou).
+class WalletEntry {
+  const WalletEntry({
+    required this.id,
+    required this.type,
+    required this.amountCents,
+    required this.description,
+    this.createdAt,
+  });
+
+  final String id;
+  final String type;
+  final int amountCents;
+  final String description;
+  final DateTime? createdAt;
+
+  factory WalletEntry.fromJson(Map<String, dynamic> json) => WalletEntry(
+    id: '${json['id']}',
+    type: '${json['type']}',
+    amountCents: (json['amountCents'] as num?)?.toInt() ?? 0,
+    description: '${json['description'] ?? ''}',
+    createdAt: json['createdAt'] == null
+        ? null
+        : DateTime.tryParse('${json['createdAt']}'),
+  );
+}
+
+/// Formata centavos no padrão brasileiro (R$ 1.234,56).
+String formatCents(int cents) {
+  final negativo = cents < 0;
+  final valor = cents.abs();
+  final reais = (valor ~/ 100).toString();
+  final centavos = (valor % 100).toString().padLeft(2, '0');
+  final buffer = StringBuffer();
+  for (var i = 0; i < reais.length; i++) {
+    if (i > 0 && (reais.length - i) % 3 == 0) buffer.write('.');
+    buffer.write(reais[i]);
+  }
+  return '${negativo ? '-' : ''}R\$ $buffer,$centavos';
+}
+
 class ApiException implements Exception {
   const ApiException(this.message, this.statusCode);
   final String message;

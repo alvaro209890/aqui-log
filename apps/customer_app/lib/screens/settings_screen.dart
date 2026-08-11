@@ -7,11 +7,16 @@ class SettingsScreen extends StatelessWidget {
     required this.userName,
     required this.email,
     required this.onLogout,
+    this.onOpenWallet,
   });
 
   final String userName;
   final String email;
   final VoidCallback onLogout;
+
+  /// PAY-01: o pedido é pré-pago, então o cliente precisa de um lugar para ver
+  /// o próprio saldo antes de descobrir o `402` na hora de publicar.
+  final VoidCallback? onOpenWallet;
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +33,16 @@ class SettingsScreen extends StatelessWidget {
             leading: const CircleAvatar(child: Icon(Icons.person)),
             title: Text(userName),
             subtitle: Text(email.isEmpty ? 'Conta cliente' : email),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.account_balance_wallet_outlined),
+            title: const Text('Minha carteira'),
+            subtitle: const Text('Saldo, valores reservados e extrato'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: onOpenWallet,
           ),
         ),
         const SizedBox(height: 12),

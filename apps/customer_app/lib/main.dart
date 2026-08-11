@@ -11,6 +11,7 @@ import 'screens/login_screen.dart';
 import 'screens/new_order_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/wallet_screen.dart';
 
 void main() => runApp(const CustomerApp());
 
@@ -27,6 +28,14 @@ class _CustomerAppState extends State<CustomerApp> {
   late final CustomerAppState state = widget.state ?? CustomerAppState();
 
   @override
+  void initState() {
+    super.initState();
+    // Auto-login: tenta restaurar a sessão gravada antes de decidir qual tela
+    // mostrar. Enquanto isso a `home` é a abertura, não o login.
+    if (!state.booted) state.bootstrap();
+  }
+
+  @override
   void dispose() {
     if (widget.state == null) state.dispose();
     super.dispose();
@@ -40,7 +49,9 @@ class _CustomerAppState extends State<CustomerApp> {
         title: 'Aqui Log Cliente',
         debugShowCheckedModeBanner: false,
         theme: AquiLogTheme.light(),
-        home: state.isAuthenticated
+        home: !state.booted
+            ? const _SplashScreen()
+            : state.isAuthenticated
             ? CustomerShell(state: state)
             : LoginScreen(
                 loading: state.loading,
@@ -63,6 +74,29 @@ class _CustomerAppState extends State<CustomerApp> {
       ),
     );
   }
+}
+
+/// Abertura do app enquanto a sessão gravada é restaurada (auto-login).
+class _SplashScreen extends StatelessWidget {
+  const _SplashScreen();
+
+  @override
+  Widget build(BuildContext context) => const Scaffold(
+    body: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AquiLogBrand(),
+          SizedBox(height: 28),
+          SizedBox(
+            width: 26,
+            height: 26,
+            child: CircularProgressIndicator(strokeWidth: 2.5),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class CustomerShell extends StatefulWidget {
@@ -151,6 +185,15 @@ class _CustomerShellState extends State<CustomerShell> {
     if (created == true) await _load();
   }
 
+  void _openWallet() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            WalletScreen(loadStatement: widget.state.api.walletStatement),
+      ),
+    );
+  }
+
   Future<String> _uploadPhoto(XFile photo) async {
     final bytes = await photo.readAsBytes();
     final contentType = photo.mimeType ?? 'image/jpeg';
@@ -184,8 +227,9 @@ class _CustomerShellState extends State<CustomerShell> {
       ),
       SettingsScreen(
         userName: widget.state.userName,
-        email: '${widget.state.session?.user['email'] ?? ''}',
+        email: widget.state.userEmail,
         onLogout: widget.state.logout,
+        onOpenWallet: _openWallet,
       ),
     ];
 

@@ -201,6 +201,10 @@ class AquiLogApiClient {
   Future<Map<String, dynamic>> statement() async =>
       await _request('GET', '/finance/statement') as Map<String, dynamic>;
 
+  /// PAY-01 — o mesmo extrato de [statement], já tipado para a tela de carteira.
+  Future<WalletStatement> walletStatement() async =>
+      WalletStatement.fromJson(await statement());
+
   Future<GeocodeResult> geocode(String address) async {
     final data =
         await _request('POST', '/geo/geocode', body: {'address': address})

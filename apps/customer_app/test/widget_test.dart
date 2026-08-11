@@ -1,5 +1,8 @@
+import 'package:aqui_log_cliente/app_state.dart';
 import 'package:aqui_log_cliente/main.dart';
+import 'package:aqui_log_cliente/session_store.dart';
 import 'package:aqui_log_cliente/screens/deliveries_screen.dart';
+import 'package:aqui_log_cliente/screens/wallet_screen.dart';
 import 'package:aqui_log_cliente/screens/delivery_detail_screen.dart';
 import 'package:aqui_log_cliente/screens/home_screen.dart';
 import 'package:aqui_log_cliente/screens/login_screen.dart';
@@ -309,9 +312,121 @@ void main() {
   });
 
   testWidgets('CustomerApp boots login shell', (tester) async {
-    await tester.pumpWidget(const CustomerApp());
-    await tester.pump();
+    // Sem sessão gravada, a abertura termina no login.
+    final state = CustomerAppState(store: MemorySessionStore());
+    await tester.pumpWidget(CustomerApp(state: state));
+    await tester.pumpAndSettle();
     expect(find.text('Acesso do cliente'), findsOneWidget);
+  });
+
+  // Auto-login: quem já entrou não vê a tela de login de novo ao reabrir o app.
+  testWidgets('CustomerApp restaura a sessao gravada (auto-login)', (
+    tester,
+  ) async {
+    final state = CustomerAppState(
+      store: MemorySessionStore(
+        const StoredSession(
+          accessToken: 'token-guardado',
+          // Sem refresh token o bootstrap não chama a rede: o teste cobre a
+          // restauração, não o servidor.
+          refreshToken: null,
+          user: {'id': 'u1', 'name': 'Álvaro', 'email': 'alvaro@teste.com'},
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(CustomerApp(state: state));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Acesso do cliente'), findsNothing);
+    expect(find.textContaining('Olá, Álvaro'), findsOneWidget);
+    expect(state.isAuthenticated, isTrue);
+    expect(state.api.accessToken, 'token-guardado');
+  });
+
+  test('logout apaga a sessao gravada', () async {
+    final store = MemorySessionStore(
+      const StoredSession(
+        accessToken: 'token-guardado',
+        refreshToken: null,
+        user: {'id': 'u1', 'name': 'Álvaro'},
+      ),
+    );
+    final state = CustomerAppState(store: store);
+    await state.bootstrap();
+    expect(state.isAuthenticated, isTrue);
+
+    await state.logout();
+
+    expect(state.isAuthenticated, isFalse);
+    expect(await store.read(), isNull);
+  });
+
+  test('StoredSession sobrevive ao round-trip de JSON', () {
+    const original = StoredSession(
+      accessToken: 'a',
+      refreshToken: 'r',
+      user: {'id': 'u1', 'name': 'Álvaro'},
+    );
+    final decoded = StoredSession.fromJson(original.toJson());
+    expect(decoded, isNotNull);
+    expect(decoded!.accessToken, 'a');
+    expect(decoded.refreshToken, 'r');
+    expect(decoded.user['name'], 'Álvaro');
+    // Sessão sem token não vale: o app precisa cair no login.
+    expect(StoredSession.fromJson(const {'user': {}}), isNull);
+  });
+
+  // OPS-01A / DEC-26: um APK instalado num celular de verdade não enxerga
+  // localhost nem o 10.0.2.2 do emulador — o padrão precisa ser o domínio
+  // público do túnel, senão o app sai da fábrica sem conseguir falar com a API.
+  test('a URL padrao da API e o dominio publico', () {
+    expect(kDefaultApiBaseUrl, 'https://aquilog-api.cursar.space/api/v1');
+  });
+
+  // PAY-01 / DEC-05: o pedido é pré-pago, então o cliente precisa ver o saldo.
+  testWidgets('WalletScreen mostra saldo, reservado e extrato', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: WalletScreen(
+          loadStatement: () async => const WalletStatement(
+            availableCents: 4250,
+            reservedCents: 1380,
+            balanceCents: 5630,
+            entries: [
+              WalletEntry(
+                id: 't1',
+                type: 'RESERVATION',
+                amountCents: -1380,
+                description: 'Reserva do pedido AQL-1',
+              ),
+              WalletEntry(
+                id: 't2',
+                type: 'ADJUSTMENT',
+                amountCents: 5630,
+                description: 'Credito inicial',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('R\$ 42,50'), findsOneWidget);
+    expect(find.text('R\$ 13,80'), findsOneWidget);
+    expect(find.text('-R\$ 13,80'), findsOneWidget);
+    expect(find.text('Reserva do pedido AQL-1'), findsOneWidget);
+  });
+
+  group('formatCents', () {
+    test('formata no padrao brasileiro', () {
+      expect(formatCents(0), r'R$ 0,00');
+      expect(formatCents(5), r'R$ 0,05');
+      expect(formatCents(1380), r'R$ 13,80');
+      expect(formatCents(123456789), r'R$ 1.234.567,89');
+      expect(formatCents(-1380), r'-R$ 13,80');
+    });
   });
 
   group('OrderMeta encode/decode', () {

@@ -236,6 +236,15 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       });
       if (!mounted) return;
       Navigator.of(context).pop(true);
+    } on ApiException catch (e) {
+      // PAY-01 / DEC-05: o produto é pré-pago. Sem saldo a API responde 402, e
+      // "Não foi possível publicar o pedido: Saldo insuficiente" não diz ao
+      // cliente onde resolver — a carteira fica no perfil.
+      setState(
+        () => error = e.statusCode == 402
+            ? '${e.message}\nConfira o saldo em Perfil › Minha carteira.'
+            : e.message,
+      );
     } catch (e) {
       setState(() => error = 'Não foi possível publicar o pedido: $e');
     } finally {
