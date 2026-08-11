@@ -12,6 +12,12 @@ import { User } from '../database/entities/user.entity';
 import { AccountStatus, NotificationType } from '../database/enums';
 import { NotificationsService } from '../notifications/notifications.service';
 
+/** Colunas cruas que a junção com `users` acrescenta ao resultado. */
+interface CourierRawUser {
+  user_name?: string;
+  user_email?: string;
+}
+
 @Injectable()
 export class CouriersService {
   constructor(
@@ -21,17 +27,70 @@ export class CouriersService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  async findAll(page?: string, limit?: string) {
-    if (page != null || limit != null) {
-      const p = parsePagination(page, limit);
-      const [items, total] = await this.couriers.findAndCount({
-        order: { createdAt: 'DESC' },
-        skip: p.skip,
-        take: p.limit,
-      });
-      return toPageResult(items, total, p.page, p.limit);
+  /**
+   * `ADMIN-02A` — lista de entregadores para o painel.
+   *
+   * Aprovar cadastro é decisão de revisão humana (`PLANO_ADMIN` §2.3 e §7:
+   * aprovação em lote sem revisão individual é proibida), e até aqui a lista
+   * devolvia só os campos de `couriers` — quem aprovava via um UUID, um CPF e
+   * um tipo de veículo, sem nome nem e-mail. Por isso o nome e o e-mail do
+   * usuário entram no payload, por junção explícita (`Courier` não tem relação
+   * declarada com `User`).
+   *
+   * `status` filtra a fila (`PENDING` é a que interessa ao operador); valor
+   * inválido é ignorado em vez de derrubar a página do painel.
+   */
+  async findAll(page?: string, limit?: string, status?: string) {
+    const filtro = this.parseStatus(status);
+    const p = parsePagination(page, limit);
+    const usaPagina = page != null || limit != null;
+
+    const qb = this.couriers
+      .createQueryBuilder('courier')
+      .leftJoin(User, 'user', 'user.id = courier.userId')
+      .addSelect(['user.name', 'user.email'])
+      .orderBy('courier.createdAt', 'DESC');
+    if (filtro) qb.where('courier.status = :status', { status: filtro });
+
+    if (!usaPagina) {
+      const { entities, raw } = await qb.getRawAndEntities<CourierRawUser>();
+      return entities.map((item, i) => this.withUser(item, raw[i]));
     }
-    return this.couriers.find({ order: { createdAt: 'DESC' } });
+
+    const total = await qb.getCount();
+    const { entities, raw } = await qb
+      .skip(p.skip)
+      .take(p.limit)
+      .getRawAndEntities<CourierRawUser>();
+    return toPageResult(
+      entities.map((item, i) => this.withUser(item, raw[i])),
+      total,
+      p.page,
+      p.limit,
+    );
+  }
+
+  /** Quantos cadastros esperam revisão — o sino da fila no painel. */
+  async pendingCount() {
+    return {
+      pending: await this.couriers.countBy({ status: AccountStatus.PENDING }),
+    };
+  }
+
+  private parseStatus(status?: string): AccountStatus | undefined {
+    if (!status) return undefined;
+    const alvo = status.toUpperCase();
+    return (Object.values(AccountStatus) as string[]).includes(alvo)
+      ? (alvo as AccountStatus)
+      : undefined;
+  }
+
+  private withUser(courier: Courier, raw?: CourierRawUser) {
+    return {
+      ...courier,
+      name: raw?.user_name ?? null,
+      email: raw?.user_email ?? null,
+    };
   }
 
   async approve(id: string, actorId?: string) {

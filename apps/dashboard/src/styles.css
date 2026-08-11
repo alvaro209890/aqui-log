@@ -341,3 +341,29 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .recharts-cartesian-axis-tick text { fill: var(--color-text-secondary); }
 .recharts-default-tooltip { background: var(--color-surface) !important; border: 1px solid var(--color-border) !important; color: var(--color-text-primary) !important; border-radius: 8px; }
 .recharts-tooltip-label, .recharts-tooltip-item { color: var(--color-text-primary) !important; }
+
+/*
+ * ADMIN-02A — fila de aprovação de entregadores.
+ *
+ * Aprovar cadastro é revisão humana (PLANO_ADMIN §2.3 e §7), então a fila usa
+ * cartão, não linha de tabela: nome, e-mail, CPF, veículo, tempo de espera e
+ * documentos precisam caber lado a lado sem o operador abrir nada. Só tokens —
+ * nenhum hexadecimal de marca fora deste arquivo (UX-01C).
+ */
+.approval-queue { display: grid; gap: 12px; padding: 0 20px 20px; }
+.approval-card { border: 1px solid var(--color-border); border-left: 3px solid var(--color-warning); border-radius: 12px; padding: 16px; background: var(--color-surface); display: grid; gap: 14px; }
+.approval-identity strong { display: block; font-size: 15px; color: var(--color-text-primary); }
+.approval-identity span { font-size: 12px; color: var(--color-text-secondary); }
+.approval-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 0; }
+.approval-facts dt { font-size: 10px; letter-spacing: .6px; text-transform: uppercase; color: var(--color-text-heading); }
+.approval-facts dd { margin: 2px 0 0; font-size: 13px; color: var(--color-text-primary); }
+.approval-facts dd em { font-style: normal; color: var(--color-warning-text); font-size: 12px; }
+.approval-docs > span { font-size: 10px; letter-spacing: .6px; text-transform: uppercase; color: var(--color-text-heading); }
+.approval-docs ul { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+.approval-docs a { display: inline-block; padding: 5px 10px; border-radius: 8px; font-size: 12px; color: var(--color-primary-strong); background: var(--color-primary-soft); border: 1px solid var(--color-border); text-decoration: none; }
+.approval-docs a:hover { border-color: var(--color-primary); }
+.approval-docs p { margin: 6px 0 0; font-size: 12px; color: var(--color-text-secondary); }
+.approval-actions { display: flex; align-items: center; gap: 12px; }
+.cell-muted { color: var(--color-text-tertiary); font-size: 10px; }
+.modal-summary { margin: 0 0 10px; font-size: 13px; color: var(--color-text-primary); line-height: 1.5; }
+.modal-note { margin: 0; font-size: 12px; color: var(--color-text-secondary); line-height: 1.5; }

@@ -105,13 +105,19 @@ export interface DeliveryRecord {
 export interface CourierRecord {
   id: string;
   userId?: string;
+  /** ADMIN-02A: nome e e-mail vêm da junção com `users` — sem eles não dá para
+   * revisar um cadastro, só para carimbar um UUID. */
+  name?: string | null;
+  email?: string | null;
   document?: string;
   vehicleType?: string;
   vehiclePlate?: string;
+  documentUrls?: string[];
   status: string;
   available?: boolean;
   lastLatitude?: number | null;
   lastLongitude?: number | null;
+  createdAt?: string;
 }
 
 export interface RatingRecord {
@@ -352,14 +358,17 @@ export const api = {
     );
     return asPage(data);
   },
-  couriers: async (token: string, page = 1, limit = 20) =>
+  couriers: async (token: string, page = 1, limit = 20, status?: string) =>
     asPage(
       await request<CourierRecord[] | PageResult<CourierRecord>>(
-        `/couriers${qs({ page, limit })}`,
+        `/couriers${qs({ page, limit, status })}`,
         {},
         token,
       ),
     ),
+  /** ADMIN-02A: quantos cadastros esperam revisão. */
+  couriersPendingCount: (token: string) =>
+    request<{ pending: number }>('/couriers/pending-count', {}, token),
   users: async (token: string, page = 1, limit = 20) =>
     asPage(
       await request<UserRecord[] | PageResult<UserRecord>>(

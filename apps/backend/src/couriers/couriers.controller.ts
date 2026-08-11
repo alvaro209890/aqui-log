@@ -40,8 +40,22 @@ export class CouriersController {
 
   @Get()
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
-    return this.couriers.findAll(page, limit);
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.couriers.findAll(page, limit, status);
+  }
+
+  /**
+   * `ADMIN-02A` — contador da fila de aprovação. Fica antes de `:id/...` na
+   * ordem de rotas para não ser capturado como um id.
+   */
+  @Get('pending-count')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  pendingCount() {
+    return this.couriers.pendingCount();
   }
 
   @Patch(':id/approve')
