@@ -92,8 +92,17 @@ function buildService(delivery: Delivery) {
     ),
   };
   const settings = { get: jest.fn().mockResolvedValue(SETTINGS) };
+  const dataSource = {
+    transaction: jest.fn((fn: (manager: unknown) => Promise<unknown>) =>
+      fn({
+        save: (entity: unknown) => Promise.resolve(entity),
+        create: (_entityClass: unknown, data: unknown) => data,
+      }),
+    ),
+  } as never;
 
   const service = new DeliveriesService(
+    dataSource,
     deliveriesRepo as never,
     couriers as never,
     {} as never,
@@ -101,10 +110,14 @@ function buildService(delivery: Delivery) {
     {} as never,
     {} as never,
     {} as never,
-    {} as never,
-    {} as never,
+    {
+      reserve: jest.fn().mockResolvedValue(null),
+      settle: jest.fn().mockResolvedValue(null),
+      release: jest.fn().mockResolvedValue(null),
+    } as never,
     {} as never,
     { get: jest.fn(() => undefined) } as never,
+    {} as never,
     {} as never,
     settings as never,
     {} as never,

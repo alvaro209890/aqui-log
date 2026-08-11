@@ -16,6 +16,9 @@ import { DeliveryOffer } from './database/entities/delivery-offer.entity';
 import { Delivery } from './database/entities/delivery.entity';
 import { Notification } from './database/entities/notification.entity';
 import { DeviceToken } from './database/entities/device-token.entity';
+import { FinancialAccount } from './database/entities/financial-account.entity';
+import { LedgerEntry } from './database/entities/ledger-entry.entity';
+import { LedgerTransaction } from './database/entities/ledger-transaction.entity';
 import { PasswordResetToken } from './database/entities/password-reset-token.entity';
 import { Rating } from './database/entities/rating.entity';
 import { RefreshToken } from './database/entities/refresh-token.entity';
@@ -62,6 +65,9 @@ import { UsersModule } from './users/users.module';
           Notification,
           AuditLog,
           WalletTransaction,
+          FinancialAccount,
+          LedgerTransaction,
+          LedgerEntry,
           Rating,
           RefreshToken,
           PasswordResetToken,

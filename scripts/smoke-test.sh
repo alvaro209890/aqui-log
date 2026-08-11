@@ -68,6 +68,17 @@ jq -er '.accessToken' <<<"$refreshed" >/dev/null
 # Cliente pessoa física: registro auto-aprovado com auto-login (B2C)
 customer_login="$(api POST /auth/register/customer "" "$(jq -nc --arg name 'Cliente Teste' --arg email "$CUSTOMER_EMAIL" --arg password "$TEST_PASSWORD" --arg document "$RUN_DOC" --arg phone '+5531999999999' '{name:$name,email:$email,password:$password,document:$document,phone:$phone}')")"
 customer_token="$(jq -er '.accessToken' <<<"$customer_login")"
+customer_id="$(jq -er '.user.customerId' <<<"$customer_login")"
+
+# PAY-01 / DEC-05: produto pré-pago. A criação de pedido reserva o preço no
+# ledger do cliente, então o smoke credita saldo de teste ANTES de qualquer
+# pedido, pela operação administrativa auditada (única forma de crédito sem
+# gateway). R$ 10.000,00 cobrem todos os pedidos dos blocos seguintes.
+adjust_response="$(api POST "/finance/accounts/customer/$customer_id/adjust" "$admin_token" "$(jq -nc '{amountCents:1000000,reason:"Credito de teste PAY-01"}')")"
+jq -e '.id != null' <<<"$adjust_response" >/dev/null
+api GET /finance/statement "$customer_token" | jq -e '.availableCents == 1000000 and .reservedCents == 0 and .balanceCents == 1000000' >/dev/null
+api GET /finance/statement "$customer_token" | jq -e '.entries[0].type == "ADJUSTMENT" and (.entries[0].description | test("Credito de teste PAY-01")) and .entries[0].amountCents == 1000000' >/dev/null
+api GET /audit "$admin_token" | jq -e 'any(.action == "FINANCE_ADJUSTMENT" and .metadata.reason == "Credito de teste PAY-01")' >/dev/null
 
 courier="$(api POST /auth/register/courier "" "$(jq -nc --arg name 'Entregador Teste' --arg email "$COURIER_EMAIL" --arg password "$TEST_PASSWORD" --arg document "$RUN_DOC" '{name:$name,email:$email,password:$password,document:$document,vehicleType:"MOTORCYCLE",vehiclePlate:"AQL1T23",documentUrls:["https://example.com/documento-teste.pdf"]}')")"
 courier_id="$(jq -er '.courierId' <<<"$courier")"
@@ -144,7 +155,7 @@ jq -e --arg photo "$product_photo" '.productType == "OTHER" and .packageSize == 
 # disponíveis (auto-dispatch no create). Se ninguém estava online no
 # momento, cai no dispatch manual do admin.
 offers="$(api GET /deliveries/offers/mine "$courier_token")"
-offer_id="$(jq -er --arg deliveryId "$delivery_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty' <<<"$offers")"
+offer_id="$(jq -r --arg deliveryId "$delivery_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty' <<<"$offers")"
 if [[ -z "$offer_id" ]]; then
   dispatch="$(api POST "/deliveries/$delivery_id/dispatch" "$admin_token")"
   offer_id="$(jq -er '.offer.id' <<<"$dispatch")"
@@ -227,7 +238,7 @@ jq -e --argjson km "$km_agendado" '.pricingBreakdown.kmRateCents == $km and .pri
 
 # DEC-20: o agendado ja nasce na fila de ofertas e pode ser aceito agora.
 scheduled_offers="$(api GET /deliveries/offers/mine "$courier_token")"
-scheduled_offer_id="$(jq -er --arg deliveryId "$scheduled_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty' <<<"$scheduled_offers")"
+scheduled_offer_id="$(jq -r --arg deliveryId "$scheduled_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty' <<<"$scheduled_offers")"
 if [[ -z "$scheduled_offer_id" ]]; then
   scheduled_dispatch="$(api POST "/deliveries/$scheduled_id/dispatch" "$admin_token")"
   scheduled_offer_id="$(jq -er '.offer.id' <<<"$scheduled_dispatch")"
@@ -305,7 +316,7 @@ disp_id="$(jq -er '.id' <<<"$disp")"
 disp_price="$(jq -er '.priceCents' <<<"$disp")"
 
 # Rodada 1: a oferta tem de ir para quem esta em cima da coleta, no anel de 3 km.
-disp_offer1="$(api GET /deliveries/offers/mine "$courier_token" | jq -er --arg deliveryId "$disp_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
+disp_offer1="$(api GET /deliveries/offers/mine "$courier_token" | jq -r --arg deliveryId "$disp_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
 if [[ -z "$disp_offer1" ]]; then
   disp_offer1="$(api POST "/deliveries/$disp_id/dispatch" "$admin_token" | jq -er '.offer.id')"
 fi
@@ -325,7 +336,7 @@ fi
 # alcancando o segundo motoboy.
 api PATCH "/deliveries/offers/$disp_offer1/reject" "$courier_token" >/dev/null
 api GET /deliveries/offers/mine "$courier_token" | jq -e --arg deliveryId "$disp_id" 'map(select(.delivery.id == $deliveryId)) | length == 0' >/dev/null
-disp_offer2="$(api GET /deliveries/offers/mine "$courier2_token" | jq -er --arg deliveryId "$disp_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
+disp_offer2="$(api GET /deliveries/offers/mine "$courier2_token" | jq -r --arg deliveryId "$disp_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
 if [[ -z "$disp_offer2" ]]; then
   printf 'Apos a recusa, a rodada 2 deveria ter ofertado ao motoboy de 5 km.\n' >&2
   api GET "/deliveries/$disp_id" "$admin_token" >&2
@@ -340,7 +351,7 @@ api GET "/deliveries/$disp_id" "$customer_token" | jq -e --argjson price "$disp_
 api PATCH /settings "$admin_token" '{"dispatchMaxRounds":1}' >/dev/null
 limite="$(api POST /deliveries "$customer_token" "$(disp_payload)")"
 limite_id="$(jq -er '.id' <<<"$limite")"
-limite_offer="$(api GET /deliveries/offers/mine "$courier_token" | jq -er --arg deliveryId "$limite_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
+limite_offer="$(api GET /deliveries/offers/mine "$courier_token" | jq -r --arg deliveryId "$limite_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
 if [[ -z "$limite_offer" ]]; then
   limite_offer="$(api POST "/deliveries/$limite_id/dispatch" "$admin_token" | jq -er '.offer.id')"
 fi
@@ -355,6 +366,11 @@ api PATCH /couriers/me/location "$courier2_token" "$(jq -nc --argjson latitude "
 api POST "/deliveries/$limite_id/dispatch" "$admin_token" | jq -e '.offer.dispatchRound == 1 and (.offer.radiusKm | tonumber) == 3' >/dev/null
 api GET "/deliveries/$limite_id" "$admin_token" | jq -e '.dispatchEndReason == null and .dispatchRound == 1' >/dev/null
 api GET /deliveries/offers/mine "$courier2_token" | jq -e --arg deliveryId "$limite_id" 'map(select(.delivery.id == $deliveryId)) | length == 1' >/dev/null
+
+# DISP-02 espera que TODAS as ofertas dos pedidos novos caiam no courier
+# principal (courier_token). O courier2 foi movido para cima da coleta no
+# cenario de recuperacao acima — devolver para 5 km, fora do anel 1 (3 km).
+api PATCH /couriers/me/location "$courier2_token" "$(jq -nc --argjson latitude "$DISP_FAR_LATITUDE" --argjson longitude "$DISP_LONGITUDE" '{latitude:$latitude,longitude:$longitude}')" >/dev/null
 
 # DISP-02 — aviso de demora (plano §6.1.4), busca esgotada recuperável e
 # consentimento do aumento de valor (plano §6.1.5 e DEC-03 §3.3).
@@ -386,7 +402,7 @@ fi
 esgotado="$(api POST /deliveries "$customer_token" "$(disp_payload)")"
 esgotado_id="$(jq -er '.id' <<<"$esgotado")"
 esgotado_price="$(jq -er '.priceCents' <<<"$esgotado")"
-esgotado_offer="$(api GET /deliveries/offers/mine "$courier_token" | jq -er --arg deliveryId "$esgotado_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
+esgotado_offer="$(api GET /deliveries/offers/mine "$courier_token" | jq -r --arg deliveryId "$esgotado_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
 if [[ -z "$esgotado_offer" ]]; then
   esgotado_offer="$(api POST "/deliveries/$esgotado_id/dispatch" "$admin_token" | jq -er '.offer.id')"
 fi
@@ -409,7 +425,7 @@ api POST "/deliveries/$esgotado_id/retry" "$customer_token" \
 # Consentimento do aumento: grava novo preco no snapshot e reabre a busca.
 esgotado2="$(api POST /deliveries "$customer_token" "$(disp_payload)")"
 esgotado2_id="$(jq -er '.id' <<<"$esgotado2")"
-esgotado2_offer="$(api GET /deliveries/offers/mine "$courier_token" | jq -er --arg deliveryId "$esgotado2_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
+esgotado2_offer="$(api GET /deliveries/offers/mine "$courier_token" | jq -r --arg deliveryId "$esgotado2_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
 if [[ -z "$esgotado2_offer" ]]; then
   esgotado2_offer="$(api POST "/deliveries/$esgotado2_id/dispatch" "$admin_token" | jq -er '.offer.id')"
 fi
@@ -428,5 +444,113 @@ if [[ "$(tail -n1 <<<"$curta")" != "400" ]]; then
   printf 'Duracao total menor que o TTL deveria ser recusada com 400, veio %s.\n' "$(tail -n1 <<<"$curta")" >&2
   exit 1
 fi
+
+# ---------------------------------------------------------------------------
+# PAY-01 — ledger interno (DEC-05): reserva, liberacao, liquidacao e ajuste.
+# ---------------------------------------------------------------------------
+
+# 1. Pre-pago: cliente sem saldo nao consegue criar pedido (402).
+sem_saldo="$(api POST /auth/register/customer "" "$(jq -nc --arg name 'Cliente Sem Saldo' --arg email "sem.saldo.${RUN_ID}@aquilog.test" --arg password "$TEST_PASSWORD" --arg document "$(printf '%011d' $((RUN_ID + 7)))" --arg phone '+5531999999998' '{name:$name,email:$email,password:$password,document:$document,phone:$phone}')")"
+sem_saldo_token="$(jq -er '.accessToken' <<<"$sem_saldo")"
+sem_saldo_id="$(jq -er '.user.customerId' <<<"$sem_saldo")"
+faltando_saldo="$(api_status POST /deliveries "$sem_saldo_token" "$(new_order_payload)")"
+if [[ "$(tail -n1 <<<"$faltando_saldo")" != "402" ]]; then
+  printf 'Pedido sem saldo deveria ser recusado com 402, veio %s.\n' "$(tail -n1 <<<"$faltando_saldo")" >&2
+  exit 1
+fi
+jq -e '.message | test("Saldo insuficiente")' < <(sed '$d' <<<"$faltando_saldo") >/dev/null
+
+# 2. Ajuste administrativo: regras de entrada e papel.
+motivo_curto="$(api_status POST "/finance/accounts/customer/$sem_saldo_id/adjust" "$admin_token" "$(jq -nc '{amountCents:1000,reason:"abc"}')")"
+if [[ "$(tail -n1 <<<"$motivo_curto")" != "400" ]]; then
+  printf 'Ajuste com motivo curto deveria ser recusado com 400, veio %s.\n' "$(tail -n1 <<<"$motivo_curto")" >&2
+  exit 1
+fi
+zero="$(api_status POST "/finance/accounts/customer/$sem_saldo_id/adjust" "$admin_token" "$(jq -nc '{amountCents:0,reason:"Credito de teste nulo"}')")"
+if [[ "$(tail -n1 <<<"$zero")" != "400" ]]; then
+  printf 'Ajuste de zero centavo deveria ser recusado com 400, veio %s.\n' "$(tail -n1 <<<"$zero")" >&2
+  exit 1
+fi
+# Debito maior que o saldo: 409 (saldo disponivel nunca fica negativo).
+sem_saldo_statement="$(api GET /finance/statement "$sem_saldo_token")"
+jq -e '.availableCents == 0 and .reservedCents == 0' <<<"$sem_saldo_statement" >/dev/null
+debito_maior="$(api_status POST "/finance/accounts/customer/$sem_saldo_id/adjust" "$admin_token" "$(jq -nc '{amountCents:-1000,reason:"Debito maior que o saldo"}')")"
+if [[ "$(tail -n1 <<<"$debito_maior")" != "409" ]]; then
+  printf 'Debito maior que o saldo deveria ser recusado com 409, veio %s.\n' "$(tail -n1 <<<"$debito_maior")" >&2
+  exit 1
+fi
+# Papel errado: motoboy nao pode ajustar carteira (nem a propria).
+sem_saldo_adjust_courier="$(api_status POST "/finance/accounts/customer/$sem_saldo_id/adjust" "$courier_token" "$(jq -nc '{amountCents:1000,reason:"Credito de teste abusivo"}')")"
+if [[ "$(tail -n1 <<<"$sem_saldo_adjust_courier")" != "403" ]]; then
+  printf 'Ajuste por motoboy deveria ser recusado com 403, veio %s.\n' "$(tail -n1 <<<"$sem_saldo_adjust_courier")" >&2
+  exit 1
+fi
+
+# 3. Idempotencia: ajuste repetido com a mesma chave nao duplica o credito.
+# (--arg expande $RUN_ID: chave unica POR execucao — aspas simples deixariam
+# literal "smoke-$RUN_ID" e a idempotencia bateria na transacao de outra rodada)
+ajuste_a="$(api POST "/finance/accounts/customer/$sem_saldo_id/adjust" "$admin_token" "$(jq -nc --arg key "smoke-$RUN_ID" '{amountCents:5000,reason:"Credito de teste idempotente",idempotencyKey:$key}')")"
+ajuste_a_id="$(jq -er '.id' <<<"$ajuste_a")"
+ajuste_b="$(api POST "/finance/accounts/customer/$sem_saldo_id/adjust" "$admin_token" "$(jq -nc --arg key "smoke-$RUN_ID" '{amountCents:5000,reason:"Credito de teste idempotente",idempotencyKey:$key}')")"
+if [[ "$(jq -er '.id' <<<"$ajuste_b")" != "$ajuste_a_id" ]]; then
+  printf 'Replay do ajuste deveria retornar a transacao anterior.\n' >&2
+  exit 1
+fi
+api GET /finance/statement "$sem_saldo_token" | jq -e '.availableCents == 5000' >/dev/null
+
+# 4. Reserva: cliente com saldo cria pedido e o valor sai do disponivel.
+reserva="$(api POST /deliveries "$sem_saldo_token" "$(new_order_payload)")"
+reserva_id="$(jq -er '.id' <<<"$reserva")"
+reserva_preco="$(jq -er '.priceCents' <<<"$reserva")"
+# 5000 centavos = R$ 50,00 > preco de um pedido de teste (R$ ~13).
+jq -en --argjson saldo 5000 --argjson preco "$reserva_preco" '$preco < $saldo' >/dev/null
+api GET /finance/statement "$sem_saldo_token" | jq -e --argjson preco "$reserva_preco" '.reservedCents == $preco and .availableCents == (5000 - $preco)' >/dev/null
+api GET /finance/statement "$sem_saldo_token" | jq -e '.entries[0].type == "RESERVATION" and (.entries[0].description | test("Reserva do pedido")) and .entries[0].amountCents < 0' >/dev/null
+
+# 5. Liberacao: cancelar devolve a reserva ao disponivel.
+api PATCH "/deliveries/$reserva_id/status" "$sem_saldo_token" '{"status":"CANCELED","note":"Cancelado no smoke PAY-01"}' >/dev/null
+api GET /finance/statement "$sem_saldo_token" | jq -e --argjson preco "$reserva_preco" '.reservedCents == 0 and .availableCents == 5000' >/dev/null
+api GET /finance/statement "$sem_saldo_token" | jq -e --argjson preco "$reserva_preco" '.entries[0].type == "RESERVATION_RELEASE" and .entries[0].amountCents == $preco' >/dev/null
+
+# 6. Concorrencia: duas criacoes simultaneas com saldo para UMA nao reservam
+# alem do saldo — uma passa (200) e a outra e recusada (402).
+race_login="$(api POST /auth/register/customer "" "$(jq -nc --arg name 'Cliente Corrida' --arg email "corrida.${RUN_ID}@aquilog.test" --arg password "$TEST_PASSWORD" --arg document "$(printf '%011d' $((RUN_ID + 8)))" --arg phone '+5531999999997' '{name:$name,email:$email,password:$password,document:$document,phone:$phone}')")"
+race_id="$(jq -er '.user.customerId' <<<"$race_login")"
+race_token="$(jq -er '.accessToken' <<<"$race_login")"
+api POST "/finance/accounts/customer/$race_id/adjust" "$admin_token" "$(jq -nc --argjson preco "$reserva_preco" '{amountCents:$preco,reason:"Saldo exato para uma corrida"}')" >/dev/null
+r1_file="$(mktemp)"
+r2_file="$(mktemp)"
+api_status POST /deliveries "$race_token" "$(new_order_payload)" >"$r1_file" &
+p1=$!
+api_status POST /deliveries "$race_token" "$(new_order_payload)" >"$r2_file" &
+p2=$!
+wait "$p1" "$p2"
+s1="$(tail -n1 <"$r1_file")"
+s2="$(tail -n1 <"$r2_file")"
+# POST /deliveries devolve 201 Created (padrão Nest) — aceitar 200/201 para o vencedor.
+if [[ " $s1 $s2 " != *" 200 "* && " $s1 $s2 " != *" 201 "* ]] || [[ " $s1 $s2 " != *" 402 "* ]]; then
+  printf 'Corrida de reserva deveria terminar com um 201/200 e um 402, veio %s e %s.\\n' "$s1" "$s2" >&2
+  exit 1
+fi
+rm -f "$r1_file" "$r2_file"
+api GET /finance/statement "$race_token" | jq -e --argjson preco "$reserva_preco" '.reservedCents == $preco and .availableCents == 0' >/dev/null
+
+# 7. Autorizacao de extrato: cliente nao consulta carteira alheia; admin sim.
+alheio="$(api_status GET "/finance/statement?ownerType=COURIER&ownerId=$courier_id" "$sem_saldo_token")"
+if [[ "$(tail -n1 <<<"$alheio")" != "403" ]]; then
+  printf 'Cliente consultando carteira do motoboy deveria levar 403, veio %s.\n' "$(tail -n1 <<<"$alheio")" >&2
+  exit 1
+fi
+api GET "/finance/statement?ownerType=COURIER&ownerId=$courier_id" "$admin_token" \
+  | jq -e --argjson fee "$courier_fee" '.availableCents == $fee and .reservedCents == 0' >/dev/null
+
+# 8. Liquidacao e obrigacao contabil com o motoboy: o extrato do motoboy vem
+# do ledger (SETTLEMENT), nao mais do credito MVP — o saldo bate com o repasse
+# da unica entrega concluida do fluxo principal.
+api GET /finance/statement "$courier_token" | jq -e --arg code "$delivery_code" '.entries[0].type == "SETTLEMENT" and (.entries[0].description | test("Credito da entrega")) and (.entries[0].description | test($code))' >/dev/null
+
+# 9. Resumo admin enxerga as contas do ledger (obrigacao com motoboys e
+# receita retida).
+api GET /finance/summary "$admin_token" | jq -e --argjson fee "$courier_fee" '.courierObligationCents == $fee and .platformRevenueCents > 0' >/dev/null
 
 printf 'Smoke test aprovado: %s (%s) + agendado %s (%s) + reoferta %s\n' "$delivery_code" "$delivery_id" "$scheduled_code" "$scheduled_id" "$disp_id"

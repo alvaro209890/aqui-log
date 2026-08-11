@@ -94,7 +94,11 @@ function buildService(delivery: Delivery) {
     assertAllowedProofUrl: jest.fn(),
     assertAllowedProductPhotoUrl: jest.fn(),
   };
-  const finance = { creditDelivery: jest.fn().mockResolvedValue(undefined) };
+  const finance = {
+    reserve: jest.fn().mockResolvedValue(null),
+    settle: jest.fn().mockResolvedValue(null),
+    release: jest.fn().mockResolvedValue(null),
+  };
   const settings = {
     get: jest.fn().mockResolvedValue({
       dispatchFirstWarningMinutes: 5,
@@ -102,7 +106,21 @@ function buildService(delivery: Delivery) {
     }),
   };
 
+  const dataSource = {
+    transaction: jest.fn((fn: (manager: unknown) => Promise<unknown>) =>
+      fn({
+        save: (entity: unknown) => {
+          const repoSave = (
+            deliveries as { save?: (entity: unknown) => Promise<unknown> }
+          ).save;
+          return repoSave ? repoSave(entity) : Promise.resolve(entity);
+        },
+        create: (_entityClass: unknown, data: unknown) => data,
+      }),
+    ),
+  } as never;
   const service = new DeliveriesService(
+    dataSource,
     deliveries as never,
     couriers as never,
     {} as never,

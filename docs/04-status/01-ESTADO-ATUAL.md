@@ -4,9 +4,10 @@
 > **Ambiente:** desenvolvimento local no PC `acer`; nada produtivo roda aqui
 > (runtime de distribuição do Aqui Log no acer = `OPS-01A`, decidido em
 > `DEC-26`).
-> **Baseline de código:** auditoria de bugs pós-`DISP-02` (2026-08-10) sobre
-> `3a48f6c`; `DISP-02` entregue (2026-08-10) sobre `b57cfb6`; antes: `bc0d553`
-> (DISP-01).
+> **Baseline de código:** `eb211d4` (auditoria pós-DISP-02) + `PAY-01` **em
+> andamento no working tree** (interrompido pelo dono; ver
+> `docs/04-status/entregas/2026-08-10-ESTADO-PAY-01-INTERROMPIDO.md`). Antes:
+> `3a48f6c`/`DISP-02` (2026-08-10) sobre `b57cfb6`/`bc0d553` (DISP-01).
 
 ## 1. Produto vigente
 

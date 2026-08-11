@@ -40,6 +40,7 @@ import { TrackingGateway } from '../tracking/tracking.gateway';
 import { parsePagination, toPageResult } from '../common/pagination';
 import { formatWindowInstant } from '../common/timezone';
 import { FULFILLMENT_MODES } from '../pricing/pricing.types';
+import { DataSource } from 'typeorm';
 import {
   executionWindow,
   hasCapacityConflict,
@@ -120,6 +121,7 @@ function parseOptionalWeightBound(
 @Injectable()
 export class DeliveriesService {
   constructor(
+    private readonly dataSource: DataSource,
     @InjectRepository(Delivery)
     private readonly deliveries: Repository<Delivery>,
     @InjectRepository(Courier) private readonly couriers: Repository<Courier>,
@@ -180,46 +182,53 @@ export class DeliveriesService {
       weightKg: dto.weightKg,
       packageSize: dto.packageSize,
     });
-    const delivery = await this.deliveries.save(
-      this.deliveries.create({
-        ...dto,
-        code: this.createCode(),
-        customerId: isCustomer ? user.customerId : null,
-        createdById: user.id,
-        courierId: null,
-        notes: dto.notes ?? null,
-        productType: dto.productType,
-        packageSize: dto.packageSize,
-        weightKg: dto.weightKg,
-        deliveryScope: dto.deliveryScope ?? null,
-        productPhotoUrls,
-        // `scheduledAt` é o campo legado de agendamento. Para não deixá-lo
-        // mentindo, o agendado o preenche com o início da janela: é isso que
-        // faz o redespacho automático (`dispatchDueScheduled`) tentar de novo
-        // na hora certa quando ninguém aceitou antes.
-        scheduledAt: schedule.pickupWindowStart
-          ? schedule.pickupWindowStart
-          : dto.scheduledAt
-            ? new Date(dto.scheduledAt)
-            : null,
-        pickupWindowStart: schedule.pickupWindowStart,
-        pickupWindowEnd: schedule.pickupWindowEnd,
-        deliveryWindowStart: schedule.deliveryWindowStart,
-        deliveryWindowEnd: schedule.deliveryWindowEnd,
-        // Server-side pricing always wins (client price fields ignored)
-        priceCents: quote.priceCents,
-        courierFeeCents: quote.courierFeeCents,
-        // B2C-02A: congela regra e valores usados (DEC-19).
-        pricingVersion: quote.pricingVersion,
-        pricingBreakdown: quote.breakdown,
-        fulfillmentMode: quote.breakdown.fulfillmentMode,
-        kmRateCents: quote.breakdown.kmRateCents,
-        courierCancelFeeCents: null,
-        collectionProofUrl: null,
-        deliveryProofUrl: null,
-        canceledAt: null,
-      }),
-    );
+    const delivery = await this.dataSource.transaction(async (manager) => {
+      const created = await manager.save(
+        manager.create(Delivery, {
+          ...dto,
+          code: this.createCode(),
+          customerId: isCustomer ? user.customerId : null,
+          createdById: user.id,
+          courierId: null,
+          notes: dto.notes ?? null,
+          productType: dto.productType,
+          packageSize: dto.packageSize,
+          weightKg: dto.weightKg,
+          deliveryScope: dto.deliveryScope ?? null,
+          productPhotoUrls,
+          // `scheduledAt` é o campo legado de agendamento. Para não deixá-lo
+          // mentindo, o agendado o preenche com o início da janela: é isso que
+          // faz o redespacho automático (`dispatchDueScheduled`) tentar de novo
+          // na hora certa quando ninguém aceitou antes.
+          scheduledAt: schedule.pickupWindowStart
+            ? schedule.pickupWindowStart
+            : dto.scheduledAt
+              ? new Date(dto.scheduledAt)
+              : null,
+          pickupWindowStart: schedule.pickupWindowStart,
+          pickupWindowEnd: schedule.pickupWindowEnd,
+          deliveryWindowStart: schedule.deliveryWindowStart,
+          deliveryWindowEnd: schedule.deliveryWindowEnd,
+          // Server-side pricing always wins (client price fields ignored)
+          priceCents: quote.priceCents,
+          courierFeeCents: quote.courierFeeCents,
+          // B2C-02A: congela regra e valores usados (DEC-19).
+          pricingVersion: quote.pricingVersion,
+          pricingBreakdown: quote.breakdown,
+          fulfillmentMode: quote.breakdown.fulfillmentMode,
+          kmRateCents: quote.breakdown.kmRateCents,
+          courierCancelFeeCents: null,
+          collectionProofUrl: null,
+          deliveryProofUrl: null,
+          canceledAt: null,
+        }),
+      );
+      // PAY-01 / DEC-05: pedido confirmado reserva o preço no ledger do
+      // cliente na MESMA transação do save — se o saldo não cobre, o `402`
+      // desfaz tudo (produto pré-pago; "dinheiro na entrega" fora de escopo).
+      await this.finance.reserve(created, manager);
+      return created;
+    });
     await this.recordEvent(
       delivery,
       user.id,
@@ -1004,7 +1013,14 @@ export class DeliveriesService {
     // Motivo recuperável (`MAX_ROUNDS`/`TIMEBOX`/`NO_CANDIDATE`) ou ciclo que
     // nunca começou: reabre. Sem candidato no momento, o `dispatch` devolve
     // `404` e o pedido continua REQUESTED com o ciclo reaberto (o job segue).
-    await this.dispatch(id, user.id, { reopen: true });
+    try {
+      await this.dispatch(id, user.id, { reopen: true });
+    } catch (error) {
+      // Sem candidato agora não é falha do retry: o ciclo foi reaberto e o
+      // job `redispatchPendingRequested` continua tentando. Devolver o pedido
+      // em vez de propagar o 404 (o cliente pediu para tentar de novo).
+      if (!(error instanceof NotFoundException)) throw error;
+    }
     // Devolve o pedido recortado por papel (sem `pickupCode` para o prestador,
     // com proposta de aumento para o cliente), não o par cru do dispatch.
     const platform = await this.settings.get();
@@ -1347,7 +1363,17 @@ export class DeliveriesService {
         delivery.dispatchEndReason = 'CANCELED';
       }
     }
-    await this.deliveries.save(delivery);
+    // PAY-01 / DEC-05: liquidação e liberação da reserva acontecem na MESMA
+    // transação do status — o ledger nunca diverge do estado da entrega.
+    await this.dataSource.transaction(async (manager) => {
+      await manager.save(Delivery, delivery);
+      if (dto.status === DeliveryStatus.DELIVERED) {
+        await this.finance.settle(delivery, manager);
+      }
+      if (dto.status === DeliveryStatus.CANCELED) {
+        await this.finance.release(delivery, manager);
+      }
+    });
     await this.recordEvent(delivery, user.id, dto.note ?? null, dto.proofUrl);
     if (
       [DeliveryStatus.DELIVERED, DeliveryStatus.CANCELED].includes(
@@ -1357,8 +1383,6 @@ export class DeliveriesService {
     ) {
       await this.couriers.update(delivery.courierId, { available: true });
     }
-    if (dto.status === DeliveryStatus.DELIVERED)
-      await this.finance.creditDelivery(delivery);
     await this.notifyCreator(
       delivery,
       'Entrega atualizada',

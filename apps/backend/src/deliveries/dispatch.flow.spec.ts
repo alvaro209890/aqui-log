@@ -188,7 +188,21 @@ function buildHarness(options: HarnessOptions): Harness {
       return Promise.resolve(value);
     }),
   };
+  const dataSource = {
+    transaction: jest.fn((fn: (manager: unknown) => Promise<unknown>) =>
+      fn({
+        save: (entity: unknown) => {
+          const repoSave = (
+            deliveriesRepo as { save?: (entity: unknown) => Promise<unknown> }
+          ).save;
+          return repoSave ? repoSave(entity) : Promise.resolve(entity);
+        },
+        create: (_entityClass: unknown, data: unknown) => data,
+      }),
+    ),
+  } as never;
   const service = new DeliveriesService(
+    dataSource,
     deliveriesRepo as never,
     couriersRepo as never,
     offersRepo as never,
@@ -196,7 +210,11 @@ function buildHarness(options: HarnessOptions): Harness {
     {} as never,
     { create: jest.fn().mockResolvedValue(undefined) } as never,
     { record: jest.fn().mockResolvedValue(undefined) } as never,
-    { creditDelivery: jest.fn() } as never,
+    {
+      reserve: jest.fn().mockResolvedValue(null),
+      settle: jest.fn().mockResolvedValue(null),
+      release: jest.fn().mockResolvedValue(null),
+    } as never,
     {} as never,
     {
       acquireLock: jest.fn().mockResolvedValue(options.lockAvailable ?? true),
