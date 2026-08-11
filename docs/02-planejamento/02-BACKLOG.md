@@ -1,6 +1,6 @@
 # Backlog executável por agentes
 
-> **Atualizado:** 2026-08-09 (2ª rodada)
+> **Atualizado:** 2026-08-11 (`PAY-01` e `OPS-01A` fechados)
 > **Papel:** converter o roadmap em pacotes pequenos, ordenados e verificáveis.
 > **Regra:** um agente executa um único ID por sessão, salvo autorização explícita.
 
@@ -21,10 +21,11 @@
 | 3 | `B2C-03` | `BLOCKED` | P1 | Avaliação mútua por papel | baseline estável e migração de ratings definida |
 | — | `DISP-01` | `DONE` (2026-08-09) | P1 | Reoferta por anéis, exclusão de tentados, limite de rodadas e de tempo | evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-DISP-01.md` |
 | 4 | `DISP-02` | `DONE` (2026-08-10) | P1 | Avisar o cliente da demora e oferecer ação explícita (inclui aumento com consentimento, `DEC-03`) | `DISP-01` ✅; evidência: `docs/04-status/entregas/2026-08-10-EVIDENCIA-DISP-02.md` |
-| 5 | `PAY-01` | `READY` | P2 | Ledger interno (cliente + prestador) sem gateway | autorização `DEC-05` ✅; `B2C-02` DONE; `DEC-23` |
-| 6 | `COUR-02` | `BLOCKED` | P2 | Cancelamento prestador + taxa no saldo | `COUR-01` ✅ DONE; falta `PAY-01`; `DEC-22` ✅ decidida |
-| 7 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-02B`, `B2C-03A`, `DISP-03` (`B2C-01B` ok) |
-| 7b | `OPS-01A` | `READY` (plano) | P1 | **Runtime de distribuição no acer via Cloudflare Tunnel** (`DEC-26` ✅ 2026-08-10): API + dashboard + Postgres/Redis + storage neste PC, domínio `*.cursar.space`, sem derrubar serviços existentes; banco em `~/Documentos/Bando_de_dados/Aqui_Log`; smoke público | `DEC-26` ✅; `OPS-01` (parcial — pode iniciar quando FKs/índices/backup locais estiverem de pé); antecede `OPS-02`/`OPS-03` |
+| — | `PAY-01` | `DONE` (2026-08-11) | P2 | Ledger interno (cliente + prestador) sem gateway | evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-APK-E-RUNTIME.md` |
+| 2 | `COUR-02` | `READY` | P2 | Cancelamento prestador + taxa no saldo | `COUR-01` ✅; **`PAY-01` ✅ DONE — destravado**; `DEC-22` ✅ decidida |
+| 7 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-02B`, `B2C-03A`, `DISP-03` (`B2C-01B` ok); inclui backup do banco em `~/Documentos/Bando_de_dados/Aqui_Log` |
+| — | `OPS-01A` | `DONE` (2026-08-11) | P1 | **Runtime de distribuição no acer via Cloudflare Tunnel** (`DEC-26`): API (`aquilog-api.cursar.space`) + dashboard (`aquilog.cursar.space`) + Postgres/Redis no acer, com início automático e sem derrubar serviços existentes; banco em `~/Documentos/Bando_de_dados/Aqui_Log`; smoke público aprovado | evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-APK-E-RUNTIME.md`; operação: `docs/03-referencia/05-RUNTIME-ACER.md` |
+| 2b | `PAY-02` | `BLOCKED` | P1 | **Recarga de saldo (PIX/cartão, Pagar.me v5)** — sem ela o cliente que instala o APK não consegue publicar pedido | `DEC-06` ✅ decidida; falta conta/credenciais Pagar.me |
 | 8 | `OPS-DB-01` | `BLOCKED` | P2 | Modelo + migração Postgres → Firestore | `DEC-25`; credenciais Firebase |
 | 9 | `OPS-02` | `BLOCKED` | P2 | Firebase Firestore/Storage/FCM reais | pedido + credenciais; ver `PLANO_HOSPEDAGEM.md` |
 | 10 | `OPS-03` | `BLOCKED` | P2 | Deploy Render + Vercel + smoke público | `OPS-01`, `OPS-02`, credenciais |

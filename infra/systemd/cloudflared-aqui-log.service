@@ -1,0 +1,19 @@
+[Unit]
+# Aqui Log — Cloudflare Tunnel dedicado (DEC-26 / OPS-01A).
+# Config PROPRIA: nunca apontar para /etc/cloudflared/config.yml nem para os
+# configs dos outros tuneis do acer (hermes, codingpro, mapasfacil, ...).
+Description=Aqui Log Cloudflare Tunnel (dedicado) — aquilog/aquilog-api.cursar.space
+Documentation=file:///home/acer/Documentos/aqui-log/docs/03-referencia/05-RUNTIME-ACER.md
+After=network-online.target aqui-log-api.service aqui-log-dashboard.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/cloudflared tunnel --config /home/acer/.cloudflared/aqui-log-config.yml run 66aa2d7d-9ff9-46ae-9c77-de3c7c205b51
+Restart=on-failure
+RestartSec=5
+MemoryMax=512M
+CPUWeight=50
+
+[Install]
+WantedBy=default.target

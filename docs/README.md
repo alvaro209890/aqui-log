@@ -40,6 +40,7 @@ e a [hospedagem cloud](02-planejamento/planos/PLANO_HOSPEDAGEM.md) (Render / Ver
 | O que está comprovadamente funcionando? | [`01-ESTADO-ATUAL.md`](04-status/01-ESTADO-ATUAL.md) |
 | O que a última sessão deixou para a próxima? | [`02-HANDOFF.md`](04-status/02-HANDOFF.md) |
 | Como rodar o projeto? | [`03-DESENVOLVIMENTO.md`](03-referencia/03-DESENVOLVIMENTO.md) |
+| Como o sistema roda no acer (URLs públicas, systemd, reiniciar)? | [`05-RUNTIME-ACER.md`](03-referencia/05-RUNTIME-ACER.md) |
 | O que já foi entregue no tempo? | [`04-CHANGELOG.md`](04-status/04-CHANGELOG.md) |
 
 ## Regra anti-drift

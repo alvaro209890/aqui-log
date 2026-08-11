@@ -1,0 +1,23 @@
+[Unit]
+# Aqui Log — dashboard admin (build estatico) do runtime no acer (DEC-26 / OPS-01A).
+# Serve apps/dashboard/dist com infra/static-server.mjs (sem dependencias, com
+# fallback de SPA que o BrowserRouter exige). Rebuild com:
+#   pnpm --filter dashboard build && systemctl --user restart aqui-log-dashboard
+Description=Aqui Log Dashboard (build estatico) — 127.0.0.1:3012
+Documentation=file:///home/acer/Documentos/aqui-log/docs/03-referencia/05-RUNTIME-ACER.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/acer/Documentos/aqui-log
+Environment=PORT=3012
+Environment=HOST=127.0.0.1
+ExecStart=/home/acer/.nvm/versions/node/v22.22.2/bin/node infra/static-server.mjs apps/dashboard/dist
+Restart=always
+RestartSec=5
+MemoryMax=256M
+CPUWeight=50
+
+[Install]
+WantedBy=default.target

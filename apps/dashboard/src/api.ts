@@ -1,4 +1,27 @@
-const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api/v1';
+/**
+ * URL da API.
+ *
+ * `VITE_API_URL` continua mandando quando existe (é assado no build). Sem ela,
+ * o padrão depende de ONDE a página está servida: em `localhost` vale a API
+ * local de desenvolvimento; servido pelo domínio público do runtime do acer
+ * (`OPS-01A`/`DEC-26`), o padrão é a API pública do mesmo túnel. Sem essa
+ * segunda regra, um `pnpm build` sem a variável (CI, outro agente) publicaria
+ * um dashboard apontando para `localhost` — e a tela quebraria em silêncio no
+ * navegador de quem abrisse pelo domínio.
+ */
+function resolveApiUrl(): string {
+  const configurada = import.meta.env.VITE_API_URL;
+  if (configurada) return configurada;
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host && host !== 'localhost' && host !== '127.0.0.1') {
+      return `${window.location.protocol}//aquilog-api.cursar.space/api/v1`;
+    }
+  }
+  return 'http://localhost:3001/api/v1';
+}
+
+const apiUrl = resolveApiUrl();
 
 export interface Session {
   accessToken: string;

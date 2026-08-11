@@ -4,6 +4,44 @@ Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
 ## Fluxo cliente↔prestador nos planos — 2026-08-07
 
+## `PAY-01` fechado, app cliente distribuível e `OPS-01A` no ar — 2026-08-11
+
+- **`PAY-01` DONE.** O ledger já estava implementado no `8b05bf2`, mas duas
+  coisas deixavam o CI vermelho: a asserção final do smoke comparava o
+  `GET /finance/summary` (que agrega o ledger **inteiro do banco**) com o
+  repasse de **uma** entrega — só passava em banco recém-criado; e havia um erro
+  de lint (`no-unsafe-enum-comparison`) em `finance.controller.ts`. A asserção
+  passou a comparar o **delta da execução** contra uma baseline capturada no
+  início, o que vale tanto no CI (banco novo) quanto no acer (banco acumulado).
+- **O app do cliente não era distribuível.** A URL padrão da API era
+  `http://10.0.2.2:3001/api/v1` — o loopback do **emulador**: um APK instalado
+  num celular de verdade não falaria com nada. Agora o padrão é o domínio
+  público (`DEC-26`), travado por teste e conferido dentro do `libapp.so`.
+- **Auto-login**: a sessão passa a sobreviver ao fechamento do app
+  (`session_store.dart` com `shared_preferences`), e a abertura **troca o
+  refresh token por um par novo** — restaurar só o access token deixaria o app
+  com um token vencido. Enquanto isso, splash em vez de piscar o login.
+- **Carteira do cliente**: com o pré-pago do `PAY-01`, criar pedido responde
+  `402` sem saldo e não havia onde conferir isso. Nova tela com saldo
+  disponível/reservado/total + extrato, entrada no perfil, e o `402` na criação
+  agora aponta para ela. Recarga por PIX/cartão continua sendo `PAY-02`.
+- **`OPS-01A` DONE** (`DEC-26`): API (`aquilog-api.cursar.space`) e dashboard
+  (`aquilog.cursar.space`) rodando no acer por três units systemd de usuário com
+  `linger`, atrás de túnel Cloudflare dedicado; dados do Postgres migrados do
+  volume Docker para `~/Documentos/Bando_de_dados/Aqui_Log` sem perder nada
+  (258 entregas, 14 migrations). Nenhum serviço pré-existente do PC foi tocado.
+- **Achado do caminho**: `cloudflared tunnel route dns <nome>` gravou o CNAME
+  apontando para o túnel **errado** (`auracore-local-api`). Corrigido com o UUID
+  explícito e registrado como armadilha na referência de runtime.
+- **APK release arm64** do cliente em `dist/aqui-log-cliente-2026-08-11.apk`
+  (19,4 MB).
+- `pnpm build`/`lint`/`test` verdes (**25 suítes / 219 testes**); `pnpm smoke`
+  aprovado 3× no localhost **e 1× pelo domínio público**; Flutter/Dart verdes
+  nos dois apps (cliente **21** testes) e no core (23).
+
+Evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-APK-E-RUNTIME.md`.
+Operação: `docs/03-referencia/05-RUNTIME-ACER.md`.
+
 ## `DISP-02`: aviso de demora e ações do cliente na busca — 2026-08-10
 
 - **O cliente passa a ser avisado quando a busca demora** (plano §6.1.4): o job

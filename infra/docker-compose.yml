@@ -10,7 +10,10 @@ services:
     ports:
       - "${DATABASE_PORT:-5432}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # DEC-26 / OPS-01A: os dados do Postgres moram no padrao de pastas do acer
+      # (~/Documentos/Bando_de_dados/Aqui_Log), nao em volume anonimo do Docker.
+      # Migrado do volume `infra_postgres_data` em 2026-08-11.
+      - ${AQUI_LOG_PGDATA:-${HOME}/Documentos/Bando_de_dados/Aqui_Log}:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-aqui_log} -d ${DATABASE_NAME:-aqui_log}"]
       interval: 5s
@@ -33,5 +36,8 @@ services:
       retries: 10
 
 volumes:
+  # `postgres_data` continua declarado so por historico: os dados vivos foram
+  # migrados para bind mount (DEC-26). O volume antigo `infra_postgres_data`
+  # segue no Docker como copia de seguranca ate o backup formal de OPS-01.
   postgres_data:
   redis_data:

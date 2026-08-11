@@ -10,6 +10,25 @@
 
 ## 0. Runtime de distribuição — acer via Cloudflare Tunnel (`DEC-26`, 2026-08-10)
 
+> **Status: `OPS-01A` ENTREGUE em 2026-08-11.** O que esta seção descrevia como
+> alvo está no ar. A **referência operacional** (subir, verificar, reiniciar,
+> instalar do zero e as armadilhas) fica em
+> [`docs/03-referencia/05-RUNTIME-ACER.md`](../../03-referencia/05-RUNTIME-ACER.md);
+> a evidência, em
+> [`2026-08-11-EVIDENCIA-APK-E-RUNTIME.md`](../../04-status/entregas/2026-08-11-EVIDENCIA-APK-E-RUNTIME.md).
+>
+> | Peça | Endereço |
+> | --- | --- |
+> | API NestJS | <https://aquilog-api.cursar.space/api/v1> (systemd user `aqui-log-api`, 3011) |
+> | Dashboard admin | <https://aquilog.cursar.space> (systemd user `aqui-log-dashboard`, 3012) |
+> | Túnel dedicado | `cloudflared-aqui-log` (`66aa2d7d-9ff9-46ae-9c77-de3c7c205b51`) |
+> | Postgres 17 | container `aqui-log-postgres` (5433), dados em `~/Documentos/Bando_de_dados/Aqui_Log` |
+> | Redis 7 | container `aqui-log-redis` (6379) |
+>
+> Units versionadas em `infra/systemd/`; segredos em `~/.config/aqui-log/env`
+> (fora do repo). As três units estão `enabled` com `linger` ligado: **sobem com
+> o PC, sem login**. Nenhum serviço pré-existente do acer foi tocado.
+
 **Antes de publicar/distribuir o aplicativo**, o backend, o banco de dados e a
 pilha inteira devem rodar **neste PC (acer)** — expostos por **Cloudflare
 Tunnel** sob o domínio próprio já comprado (`*.cursar.space`) — **sem derrubar
@@ -58,13 +77,14 @@ Compose local enquanto o runtime cloud Firestore não estiver validado.
 | ID | Status | Entrega | Gate |
 | --- | --- | --- | --- |
 | `OPS-01` | ⏳ | Prontidão local (índices, backup, smoke) | features B2C estáveis |
-| `OPS-01A` | ⏳ | **Runtime de distribuição no acer** (CF Tunnel, domínio próprio, banco em `~/Documentos/Bando_de_dados/Aqui_Log`) | `DEC-26` ✅, `OPS-01` parcial |
+| `OPS-01A` | ✅ **2026-08-11** | **Runtime de distribuição no acer** (CF Tunnel, domínio próprio, banco em `~/Documentos/Bando_de_dados/Aqui_Log`) — no ar, com início automático | `DEC-26` ✅, `OPS-01` parcial |
 | `OPS-DB-01` | ⏸️ | Desenho + migração/dual-write Postgres → Firestore | `DEC-25`, modelo de coleções, aceite do dono |
 | `OPS-02` | ⏸️ | Firebase: projeto, Firestore rules, Storage, FCM; adapters reais | pedido + credenciais |
 | `OPS-03` | ⏸️ | Deploy API Render + dashboard Vercel + smoke público | `OPS-01`, `OPS-02`, URL API estável |
 
 Ordem: local estável → **runtime de distribuição no acer via CF Tunnel
-(`OPS-01A`)** → desenho Firestore → ligar Firebase → publicar Render/Vercel.
+(`OPS-01A` ✅ 2026-08-11)** → desenho Firestore → ligar Firebase → publicar
+Render/Vercel.
 
 ## 4. Diagramas
 

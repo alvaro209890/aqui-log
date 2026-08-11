@@ -5,7 +5,9 @@
 > **Rodada atual:** `DISP-02` fechado com evidência de runtime local (aviso de
 > demora idempotente, ações do cliente na busca esgotada e aumento com
 > consentimento — `DEC-03` completo).
-> **Próximo pacote:** `PAY-01` (ledger), `UX-02` (QA visual) ou `OPS-01A` (runtime de distribuição no acer, `DEC-26`).
+> **Próximo pacote:** `COUR-02` (cancelamento do prestador — destravado pelo
+> `PAY-01`) ou `UX-02` (QA visual, agora com APK do cliente disponível).
+> `PAY-01` e `OPS-01A` fecharam em 2026-08-11.
 > **Produto principal:** cliente pessoa física → motoboy, sem intermediário no fluxo
 > **Regra operacional:** desenvolvimento e validação local primeiro; nenhuma cloud é ligada sem pedido explícito do Álvaro
 
@@ -155,10 +157,10 @@ Falha de aceite deve terminar em estado recuperável e compreensível, nunca em 
 
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
-| PAY-01 | ▶️ | Autorização `DEC-05` ✅, `B2C-02` ✅ | Ledger imutável; saldos cliente e prestador; reserva/estorno sem gateway |
+| PAY-01 | ✅ | Autorização `DEC-05` ✅, `B2C-02` ✅ | **DONE 2026-08-11.** Ledger imutável; saldos cliente e prestador; reserva na criação, liberação no cancelamento, liquidação em `DELIVERED`; `402` sem saldo; ajuste administrativo auditado |
 | PAY-01A | ⏳ | `PAY-01`, `DEC-22` | Políticas de cancelamento (cliente + taxa do prestador no saldo) e liquidação idempotente |
 | PAY-01B | ⏳ | `PAY-01A` | Operação administrativa auditada para crédito manual de ambiente de teste |
-| COUR-02 | ⏳ | `PAY-01`, `COUR-01`, `DEC-22` | Cancelamento do prestador com cutoff + débito de taxa; recusa se saldo insuficiente |
+| COUR-02 | ▶️ | `PAY-01` ✅, `COUR-01` ✅, `DEC-22` ✅ — **destravado** | Cancelamento do prestador com cutoff + débito de taxa; recusa se saldo insuficiente |
 
 Nenhuma integração PIX/cartão entra nesta fase. O objetivo é provar a contabilidade e as transições. O **modelo** de saldo sacável do prestador está decidido (`DEC-23`); saque real continua em `PAY-02`.
 
@@ -181,7 +183,7 @@ posterior** (API **Render**, dashboard **Vercel**, banco **Firebase Firestore**)
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
 | OPS-01 | ⏳ | `B2C-01B`, `B2C-02B`, `B2C-03A`, `DISP-03` | FKs, índices, logs, auditoria, retenção, backup e restauração testada (local) |
-| OPS-01A | ⏳ | `OPS-01` ✅, `DEC-26` ✅ | **Runtime de distribuição no acer**: API + dashboard + Postgres/Redis + storage rodando neste PC, expostos via Cloudflare Tunnel em `*.cursar.space`, sem derrubar serviços existentes; banco em `~/Documentos/Bando_de_dados/Aqui_Log`; smoke público pelo domínio |
+| OPS-01A | ✅ | `OPS-01` ✅, `DEC-26` ✅ | **DONE 2026-08-11** (`aquilog-api.cursar.space` + `aquilog.cursar.space`; units systemd com linger; banco migrado). **Runtime de distribuição no acer**: API + dashboard + Postgres/Redis + storage rodando neste PC, expostos via Cloudflare Tunnel em `*.cursar.space`, sem derrubar serviços existentes; banco em `~/Documentos/Bando_de_dados/Aqui_Log`; smoke público pelo domínio |
 | OPS-DB-01 | ⏸️ | `DEC-25`, modelo de coleções, aceite do dono | Migração/dual-write Postgres local → Firestore cloud |
 | OPS-02 | ⏸️ | Pedido + credenciais Firebase | Projeto Firebase: Firestore, Storage, FCM; adapters reais; fallback local |
 | OPS-03 | ⏸️ | Pedido + credenciais, `OPS-01`, `OPS-02` | Deploy API **Render** + dashboard **Vercel** + smoke público |
@@ -190,7 +192,9 @@ posterior** (API **Render**, dashboard **Vercel**, banco **Firebase Firestore**)
 Build verde não comprova deploy. `OPS-03` só fecha com health real na API Render,
 dashboard Vercel apontando para ela, Firestore/Storage operacionais e smoke B2C público.
 `OPS-01A` só fecha com health real no domínio do túnel, API + dashboard +
-Postgres/Redis/storage no acer, e os serviços pré-existentes do PC intactos.
+Postgres/Redis/storage no acer, e os serviços pré-existentes do PC intactos —
+**critérios cumpridos em 2026-08-11**
+(`docs/04-status/entregas/2026-08-11-EVIDENCIA-APK-E-RUNTIME.md`).
 
 ### Fase 7 — lote multi-pedido, agendamento e frota
 
@@ -321,7 +325,14 @@ ser simplesmente omitida.
 - **`B2C-06` + `SCHED-01`** — falta o cliente **escolher** o modo; a tarifa dual
   e o admin dela já existem desde `B2C-02`;
 - **`DISP-02`** — ✅ entregue 2026-08-10 (aviso de demora + ações explícitas + aumento com consentimento); `DEC-03` completo;
-- **`PAY-01`** — ledger interno sem gateway (`DEC-05` ✅).
+- **`PAY-01`** — ✅ entregue 2026-08-11 (ledger interno sem gateway, `DEC-05`);
+- **`OPS-01A`** — ✅ entregue 2026-08-11 (runtime de distribuição no acer,
+  `DEC-26`); ver `docs/03-referencia/05-RUNTIME-ACER.md`;
+- **`COUR-02`** — destravado pelo `PAY-01`: cancelamento do prestador com
+  cutoff e débito da taxa no saldo (`DEC-22`);
+- **`PAY-02`** — bloqueado por credenciais, mas é a pendência que mais pesa no
+  produto: com o pré-pago do `PAY-01` e sem recarga, um cliente novo não
+  consegue publicar pedido sem um admin creditar saldo à mão.
 
 Ao retomar:
 

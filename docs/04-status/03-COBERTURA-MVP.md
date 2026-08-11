@@ -242,3 +242,30 @@ Registro append-only. Nada acima foi alterado.
 | QA de navegador do painel / QA visual do app | Não executado | segue em `UX-02` |
 
 Evidência: `docs/04-status/entregas/2026-08-10-EVIDENCIA-DISP-02.md`.
+
+## `PAY-01` + app cliente distribuível + `OPS-01A` (2026-08-11) ✅
+
+Registro append-only. Nada acima foi alterado.
+
+| Funcionalidade | Estado | Observação |
+| --- | --- | --- |
+| Ledger interno (partidas balanceadas) | Funcional | `financial_accounts` + `ledger_transactions` + `ledger_entries`; idempotência por chave determinística; saldo disponível nunca negativo |
+| Pedido pré-pago (reserva na criação) | Funcional | Criação reserva o preço na mesma transação do save; sem saldo → `402` em pt-BR |
+| Liberação no cancelamento | Funcional | `CANCELED` devolve a reserva ao disponível |
+| Liquidação na entrega | Funcional | `DELIVERED` vira receita da plataforma (preço − repasse) + obrigação contábil com o motoboy; sem payout |
+| Ajuste administrativo auditado | Funcional | Só admin; motivo ≥ 5 chars; débito > saldo → `409`; idempotente |
+| Extrato com autorização por papel | Funcional | Participante só vê a própria carteira (`403` na alheia); admin consulta qualquer uma |
+| Carteira no app do cliente | Funcional | Saldo disponível/reservado/total + extrato; `402` da criação aponta para ela |
+| **Recarga de saldo (PIX/cartão)** | **Planejado** | `PAY-02` (Pagar.me, `DEC-06`) — **sem ela, cliente novo não publica pedido sem crédito manual de admin** |
+| Auto-login no app do cliente | Funcional | Sessão persistida (`shared_preferences`) + refresh do par de tokens na abertura; splash enquanto restaura |
+| APK do cliente apontando para a API pública | Funcional | `dist/aqui-log-cliente-2026-08-11.apk` (arm64, 19,4 MB); URL conferida dentro do `libapp.so` |
+| Runtime de distribuição no acer | Funcional | API + dashboard + Postgres/Redis sob `*.cursar.space`; 3 units systemd `enabled` + `linger` = sobe com o PC |
+| Criação de conta pelo domínio público | Funcional | `POST /auth/register/customer` + login + rota autenticada, provados por HTTP |
+| Smoke pelo domínio público | Funcional | `API_URL=https://aquilog-api.cursar.space/api/v1 pnpm smoke` aprovado (inclui upload de foto pela presign pública) |
+| Dashboard público em navegador real | Funcional | React monta, tela de login renderiza, e a página alcança a API pela origem pública (CORS ok) |
+| Login de admin no painel público | Não executado | digitar senha em formulário está fora do escopo do agente |
+| QA visual do app em aparelho/emulador | Não executado | segue em `UX-02`; o APK existe mas ninguém instalou |
+| Backup automatizado do banco | Não executado | `OPS-01`; só um dump pontual pré-migração |
+| `PAY-DEC-02` (cancelamento do cliente após aceite) | Planejado | sem decisão; nada inventado |
+
+Evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-APK-E-RUNTIME.md`.

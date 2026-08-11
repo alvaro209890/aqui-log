@@ -1,0 +1,26 @@
+[Unit]
+# Aqui Log — API NestJS do runtime de distribuicao no acer (DEC-26 / OPS-01A).
+# Instalar em ~/.config/systemd/user/ (systemd USER, com linger ligado).
+Description=Aqui Log API (NestJS) — 0.0.0.0:3011
+Documentation=file:///home/acer/Documentos/aqui-log/docs/03-referencia/05-RUNTIME-ACER.md
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/acer/Documentos/aqui-log/apps/backend
+# Segredos ficam FORA do repositorio (JWT_SECRET, senha do banco, admin).
+EnvironmentFile=/home/acer/.config/aqui-log/env
+ExecStart=/home/acer/.nvm/versions/node/v22.22.2/bin/node dist/main
+Restart=always
+RestartSec=5
+# Postgres/Redis sobem por Docker (restart=unless-stopped); se a API subir antes
+# deles, o Restart=always cobre a corrida de boot.
+StartLimitIntervalSec=0
+# Coexistencia com os outros servicos do acer: se vazar memoria, morre e
+# reinicia sozinho em vez de derrubar Hermes/CodingPro/NexoGeo.
+MemoryMax=1G
+CPUWeight=50
+
+[Install]
+WantedBy=default.target

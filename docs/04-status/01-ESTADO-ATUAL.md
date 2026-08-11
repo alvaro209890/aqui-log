@@ -1,13 +1,30 @@
 # Estado atual observado
 
-> **Data de referência:** 2026-08-10
-> **Ambiente:** desenvolvimento local no PC `acer`; nada produtivo roda aqui
-> (runtime de distribuição do Aqui Log no acer = `OPS-01A`, decidido em
-> `DEC-26`).
-> **Baseline de código:** `eb211d4` (auditoria pós-DISP-02) + `PAY-01` **em
-> andamento no working tree** (interrompido pelo dono; ver
-> `docs/04-status/entregas/2026-08-10-ESTADO-PAY-01-INTERROMPIDO.md`). Antes:
-> `3a48f6c`/`DISP-02` (2026-08-10) sobre `b57cfb6`/`bc0d553` (DISP-01).
+> **Data de referência:** 2026-08-11
+> **Ambiente:** PC `acer`. **O runtime de distribuição está NO AR** (`OPS-01A` /
+> `DEC-26`): API, dashboard, Postgres e Redis rodam neste PC sob
+> `*.cursar.space`, com início automático ao ligar. Detalhes operacionais em
+> `docs/03-referencia/05-RUNTIME-ACER.md`.
+> **Baseline de código:** `8b05bf2` (PAY-01 parcial) + fechamento do `PAY-01`,
+> app cliente e `OPS-01A` desta rodada
+> (`docs/04-status/entregas/2026-08-11-EVIDENCIA-APK-E-RUNTIME.md`). Antes:
+> `eb211d4` (auditoria pós-DISP-02) e `3a48f6c`/`DISP-02` sobre
+> `b57cfb6`/`bc0d553` (DISP-01).
+
+## 0. Runtime de distribuição no acer (`OPS-01A` — `DONE` 2026-08-11)
+
+| Superfície | URL pública | Serviço local |
+| --- | --- | --- |
+| API NestJS | <https://aquilog-api.cursar.space/api/v1> | systemd user `aqui-log-api` (3011) |
+| Dashboard admin | <https://aquilog.cursar.space> | systemd user `aqui-log-dashboard` (3012) |
+| Túnel | — | systemd user `cloudflared-aqui-log` (`66aa2d7d-…`) |
+| Postgres 17 | — | container `aqui-log-postgres` (5433), dados em `~/Documentos/Bando_de_dados/Aqui_Log` |
+| Redis 7 | — | container `aqui-log-redis` (6379) |
+
+As três units estão `enabled` e o usuário tem `linger`: **com o PC ligado, o
+cadastro de conta, o banco, a API e o dashboard estão funcionando**, sem login.
+Nenhum serviço pré-existente do acer foi tocado. Verificação rápida e armadilhas
+em `docs/03-referencia/05-RUNTIME-ACER.md`.
 
 ## 1. Produto vigente
 
@@ -22,13 +39,39 @@ coluna `company_id`).
 | Superfície | Estado observado na última rodada técnica | Limitação aberta |
 | --- | --- | --- |
 | Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso/modo**), **modo agendado com janela e aceite antecipado**, ofertas com **reserva de agenda** e **reoferta por anéis de raio com limite de rodadas e de tempo**, tracking, **preço v2 versionado com breakdown congelado**, **código de recolhimento na coleta**, **aviso de demora da busca + ações do cliente (tentar de novo, editar, cancelar) + aumento com consentimento**, dashboard e storage local | migrations revalidadas em banco vivo em 2026-08-10 (**13 migrations**) |
-| App cliente Flutter | Cadastro/login, pedido estruturado **com foto obrigatória**, **escolha entre agora e agendar (com janela)**, **código de recolhimento visível após o aceite**, **status da busca com aviso de demora e ações de recuperação (tentar/editar/cancelar/aceitar aumento)**, histórico e acompanhamento | QA recente em dispositivo/emulador pendente |
+| App cliente Flutter | Cadastro/login **com auto-login (sessão persistida + refresh na abertura)**, pedido estruturado **com foto obrigatória**, **escolha entre agora e agendar (com janela)**, **código de recolhimento visível após o aceite**, **status da busca com aviso de demora e ações de recuperação (tentar/editar/cancelar/aceitar aumento)**, histórico, acompanhamento, avaliação e **carteira (saldo/reservado/extrato)**. **APK release arm64 gerado** apontando para a API pública | QA em dispositivo/emulador pendente (`UX-02`); **recarga de saldo não existe** até `PAY-02` |
 | App motoboy Flutter | Cadastro, disponibilidade, oferta (**agendada mostra a janela e aceita antecipado**), **abas Em andamento / Agenda / Concluídas**, **coleta com código de recolhimento**, prova, entrega e carteira básica | sem botão de cancelar (é `COUR-02`); QA em dispositivo/emulador pendente |
 | Dashboard React | KPIs, entregas (**filtro e coluna de modo**), mapa, motoboys, usuários, auditoria, **configurações completas de preço/multas/agendamento/reoferta** (inclui **aviso de demora** e **aumento de destrava da busca**), relatórios; identidade laranja + **tema claro/escuro**; **gráfico de pizza e gauge corrigidos (2026-08-10)** | seções "Modo agendado" e **"Reoferta por aneis"** ainda **sem QA de navegador**; busca da `TopBar` continua decorativa (não corrigida — é feature nova, fora do escopo da auditoria) |
-| Postgres/Redis | Containers `aqui-log-postgres` (5433) e `aqui-log-redis` (6379) ativos | banco de teste é descartável; nenhum dado tem valor |
-| Cloud | Scaffolds Render/Vercel/Firebase; alvos **decididos** (`DEC-25`) | nenhum projeto ou credencial conectado |
+| Backend — ledger (`PAY-01`) | Pedido **pré-pago**: criação reserva o preço, cancelamento libera, `DELIVERED` liquida (receita da plataforma + obrigação com o motoboy); ajuste administrativo auditado; extrato e resumo com autorização por papel; `402` sem saldo | **crédito só por operação de admin** — recarga PIX/cartão é `PAY-02` |
+| Postgres/Redis | Containers `aqui-log-postgres` (5433) e `aqui-log-redis` (6379) ativos, `restart=unless-stopped`; dados do Postgres em `~/Documentos/Bando_de_dados/Aqui_Log` (`DEC-26`, migrados 2026-08-11) | banco ainda é descartável; **sem backup automatizado** (`OPS-01`) |
+| Cloud | Scaffolds Render/Vercel/Firebase; alvos **decididos** (`DEC-25`) | nenhum projeto ou credencial conectado — evolução posterior ao runtime local |
 
 ## 3. Evidência das rodadas técnicas
+
+### `PAY-01` fechado + app cliente + `OPS-01A` (rodada de 2026-08-11)
+
+- **`PAY-01` DONE**: a asserção final do smoke (`GET /finance/summary`) passou a
+  comparar o **delta da execução** contra uma baseline capturada no início, em
+  vez do total acumulado do banco — funciona tanto no CI (banco novo) quanto no
+  acer (banco sujo); e um erro de lint pré-existente
+  (`no-unsafe-enum-comparison` em `finance.controller.ts`) foi corrigido. Os
+  dois deixavam o CI vermelho no `8b05bf2`;
+- `pnpm build`/`lint`/`test` verdes (**25 suítes / 219 testes**); `pnpm smoke`
+  aprovado **3× no localhost** e **1× pelo domínio público**;
+- **app cliente**: a URL padrão da API era o loopback do emulador
+  (`10.0.2.2`) — um APK real não falaria com nada; agora é o domínio público,
+  travado por teste e conferido dentro do `libapp.so`. Somados **auto-login**
+  (sessão persistida + refresh na abertura, com splash) e a tela de **carteira**
+  (o `402` do pré-pago não tinha para onde apontar);
+- `flutter analyze`/`flutter test` verdes nos dois apps (cliente **21**, motoboy
+  18) e `dart analyze`/`dart test` no core (23);
+- **APK release arm64** em `dist/aqui-log-cliente-2026-08-11.apk` (19,4 MB);
+- **`OPS-01A` DONE**: 3 units systemd + túnel dedicado + banco migrado para o
+  caminho da `DEC-26`, com criação de conta, login e dashboard provados pelo
+  domínio público, e restart verificado.
+
+Documento: `docs/04-status/entregas/2026-08-11-EVIDENCIA-APK-E-RUNTIME.md`.
+Operação: `docs/03-referencia/05-RUNTIME-ACER.md`.
 
 ### Auditoria de bugs pós-`DISP-02` (rodada de 2026-08-10)
 
@@ -285,24 +328,38 @@ Evidência anterior (mobile, 2026-08-07):
 - [x] Aplicar e reverter `1785500000000-DeliveryScheduling` em banco descartável.
 - [x] Aplicar e reverter `1785600000000-DispatchRounds` em banco descartável.
 - [x] Aplicar e reverter `1785700000000-DispatchClientNotice` em banco descartável.
+- [x] Subir o runtime de distribuição no acer e provar health, cadastro de conta
+      e dashboard **pelo domínio público** (`OPS-01A`, 2026-08-11).
+- [x] Migrar os dados do Postgres para `~/Documentos/Bando_de_dados/Aqui_Log`.
+- [x] Fechar o smoke do `PAY-01` em banco acumulado (delta em vez de total).
+- [x] Gerar o APK do app cliente (release arm64) apontando para a API pública.
 - [ ] Fazer QA de navegador das seções "Modo agendado" e "Reoferta por aneis" do painel.
-- [ ] Gerar APKs atuais.
-- [ ] Fazer QA visual dos apps em emulador/dispositivo — pendente **e agora mais
-      relevante**, porque `B2C-05` mudou a tela de novo pedido do app cliente.
+- [ ] Gerar o APK atual do app do motoboy.
+- [ ] Fazer QA visual dos apps em emulador/dispositivo — o APK do cliente existe,
+      mas ninguém o instalou ainda.
+- [ ] Fazer login de admin no painel público pelo navegador (o carregamento e o
+      acesso à API a partir da origem pública já estão provados).
+- [ ] Automatizar backup do banco no caminho novo (`OPS-01`).
 
 ## 5. Próximo passo
 
 `BASE-04`, `B2C-01B`, `B2C-05`, `UX-01C`, `B2C-02`, `PICK-01`, `B2C-06`,
-`SCHED-01`, `COUR-01`, `DISP-01` e `DISP-02` estão `DONE`. `DISP-02` entregou o
-aviso de demora e as ações explícitas do cliente (tentar de novo, editar,
-cancelar) e fechou o `DEC-03` por completo com o **aumento com consentimento**
-(nunca silencioso). Com isso, a reoferta sem aceite está integralmente no
-produto; `DEC-03` deixa de ser pendência. `COUR-02` continua esperando só
-`PAY-01`, o ledger interno, que está `READY`. A fila também tem `UX-02` (QA
-visual — a parte mobile exige dispositivo/emulador; o gráfico de pizza que
-estava quebrado foi corrigido na auditoria de 2026-08-10) e `OPS-01A` (runtime
-de distribuição no acer via Cloudflare Tunnel,
-`DEC-26`). Escolher um único ID, conforme o backlog.
+`SCHED-01`, `COUR-01`, `DISP-01`, `DISP-02`, **`PAY-01`** e **`OPS-01A`** estão
+`DONE`. Com o `PAY-01` fechado, **`COUR-02` destrava** (cancelamento do
+prestador com taxa no saldo) — é o próximo ID natural. A fila também tem
+`UX-02` (QA visual: agora existe um APK do cliente para instalar) e, como
+pendência de produto, **`PAY-02`** (Pagar.me, `DEC-06`): sem ela o cliente que
+instalar o APK não consegue pôr saldo e, portanto, não consegue publicar
+pedido. Escolher um único ID, conforme o backlog.
+
+Pendência aberta de `PAY-01`: a **recarga de saldo não existe**. O único
+caminho de crédito é o ajuste administrativo auditado
+(`POST /finance/accounts/customer/:id/adjust`). `PAY-DEC-02` (política de
+cancelamento do cliente depois do aceite/coleta) continua sem decisão.
+
+Pendência aberta de `OPS-01A`: sem backup automatizado e sem monitoramento (é
+`OPS-01`); o dashboard é público e protegido só pelo login de admin da própria
+API.
 
 Pendência aberta de `DISP-02`: o app cliente acompanha a busca por
 **polling/refresh** — os eventos `delivery:warning`/`delivery:dispatch-ended`/
@@ -333,10 +390,13 @@ A tela é trabalho de `SUP-*`/`ADMIN-*` e não foi criada aqui.
 ## 6. Bloqueios externos
 
 - **Distribuição inicial = runtime local no acer via Cloudflare Tunnel**
-  (`DEC-26`, 2026-08-10): antes de publicar/distribuir o app, backend + banco +
-  pilha rodam neste PC sob domínio próprio (`*.cursar.space`), sem derrubar
-  nada que já roda; banco em `~/Documentos/Bando_de_dados/Aqui_Log`. Gate
-  `OPS-01A` (só planejado — nada implementado).
+  (`DEC-26`, 2026-08-10): **gate `OPS-01A` cumprido em 2026-08-11** — API,
+  dashboard, Postgres e Redis rodam no acer sob `*.cursar.space`, com início
+  automático e sem derrubar nada que já rodava; banco em
+  `~/Documentos/Bando_de_dados/Aqui_Log`. Distribuir o app está liberado.
+- **Pagamento do cliente**: o produto é pré-pago (`PAY-01`/`DEC-05`) e a
+  recarga depende de `PAY-02` (Pagar.me, `DEC-06`) — falta conta/credenciais.
+  Até lá, saldo só por ajuste administrativo.
 - Firebase/Render/Vercel: alvos decididos (`DEC-25`); ligar exige credenciais + `OPS-*` — evolução posterior ao runtime local.
 - Verificação de telefone: por **código no app** (`DEC-04`, 2026-08-09); SMS/WhatsApp seguem como opção futura.
 - Pagamentos/PIX: `DEC-05` (ledger sem gateway) e `DEC-06` (**Pagar.me v5**) decididas 2026-08-09; falta conta/credenciais Pagar.me e `PAY-01`.
