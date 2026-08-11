@@ -5,8 +5,10 @@
 > `DEC-26`): API, dashboard, Postgres e Redis rodam neste PC sob
 > `*.cursar.space`, com início automático ao ligar. Detalhes operacionais em
 > `docs/03-referencia/05-RUNTIME-ACER.md`.
-> **Baseline de código:** `8b05bf2` (PAY-01 parcial) + fechamento do `PAY-01`,
-> app cliente e `OPS-01A` desta rodada
+> **Baseline de código:** `5ca60e0` (`OPS-01A`) + o **app do entregador**
+> concluído nesta rodada
+> (`docs/04-status/entregas/2026-08-11-EVIDENCIA-APP-ENTREGADOR.md`), sobre o
+> fechamento do `PAY-01` + app cliente + `OPS-01A`
 > (`docs/04-status/entregas/2026-08-11-EVIDENCIA-APK-E-RUNTIME.md`). Antes:
 > `eb211d4` (auditoria pós-DISP-02) e `3a48f6c`/`DISP-02` sobre
 > `b57cfb6`/`bc0d553` (DISP-01).
@@ -40,13 +42,48 @@ coluna `company_id`).
 | --- | --- | --- |
 | Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso/modo**), **modo agendado com janela e aceite antecipado**, ofertas com **reserva de agenda** e **reoferta por anéis de raio com limite de rodadas e de tempo**, tracking, **preço v2 versionado com breakdown congelado**, **código de recolhimento na coleta**, **aviso de demora da busca + ações do cliente (tentar de novo, editar, cancelar) + aumento com consentimento**, dashboard e storage local | migrations revalidadas em banco vivo em 2026-08-10 (**13 migrations**) |
 | App cliente Flutter | Cadastro/login **com auto-login (sessão persistida + refresh na abertura)**, pedido estruturado **com foto obrigatória**, **escolha entre agora e agendar (com janela)**, **código de recolhimento visível após o aceite**, **status da busca com aviso de demora e ações de recuperação (tentar/editar/cancelar/aceitar aumento)**, histórico, acompanhamento, avaliação e **carteira (saldo/reservado/extrato)**. **APK release arm64 gerado** apontando para a API pública | QA em dispositivo/emulador pendente (`UX-02`); **recarga de saldo não existe** até `PAY-02` |
-| App motoboy Flutter | Cadastro, disponibilidade, oferta (**agendada mostra a janela e aceita antecipado**), **abas Em andamento / Agenda / Concluídas**, **coleta com código de recolhimento**, prova, entrega e carteira básica | sem botão de cancelar (é `COUR-02`); QA em dispositivo/emulador pendente |
+| App motoboy Flutter | **Cadastro dentro do app (com aviso de análise)**, login **com auto-login**, disponibilidade, oferta (**agendada mostra a janela e aceita antecipado**, **com o repasse visível antes do aceite**), **abas Em andamento / Agenda / Concluídas**, **coleta com código de recolhimento**, prova, entrega e **carteira do ledger**. **APK release arm64 gerado** apontando para a API pública | **aprovação do cadastro é manual e só por API** (sem tela no painel); sem botão de cancelar (é `COUR-02`); não avalia o cliente (`B2C-03` BLOCKED); sem saque; QA em dispositivo/emulador pendente |
 | Dashboard React | KPIs, entregas (**filtro e coluna de modo**), mapa, motoboys, usuários, auditoria, **configurações completas de preço/multas/agendamento/reoferta** (inclui **aviso de demora** e **aumento de destrava da busca**), relatórios; identidade laranja + **tema claro/escuro**; **gráfico de pizza e gauge corrigidos (2026-08-10)** | seções "Modo agendado" e **"Reoferta por aneis"** ainda **sem QA de navegador**; busca da `TopBar` continua decorativa (não corrigida — é feature nova, fora do escopo da auditoria) |
 | Backend — ledger (`PAY-01`) | Pedido **pré-pago**: criação reserva o preço, cancelamento libera, `DELIVERED` liquida (receita da plataforma + obrigação com o motoboy); ajuste administrativo auditado; extrato e resumo com autorização por papel; `402` sem saldo | **crédito só por operação de admin** — recarga PIX/cartão é `PAY-02` |
 | Postgres/Redis | Containers `aqui-log-postgres` (5433) e `aqui-log-redis` (6379) ativos, `restart=unless-stopped`; dados do Postgres em `~/Documentos/Bando_de_dados/Aqui_Log` (`DEC-26`, migrados 2026-08-11) | banco ainda é descartável; **sem backup automatizado** (`OPS-01`) |
 | Cloud | Scaffolds Render/Vercel/Firebase; alvos **decididos** (`DEC-25`) | nenhum projeto ou credencial conectado — evolução posterior ao runtime local |
 
 ## 3. Evidência das rodadas técnicas
+
+### App do entregador completo + APK (rodada de 2026-08-11, 2ª)
+
+Executado contra o runtime público (`https://aquilog-api.cursar.space/api/v1`):
+
+- **mesmo achado crítico do app cliente**: a URL padrão da API era o loopback do
+  emulador (`10.0.2.2`) — o APK não falaria com nada. Corrigida para o domínio
+  público, travada por teste e conferida dentro do `libapp.so`;
+- **o entregador não tinha como criar conta pelo app**: tela de cadastro nova,
+  com veículo/placa e **sem auto-login** — a API cria a conta `PENDING` e o
+  login responde `401 Cadastro ainda nao aprovado` até um admin aprovar
+  (`PATCH /couriers/:id/approve`). O fluxo inteiro foi provado ao vivo;
+- **auto-login** com sessão persistida (chave própria do app do entregador) e
+  refresh na abertura; o contrato `SessionStore`/`StoredSession` foi para o
+  `aqui_log_core` (Dart puro) e só a ligação com `shared_preferences` ficou em
+  cada app;
+- **repasse no card da oferta**: `courierFeeCents` já vinha no payload
+  (`present()` não corta esse campo para o `COURIER`), mas o card não mostrava —
+  o entregador aceitava sem saber quanto ganha. Provado ao vivo: oferta real com
+  `courierFeeCents: 1586`;
+- **erros deixaram de ser silenciosos**: oferta expirada/tomada (`404`/`409`)
+  vira frase legível e o card trava enquanto decide; recusa de transição de
+  status (`409` fora da janela) aparece na tela; disponibilidade recusada
+  reverte o switch;
+- **carteira** migrada para o extrato tipado do ledger (imprimia `R$ 18.00`,
+  com ponto);
+- contratos travados: `pickupCode` e `priceBoostProposal` **não** chegam ao app
+  do entregador — verificado no runtime real depois de um aceite e com teste
+  novo;
+- `flutter analyze`/`flutter test` verdes (entregador **28**, cliente 21),
+  `dart analyze`/`dart test` no core (**29**), `pnpm build`/`lint`/`test`
+  (25 suítes / 219 testes) e `pnpm smoke` pelo domínio público;
+- **APK**: `dist/aqui-log-entregador-2026-08-11.apk` (19,3 MB).
+
+Documento: `docs/04-status/entregas/2026-08-11-EVIDENCIA-APP-ENTREGADOR.md`.
 
 ### `PAY-01` fechado + app cliente + `OPS-01A` (rodada de 2026-08-11)
 
@@ -334,7 +371,8 @@ Evidência anterior (mobile, 2026-08-07):
 - [x] Fechar o smoke do `PAY-01` em banco acumulado (delta em vez de total).
 - [x] Gerar o APK do app cliente (release arm64) apontando para a API pública.
 - [ ] Fazer QA de navegador das seções "Modo agendado" e "Reoferta por aneis" do painel.
-- [ ] Gerar o APK atual do app do motoboy.
+- [x] Gerar o APK atual do app do motoboy (2026-08-11).
+- [ ] Criar tela de aprovação de entregadores no painel (hoje só por API) — `ADMIN-*`.
 - [ ] Fazer QA visual dos apps em emulador/dispositivo — o APK do cliente existe,
       mas ninguém o instalou ainda.
 - [ ] Fazer login de admin no painel público pelo navegador (o carregamento e o
@@ -360,6 +398,13 @@ cancelamento do cliente depois do aceite/coleta) continua sem decisão.
 Pendência aberta de `OPS-01A`: sem backup automatizado e sem monitoramento (é
 `OPS-01`); o dashboard é público e protegido só pelo login de admin da própria
 API.
+
+Pendência aberta do app do entregador (2026-08-11): a **aprovação do cadastro é
+manual e só existe por API** (`PATCH /couriers/:id/approve`) — um motoboy que
+instala o APK e se cadastra fica parado até alguém aprovar, e o painel não tem
+fila de aprovação. É a trava operacional equivalente ao `PAY-02` do lado do
+cliente. O entregador também **não avalia o cliente** (`B2C-03`, `BLOCKED`), não
+cancela corrida (`COUR-02`) e não saca saldo.
 
 Pendência aberta de `DISP-02`: o app cliente acompanha a busca por
 **polling/refresh** — os eventos `delivery:warning`/`delivery:dispatch-ended`/

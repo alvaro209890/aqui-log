@@ -4,6 +4,49 @@ Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
 ## Fluxo cliente↔prestador nos planos — 2026-08-07
 
+## App do entregador completo e distribuível — 2026-08-11
+
+- **O mesmo achado crítico do app cliente estava aqui**: a URL padrão da API era
+  `http://10.0.2.2:3001/api/v1`, o loopback do **emulador**. Um APK instalado
+  num celular real não falaria com nada. Agora é o domínio público, travado por
+  teste e conferido dentro do `libapp.so`.
+- **O entregador não tinha como criar conta pelo app** — só existia login. Tela
+  de cadastro nova (nome, e-mail, senha, CPF, veículo, placa). E **sem
+  auto-login de propósito**: a API cria a conta com `status: PENDING` e o login
+  responde `401 Cadastro ainda nao aprovado` até um admin aprovar. A tela
+  termina dizendo isso, em vez de fingir uma entrada que falharia em seguida.
+  Bicicleta não pede placa.
+- **Auto-login** com sessão persistida (chave própria, para cliente e entregador
+  coexistirem no mesmo aparelho) e refresh do par de tokens na abertura. Para
+  não duplicar código, `SessionStore`/`StoredSession`/`MemorySessionStore`
+  foram para o `aqui_log_core` (Dart puro, coberto por `dart test`); em cada app
+  ficou só a ligação com `shared_preferences`, que é plugin Flutter.
+- **O card da oferta não dizia quanto o entregador ganha.** `courierFeeCents` já
+  vinha no payload (o corte de papel de `present()` não remove esse campo do
+  `COURIER`), mas a tela não mostrava — ele aceitava no escuro. Bloco "Você
+  recebe" no card da oferta e no detalhe da corrida.
+- **Erros deixaram de ser silenciosos**: oferta expirada ou tomada por outro
+  (`404`/`409`) vira "Essa oferta não está mais disponível." e o card trava
+  enquanto decide (antes, toque duplo disparava duas chamadas); a recusa do
+  servidor numa transição de status (`409` fora da janela do agendado) aparece
+  na tela; disponibilidade recusada reverte o switch; offline, a tela explica
+  por que não chega oferta.
+- **Carteira** migrada para o extrato tipado do ledger — imprimia `R$ 18.00`,
+  com ponto. O texto passou a dizer a verdade: o saque é feito pela equipe,
+  porque payout automático não existe no servidor.
+- **Contratos preservados e travados**: `pickupCode` e `priceBoostProposal`
+  continuam sem chegar ao app do entregador — verificado no runtime real depois
+  de um aceite (`pickupCodeRequired: true`, `pickupCode` ausente) e com teste
+  novo no app.
+- **APK release arm64** em `dist/aqui-log-entregador-2026-08-11.apk` (19,3 MB).
+- Verificação: `flutter analyze`/`test` verdes (entregador **28** testes, eram
+  18; cliente 21 sem regressão), `dart analyze`/`test` no core (**29**, eram
+  23), `pnpm build`/`lint`/`test` (25 suítes / 219 testes) e `pnpm smoke` pelo
+  domínio público. O fluxo de cadastro → `401` → aprovação → login → oferta com
+  repasse foi exercitado ao vivo contra `aquilog-api.cursar.space`.
+
+Evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-APP-ENTREGADOR.md`.
+
 ## `PAY-01` fechado, app cliente distribuível e `OPS-01A` no ar — 2026-08-11
 
 - **`PAY-01` DONE.** O ledger já estava implementado no `8b05bf2`, mas duas

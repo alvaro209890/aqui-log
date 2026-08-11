@@ -5,9 +5,11 @@
 > **Rodada atual:** `DISP-02` fechado com evidência de runtime local (aviso de
 > demora idempotente, ações do cliente na busca esgotada e aumento com
 > consentimento — `DEC-03` completo).
-> **Próximo pacote:** `COUR-02` (cancelamento do prestador — destravado pelo
-> `PAY-01`) ou `UX-02` (QA visual, agora com APK do cliente disponível).
-> `PAY-01` e `OPS-01A` fecharam em 2026-08-11.
+> **Próximo pacote:** `ADMIN-02A` (fila de aprovação de entregadores — trava
+> operacional do app do motoboy), `COUR-02` (cancelamento do prestador,
+> destravado pelo `PAY-01`) ou `UX-02` (QA visual, agora com **os dois APKs**
+> disponíveis). `PAY-01` e `OPS-01A` fecharam em 2026-08-11, e no mesmo dia os
+> apps do cliente e do entregador ficaram distribuíveis.
 > **Produto principal:** cliente pessoa física → motoboy, sem intermediário no fluxo
 > **Regra operacional:** desenvolvimento e validação local primeiro; nenhuma cloud é ligada sem pedido explícito do Álvaro
 
@@ -229,6 +231,7 @@ legal": dossiê automático, auto-resolução e juiz rápido). Ambos estão em d
 | --- | --- | --- | --- |
 | ADMIN-01 | ⏳ | `B2C-01B` | Fundação do painel: ações com motivo obrigatório, audit log completo, matriz de permissões, confirmação dupla |
 | ADMIN-02 | ⏳ | `ADMIN-01` | Comandos de domínio: status manual, cancelar (guard), redespachar, reatribuir, aprovar/suspender motoboy, suspender cliente |
+| ADMIN-02A | ▶️ | rota `PATCH /couriers/:id/approve` já existe | **Fila de aprovação de entregadores** — fatia urgente do `ADMIN-02` desde que o app do motoboy passou a ter cadastro próprio (2026-08-11): sem essa tela, quem instala o APK e se cadastra fica parado |
 | ADMIN-03 | ⏳ | `PAY-01`, `PAY-01A`, `PAY-01B` | Financeiro admin: ledger, crédito/estorno manual com gate, relatórios |
 | ADMIN-04 | ⏳ | `FROTA-01`, `FROTA-02` | Frota no painel: mapa, ack de alertas, ações forçadas |
 | ADMIN-05 | ⏳ | `LOT-01`, `LOT-02` | Viagens e lotes no painel: reordenar paradas, remover/cancelar lote, intervenção |
@@ -330,6 +333,10 @@ ser simplesmente omitida.
   `DEC-26`); ver `docs/03-referencia/05-RUNTIME-ACER.md`;
 - **`COUR-02`** — destravado pelo `PAY-01`: cancelamento do prestador com
   cutoff e débito da taxa no saldo (`DEC-22`);
+- **`ADMIN-02A`** — fila de aprovação de entregadores no painel: a fatia
+  urgente do `ADMIN-02`, que já prevê "aprovar/suspender motoboy". A rota existe
+  (`PATCH /couriers/:id/approve`), mas não há tela — o motoboy que instala o APK
+  e se cadastra fica parado até alguém chamar a API na mão;
 - **`PAY-02`** — bloqueado por credenciais, mas é a pendência que mais pesa no
   produto: com o pré-pago do `PAY-01` e sem recarga, um cliente novo não
   consegue publicar pedido sem um admin creditar saldo à mão.

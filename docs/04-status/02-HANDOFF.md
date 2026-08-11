@@ -1,85 +1,82 @@
 # Handoff vigente
 
-- **Data/hora:** 2026-08-11
+- **Data/hora:** 2026-08-11 (2ª rodada do dia)
 - **Agente:** Claude (Opus 5)
-- **Tarefas:** `PAY-01` (fechamento), app cliente + APK e `OPS-01A` (runtime de
-  distribuição no acer) — as três autorizadas explicitamente pelo Álvaro na
-  mesma missão
-- **Branch/commit inicial:** `main` @ `8b05bf2` (PAY-01 parcial, CI vermelho)
-- **Estado:** ✅ tudo entregue, commitado e pushado; CI verde
+- **Tarefa:** terminar a parte principal do **app do entregador**
+  (`apps/courier_app`) e exportar o APK, no padrão do app do cliente
+- **Branch/commit inicial:** `main` @ `5ca60e0` (`OPS-01A`)
+- **Estado:** ✅ entregue, commitado e pushado; CI verde
 
 ## Resultado
 
-Evidência completa em
-`docs/04-status/entregas/2026-08-11-EVIDENCIA-APK-E-RUNTIME.md`.
-Operação do runtime em `docs/03-referencia/05-RUNTIME-ACER.md`.
+Evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-APP-ENTREGADOR.md`.
 
-- **`PAY-01` DONE**: smoke fechado (asserção do summary agora compara o **delta
-  da execução** contra uma baseline capturada no início) + erro de lint
-  (`no-unsafe-enum-comparison`) corrigido. Eram os dois motivos do CI vermelho.
-- **App cliente**: URL padrão da API passou a ser o domínio público (era o
-  loopback do emulador — o APK não falaria com nada), **auto-login** com sessão
-  persistida + refresh na abertura, e **carteira** (saldo/reservado/extrato)
-  para o `402` do pré-pago ter para onde apontar.
-- **APK**: `dist/aqui-log-cliente-2026-08-11.apk` (arm64, 19,4 MB, SHA-256
-  `47d0ddd2…`). `dist/` é gitignored de propósito.
-- **`OPS-01A` DONE**: <https://aquilog-api.cursar.space/api/v1> e
-  <https://aquilog.cursar.space> no ar, 3 units systemd de usuário `enabled` com
-  `linger`, banco migrado para `~/Documentos/Bando_de_dados/Aqui_Log`.
+- **URL da API**: era `http://10.0.2.2:3001/api/v1` (loopback do emulador) — o
+  APK não falaria com nada. Agora é o domínio público, travado por teste e
+  conferido dentro do `libapp.so`.
+- **Cadastro no app**: não existia; o entregador só conseguia entrar se alguém
+  criasse a conta por fora. Tela nova, **sem auto-login de propósito** — a API
+  cria a conta `PENDING` e o login responde `401` até um admin aprovar.
+- **Auto-login**, repasse visível na oferta, tratamento de erro em
+  oferta/status/disponibilidade e carteira do ledger tipada.
+- **APK**: `dist/aqui-log-entregador-2026-08-11.apk` (arm64, 19,3 MB, SHA-256
+  `2a00d4d2…`). O do cliente segue em `dist/aqui-log-cliente-2026-08-11.apk`.
+- **Refatoração compartilhada**: `SessionStore`/`StoredSession`/
+  `MemorySessionStore` foram para o `aqui_log_core`; em cada app ficou só o
+  `PrefsSessionStore`. O `session_store.dart` do app cliente virou reexport —
+  nenhum import existente mudou.
 
-Verificação: `pnpm build`/`lint`/`test` ✅ (25 suítes / 219 testes), `pnpm smoke`
-✅ 3× no localhost e 1× pelo domínio público, `flutter analyze`/`test` ✅ nos dois
-apps (cliente 21), `dart analyze`/`test` ✅ no core (23).
+Verificação: `flutter analyze`/`test` verdes (entregador **28**, cliente 21),
+`dart analyze`/`test` no core (**29**), `pnpm build`/`lint`/`test` (25 suítes /
+219 testes) e `pnpm smoke` pelo domínio público. O fluxo cadastro → `401` →
+aprovação → login → oferta com repasse foi exercitado ao vivo.
 
 ## Coisas que o próximo agente precisa saber
 
-1. **O runtime está no ar e é o de verdade.** Publicar código novo da API é
-   `pnpm --filter backend build && systemctl --user restart aqui-log-api`. Ver
-   `docs/03-referencia/05-RUNTIME-ACER.md` §4.
-2. **`pnpm build` na raiz publica o dashboard apontando para `localhost`** — o
-   script não passa `VITE_API_URL`. Existe uma rede de proteção em
-   `apps/dashboard/src/api.ts` (fora de `localhost`, usa a API pública), mas o
-   build de produção deve passar a variável.
-3. **`PUBLIC_API_URL` do serviço é a URL pública.** Por isso o smoke local
-   precisa rodar contra o domínio:
-   `API_URL=https://aquilog-api.cursar.space/api/v1 pnpm smoke`. Rodar contra
-   `localhost:3011` aborta no upload da presign (proteção de `BASE-04`).
-4. **`cloudflared tunnel route dns <nome>` pode acertar o túnel errado** —
-   aconteceu nesta rodada (gravou para `auracore-local-api`). Sempre usar o
-   **UUID** e conferir a saída.
-5. **O smoke não assume banco limpo.** A asserção do summary compara delta
-   contra baseline; não voltar a comparar o total.
-6. **O produto é pré-pago e não tem recarga.** Um cliente novo que instalar o
-   APK **não consegue publicar pedido** sem um admin creditar saldo
-   (`POST /finance/accounts/customer/:id/adjust`). É a pendência que mais pesa.
+1. **A aprovação de entregador é manual e não tem tela.** É a trava operacional
+   do app do motoboy: quem instala o APK e se cadastra fica parado até alguém
+   chamar `PATCH /couriers/:id/approve`. Virou `ADMIN-02A` no backlog.
+2. **`courierFeeCents` chega ao app do motoboy** (o corte de papel de
+   `present()` não remove esse campo do `COURIER`) — é o que alimenta o "Você
+   recebe". Já `pickupCode` e `priceBoostProposal` **não chegam**, e há teste
+   travando isso nos dois lados. Não afrouxar.
+3. **O app do entregador tem chave de sessão própria**
+   (`aqui_log_entregador.sessao`): os dois apps podem coexistir no aparelho.
+4. **`shared_preferences` é plugin Flutter** e por isso não entra no
+   `aqui_log_core`, que é Dart puro e roda em `dart test`. Só o contrato e o
+   modelo moram lá.
+5. Timer periódico de localização: teste de widget que chega ao shell
+   autenticado **não pode usar `pumpAndSettle`** — timer periódico nunca
+   assenta. Usar `pump()` e `stopLocationUpdates()`.
+6. Continuam valendo as armadilhas do runtime
+   (`docs/03-referencia/05-RUNTIME-ACER.md`): `pnpm build` na raiz publica o
+   dashboard apontando para `localhost`; o smoke tem que rodar contra o domínio
+   público.
 
 ## Não feito e bloqueios
 
-- **`PAY-02`** (recarga PIX/cartão, Pagar.me v5): `BLOCKED` por conta e
-  credenciais. Sem ela o app não é auto-suficiente.
-- **QA visual em aparelho/emulador** (`UX-02`): o APK existe, ninguém instalou.
-- **Login de admin no painel público pelo navegador**: não executado — digitar
-  senha em formulário está fora do escopo do agente. O carregamento do painel,
-  o fallback de SPA e o acesso à API pela origem pública estão provados.
-- **Backup automatizado do banco** no caminho novo: é `OPS-01`. Só existe um
-  dump pontual pré-migração, fora do repositório.
-- **`PAY-DEC-02`** (política de cancelamento do cliente após aceite/coleta):
-  sem decisão do Álvaro; nada foi inventado.
-- Fora de escopo por instrução: `COUR-02`, `B2C-04`, `DISP-03`, lote, frota e
-  cloud (Render/Vercel/Firebase).
+- **`ADMIN-02A`** (fila de aprovação no painel): `READY`, não feito aqui.
+- **Entregador não avalia o cliente**: `B2C-03` está `BLOCKED` e
+  `POST /deliveries/:id/rate` é do cliente. Nenhuma rota foi inventada.
+- **`COUR-02`** (cancelamento com taxa) e **`PAY-02`** (recarga/payout): fora de
+  escopo por instrução; `PAY-02` segue bloqueado por credenciais.
+- **Saque/payout não existe** no servidor — a carteira do entregador diz isso.
+- **QA visual em aparelho** (`UX-02`): os dois APKs existem, ninguém instalou.
+- App não consome WebSocket: ofertas e status por polling.
+- Pendências antigas de `COUR-01` intactas: aba *Concluídas* não pagina e a
+  classificação das abas usa o relógio do aparelho.
 
 ## Próximo passo recomendado
 
-1. **`COUR-02`** — destravado pelo `PAY-01`: cancelamento do prestador com
-   cutoff e débito da taxa no saldo (`DEC-22`, `FLOW-DEC-01`: R$ 3,00; 5/60 min).
-2. Ou **`UX-02`** — agora com o APK do cliente pronto para instalar.
-3. Quando o Álvaro tiver a conta Pagar.me, **`PAY-02`** passa à frente das duas.
+1. **`ADMIN-02A`** — fila de aprovação de entregadores no painel. É o que falta
+   para o APK do motoboy funcionar sem alguém chamar API na mão.
+2. Ou **`UX-02`** — QA visual com os dois APKs instalados num aparelho.
+3. **`COUR-02`** segue destravado pelo `PAY-01`, quando o dono quiser.
 
 ## Mensagem de retomada
 
-> `PAY-01` e `OPS-01A` estão `DONE` e no `main` com CI verde. O Aqui Log roda
-> neste PC em <https://aquilog-api.cursar.space/api/v1> (API) e
-> <https://aquilog.cursar.space> (painel), subindo sozinho com o PC. O APK do
-> cliente está em `dist/aqui-log-cliente-2026-08-11.apk`. A pendência que mais
-> pesa é `PAY-02` (recarga de saldo): sem ela, quem instalar o app não consegue
-> publicar pedido sem crédito manual de admin.
+> Os dois apps estão distribuíveis e com APK em `dist/` (cliente e entregador),
+> apontando para <https://aquilog-api.cursar.space/api/v1>, que roda neste PC.
+> Duas travas operacionais em aberto: **`PAY-02`** (sem recarga, cliente novo
+> não publica pedido) e **`ADMIN-02A`** (sem tela de aprovação, motoboy novo não
+> recebe oferta). As duas são de produto, não de código quebrado.

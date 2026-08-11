@@ -269,3 +269,33 @@ Registro append-only. Nada acima foi alterado.
 | `PAY-DEC-02` (cancelamento do cliente após aceite) | Planejado | sem decisão; nada inventado |
 
 Evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-APK-E-RUNTIME.md`.
+
+## App do entregador completo + APK (2026-08-11, 2ª rodada) ✅
+
+Registro append-only. Nada acima foi alterado.
+
+| Funcionalidade | Estado | Observação |
+| --- | --- | --- |
+| Cadastro de entregador pelo app | Funcional | Nome, e-mail, senha, CPF, `VehicleType` e placa; bicicleta não pede placa; **sem auto-login** — a conta nasce `PENDING` |
+| **Aprovação do entregador** | **Manual, sem tela** | `PATCH /couriers/:id/approve` (admin). Enquanto não aprova, o login responde `401 Cadastro ainda nao aprovado`. Fila no painel é `ADMIN-*` |
+| Auto-login do entregador | Funcional | Sessão persistida com chave própria (`aqui_log_entregador.sessao`) + refresh do par de tokens na abertura; splash enquanto restaura |
+| URL da API no APK | Funcional | Domínio público do runtime; travada por teste e conferida no `libapp.so` |
+| Disponibilidade (online/offline) | Funcional | Recusa do servidor reverte o switch; offline a tela explica por que não chega oferta |
+| Envio de localização | Funcional | `PATCH /couriers/me/location` a cada 15 s enquanto disponível |
+| Ofertas: lista, mapa e encomenda | Funcional | Card mostra código, tipo/tamanho/peso, foto, endereços e, no agendado, a janela antes do aceite (`DEC-20`) |
+| **Repasse visível antes do aceite** | Funcional | Bloco "Você recebe" no card da oferta e no detalhe; provado ao vivo com `courierFeeCents: 1586` |
+| Aceitar / recusar oferta | Funcional | Card trava enquanto decide (evita duplo aceite); `404`/`409` viram "Essa oferta não está mais disponível." |
+| Abas Em andamento / Agenda / Concluídas | Funcional | `COUR-01` intacto (`courier_board.dart` não foi tocado) |
+| Coleta com código de recolhimento | Funcional | O app **exige** o código sem nunca recebê-lo; `pickupCode` ausente no payload conferido no runtime real após o aceite |
+| Transições de status (AT_PICKUP / IN_TRANSIT) | Funcional | Confirmação em tela e a recusa do servidor (`409`) aparece — antes era disparar e esquecer |
+| Prova com foto | Funcional | Já existia; inalterado |
+| Carteira do entregador | Funcional | Extrato tipado do ledger (`PAY-01`); valores em pt-BR (imprimia `R$ 18.00`, com ponto) |
+| **Saque / payout** | **Planejado** | Não existe no servidor; a tela diz que o saque é feito pela equipe |
+| Entregador avalia o cliente | Planejado | `B2C-03` (`BLOCKED`) — `POST /deliveries/:id/rate` é do cliente; nenhuma rota foi inventada |
+| Cancelamento pelo entregador | Planejado | `COUR-02` (com taxa) |
+| APK do entregador | Funcional | `dist/aqui-log-entregador-2026-08-11.apk` (arm64, 19,3 MB) |
+| Eventos em tempo real no app | Não executado | Ofertas e status por polling/pull-to-refresh; socket do gateway não é consumido |
+| QA visual em aparelho/emulador | Não executado | `UX-02`; o APK existe mas ninguém instalou |
+| Paginação da aba Concluídas | Planejado | Pendência aberta de `COUR-01`; a lista cresce sem limite |
+
+Evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-APP-ENTREGADOR.md`.
