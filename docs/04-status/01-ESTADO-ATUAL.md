@@ -4,8 +4,9 @@
 > **Ambiente:** desenvolvimento local no PC `acer`; nada produtivo roda aqui
 > (runtime de distribuição do Aqui Log no acer = `OPS-01A`, decidido em
 > `DEC-26`).
-> **Baseline de código:** `DISP-02` entregue (2026-08-10) sobre `b57cfb6`; antes:
-> `bc0d553` (DISP-01).
+> **Baseline de código:** auditoria de bugs pós-`DISP-02` (2026-08-10) sobre
+> `3a48f6c`; `DISP-02` entregue (2026-08-10) sobre `b57cfb6`; antes: `bc0d553`
+> (DISP-01).
 
 ## 1. Produto vigente
 
@@ -22,11 +23,38 @@ coluna `company_id`).
 | Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso/modo**), **modo agendado com janela e aceite antecipado**, ofertas com **reserva de agenda** e **reoferta por anéis de raio com limite de rodadas e de tempo**, tracking, **preço v2 versionado com breakdown congelado**, **código de recolhimento na coleta**, **aviso de demora da busca + ações do cliente (tentar de novo, editar, cancelar) + aumento com consentimento**, dashboard e storage local | migrations revalidadas em banco vivo em 2026-08-10 (**13 migrations**) |
 | App cliente Flutter | Cadastro/login, pedido estruturado **com foto obrigatória**, **escolha entre agora e agendar (com janela)**, **código de recolhimento visível após o aceite**, **status da busca com aviso de demora e ações de recuperação (tentar/editar/cancelar/aceitar aumento)**, histórico e acompanhamento | QA recente em dispositivo/emulador pendente |
 | App motoboy Flutter | Cadastro, disponibilidade, oferta (**agendada mostra a janela e aceita antecipado**), **abas Em andamento / Agenda / Concluídas**, **coleta com código de recolhimento**, prova, entrega e carteira básica | sem botão de cancelar (é `COUR-02`); QA em dispositivo/emulador pendente |
-| Dashboard React | KPIs, entregas (**filtro e coluna de modo**), mapa, motoboys, usuários, auditoria, **configurações completas de preço/multas/agendamento/reoferta** (inclui **aviso de demora** e **aumento de destrava da busca**), relatórios; identidade laranja + **tema claro/escuro** | seções "Modo agendado" e **"Reoferta por aneis"** ainda **sem QA de navegador**; busca da `TopBar` decorativa; **gráfico de pizza não renderiza setores** (Recharts 3.9 + React 19) — em `UX-02` |
+| Dashboard React | KPIs, entregas (**filtro e coluna de modo**), mapa, motoboys, usuários, auditoria, **configurações completas de preço/multas/agendamento/reoferta** (inclui **aviso de demora** e **aumento de destrava da busca**), relatórios; identidade laranja + **tema claro/escuro**; **gráfico de pizza e gauge corrigidos (2026-08-10)** | seções "Modo agendado" e **"Reoferta por aneis"** ainda **sem QA de navegador**; busca da `TopBar` continua decorativa (não corrigida — é feature nova, fora do escopo da auditoria) |
 | Postgres/Redis | Containers `aqui-log-postgres` (5433) e `aqui-log-redis` (6379) ativos | banco de teste é descartável; nenhum dado tem valor |
 | Cloud | Scaffolds Render/Vercel/Firebase; alvos **decididos** (`DEC-25`) | nenhum projeto ou credencial conectado |
 
 ## 3. Evidência das rodadas técnicas
+
+### Auditoria de bugs pós-`DISP-02` (rodada de 2026-08-10)
+
+Motivada pelo CI vermelho no run `31443312246` (push de `3a48f6c`). Executado
+em banco descartável `aqui_log_audit0810` (5433) com API em `PORT=3011`,
+sobre `3a48f6c`:
+
+- **causa raiz do CI vermelho**: `warnSlowDispatch()` só olhava pedidos
+  `REQUESTED`, mas o despacho deixa o pedido em `OFFERED` assim que há oferta
+  pendente — o caso comum. O aviso de demora nunca disparava com oferta
+  ativa; corrigido para considerar `REQUESTED` e `OFFERED`;
+- **vazamento de papel**: `priceBoostProposal` calculado antes do corte de
+  `COURIER` em `present()` — o app do motoboy recebia a proposta de aumento
+  que só deveria existir para o cliente; corrigido movendo o cálculo para
+  depois do retorno antecipado do `COURIER`;
+- **gráfico de pizza e gauge do dashboard**: não renderizavam setores
+  (Recharts 3.9 + React 19 StrictMode); corrigido com `isAnimationActive={false}`;
+- `pnpm build`, `pnpm lint`, `pnpm test` verdes (**23 suítes / 209 testes**,
+  +2 suítes / +4 testes desta auditoria);
+- `pnpm smoke` aprovado 3× consecutivas depois das correções;
+- `flutter analyze`/`flutter test` e `dart analyze`/`dart test` verdes nos
+  dois apps e no core (nenhum arquivo Dart/Flutter tocado);
+- achados registrados sem correção: busca da `TopBar` decorativa (é feature
+  nova, não bug regressivo) e uma janela de corrida teórica (sem lock) no
+  consentimento de aumento de preço.
+
+Documento: `docs/04-status/entregas/2026-08-10-AUDITORIA-BUGS.md`.
 
 ### `DISP-02` (rodada de 2026-08-10)
 
@@ -270,8 +298,9 @@ cancelar) e fechou o `DEC-03` por completo com o **aumento com consentimento**
 (nunca silencioso). Com isso, a reoferta sem aceite está integralmente no
 produto; `DEC-03` deixa de ser pendência. `COUR-02` continua esperando só
 `PAY-01`, o ledger interno, que está `READY`. A fila também tem `UX-02` (QA
-visual — a parte mobile exige dispositivo/emulador e inclui o gráfico de pizza
-quebrado) e `OPS-01A` (runtime de distribuição no acer via Cloudflare Tunnel,
+visual — a parte mobile exige dispositivo/emulador; o gráfico de pizza que
+estava quebrado foi corrigido na auditoria de 2026-08-10) e `OPS-01A` (runtime
+de distribuição no acer via Cloudflare Tunnel,
 `DEC-26`). Escolher um único ID, conforme o backlog.
 
 Pendência aberta de `DISP-02`: o app cliente acompanha a busca por
