@@ -74,6 +74,9 @@ espera.
   **Status inválido é ignorado** em vez de virar erro do Postgres: um enum
   inexistente no `WHERE` derrubaria a página do painel com 500 e a tela ficaria
   vazia sem explicação.
+- As duas decisões acima moram em `couriers.rules.ts` como **funções puras**
+  (`withUser`, `parseCourierStatus`), no padrão que o repositório já usa para
+  regra testável sem subir o Nest (`ledger-rules.ts`, `courier_board.dart`).
 - `GET /couriers/pending-count` — o número da fila. Declarado **antes** das
   rotas `:id/...` para não ser capturado como um id.
 - Nada de novo em `approve`/`reject`/`suspend`: já gravavam auditoria e
@@ -158,12 +161,16 @@ entra na **auditoria** — os dois já existiam no serviço e continuam.
 
 ## 5. Comandos e contagens
 
+Verificação final, com o **exit code** conferido em cada comando (sem `| tail`,
+que mascara o código de saída):
+
 | Comando | Antes | Depois |
 | --- | --- | --- |
-| `pnpm --filter backend test` | 25 suítes / 219 testes | ✅ **26 suítes / 224 testes** |
-| `pnpm build` | ✅ | ✅ |
-| `pnpm lint` | ✅ | ✅ (0 erros, 0 avisos) |
-| `pnpm smoke` (domínio público) | ✅ | ✅ `AQL-MSO4RLTG0WI` + agendado `AQL-MSO4RPYEZNH` + reoferta `2c31bf7a-…` |
+| `pnpm build` | ✅ | ✅ `exit=0` |
+| `pnpm --filter backend test` | 25 suítes / 219 testes | ✅ **26 suítes / 224 testes**, `exit=0` |
+| `pnpm --filter backend lint:check` | ✅ | ✅ `exit=0` |
+| `pnpm lint` | ✅ | ✅ `exit=0` |
+| `pnpm smoke` (domínio público) | ✅ | ✅ `exit=0` — `AQL-MSO6COYBQBK` + agendado `AQL-MSO6CT80T9D` + reoferta `a49c9d04-…` |
 
 Teste novo: `apps/backend/src/couriers/courier-queue.contract.spec.ts` (5 casos)
 — trava o contrato de que a tela depende: nome e e-mail no payload, campos de
@@ -172,6 +179,26 @@ entregador sem usuário correspondente não quebra a lista, e o filtro de status
 aceita os válidos e ignora o inválido.
 
 Flutter/Dart **não executados**: nenhum arquivo Dart foi tocado nesta rodada.
+
+### 5.1 CI vermelho no primeiro push (`e815afd`) — erro de processo
+
+O primeiro push quebrou em `pnpm --filter backend lint:check` com **27 erros**,
+todos no arquivo de teste novo. Causa: o teste alcançava os dois helpers por
+`Object.create(CouriersService.prototype)`, que devolve `any` — o
+`typescript-eslint` marcou cada acesso como `no-unsafe-*`. **Erro de processo,
+não de código:** o lint tinha rodado **antes** de o arquivo de teste existir e
+não foi repetido depois; a primeira versão desta evidência afirmava
+`pnpm lint ✅` com base nessa execução obsoleta.
+
+Correção — a que o próprio repositório já sugeria (`ledger-rules.ts`,
+`courier_board.dart`): as duas funções viraram **regras puras exportadas** em
+`couriers.rules.ts` (`withUser`, `parseCourierStatus`), o serviço passou a
+importá-las e o teste passou a chamá-las direto. Sem `any`, sem
+`eslint-disable`, e a lógica ficou testável sem instanciar o Nest.
+
+Lição registrada: `comando | tail` devolve o exit code do `tail`, não do
+comando. A verificação final desta rodada gravou a saída em arquivo e conferiu
+`$?` de cada etapa.
 
 ---
 

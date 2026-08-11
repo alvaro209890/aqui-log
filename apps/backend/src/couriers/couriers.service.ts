@@ -11,12 +11,11 @@ import { Courier } from '../database/entities/courier.entity';
 import { User } from '../database/entities/user.entity';
 import { AccountStatus, NotificationType } from '../database/enums';
 import { NotificationsService } from '../notifications/notifications.service';
-
-/** Colunas cruas que a junção com `users` acrescenta ao resultado. */
-interface CourierRawUser {
-  user_name?: string;
-  user_email?: string;
-}
+import {
+  parseCourierStatus,
+  withUser,
+  type CourierRawUser,
+} from './couriers.rules';
 
 @Injectable()
 export class CouriersService {
@@ -41,7 +40,7 @@ export class CouriersService {
    * inválido é ignorado em vez de derrubar a página do painel.
    */
   async findAll(page?: string, limit?: string, status?: string) {
-    const filtro = this.parseStatus(status);
+    const filtro = parseCourierStatus(status);
     const p = parsePagination(page, limit);
     const usaPagina = page != null || limit != null;
 
@@ -54,7 +53,7 @@ export class CouriersService {
 
     if (!usaPagina) {
       const { entities, raw } = await qb.getRawAndEntities<CourierRawUser>();
-      return entities.map((item, i) => this.withUser(item, raw[i]));
+      return entities.map((item, i) => withUser(item, raw[i]));
     }
 
     const total = await qb.getCount();
@@ -63,7 +62,7 @@ export class CouriersService {
       .take(p.limit)
       .getRawAndEntities<CourierRawUser>();
     return toPageResult(
-      entities.map((item, i) => this.withUser(item, raw[i])),
+      entities.map((item, i) => withUser(item, raw[i])),
       total,
       p.page,
       p.limit,
@@ -74,22 +73,6 @@ export class CouriersService {
   async pendingCount() {
     return {
       pending: await this.couriers.countBy({ status: AccountStatus.PENDING }),
-    };
-  }
-
-  private parseStatus(status?: string): AccountStatus | undefined {
-    if (!status) return undefined;
-    const alvo = status.toUpperCase();
-    return (Object.values(AccountStatus) as string[]).includes(alvo)
-      ? (alvo as AccountStatus)
-      : undefined;
-  }
-
-  private withUser(courier: Courier, raw?: CourierRawUser) {
-    return {
-      ...courier,
-      name: raw?.user_name ?? null,
-      email: raw?.user_email ?? null,
     };
   }
 
