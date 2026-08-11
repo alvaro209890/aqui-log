@@ -1444,10 +1444,16 @@ export class DeliveriesService {
         : null,
     };
     // DISP-02 / DEC-03 §3.3 — a proposta de aumento de valor para destravar a
-    // busca esgotada. Só existe quando o ciclo terminou em motivo recuperável
-    // e há percentual configurado > 0. É ela que o app mostra antes de pedir
-    // consentimento — nunca o contrário. O percentual real (Redis) é passado
-    // por quem leu as settings; o default do env cobre os fluxos de lista.
+    // busca esgotada é só do cliente (e de staff, que atua em nome dele):
+    // revelar ao motoboy que um aumento está para ser oferecido deixaria a
+    // recusa estratégica (recusar de propósito para forçar o valor subir)
+    // valer a pena. Por isso o cálculo fica DEPOIS do retorno antecipado do
+    // `COURIER`, no mesmo espírito do corte de `pickupCode` acima.
+    if (user.role === UserRole.COURIER) return shared;
+    // Só existe quando o ciclo terminou em motivo recuperável e há percentual
+    // configurado > 0. É ela que o app mostra antes de pedir consentimento —
+    // nunca o contrário. O percentual real (Redis) é passado por quem leu as
+    // settings; o default do env cobre os fluxos de lista.
     const effectiveBoostPercent = boostPercent ?? this.settingsBoostPercent();
     if (
       delivery.status === DeliveryStatus.REQUESTED &&
@@ -1463,7 +1469,6 @@ export class DeliveriesService {
     } else {
       shared.priceBoostProposal = null;
     }
-    if (user.role === UserRole.COURIER) return shared;
     if (STAFF_ROLES.includes(user.role)) {
       return {
         ...shared,
