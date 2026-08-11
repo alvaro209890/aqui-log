@@ -1,7 +1,7 @@
 # Backlog executável por agentes
 
-> **Atualizado:** 2026-08-11 (`PAY-01` e `OPS-01A` fechados; apps cliente e
-> entregador com APK gerado)
+> **Atualizado:** 2026-08-11 (`PAY-01`, `OPS-01A` e `ADMIN-02A` fechados; apps
+> cliente e entregador com APK gerado)
 > **Papel:** converter o roadmap em pacotes pequenos, ordenados e verificáveis.
 > **Regra:** um agente executa um único ID por sessão, salvo autorização explícita.
 
@@ -14,7 +14,7 @@
 | — | `B2C-05` | `DONE` (2026-08-08) | P0 | Foto + campos obrigatórios na criação | evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-05.md` |
 | — | `UX-01C` | `DONE` (2026-08-08) | P1 | Dashboard usa tokens laranja equivalentes | evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-UX-01C.md` |
 | 1 | `UX-02` | `READY` | P1 | Fluxos principais passam por QA visual/acessibilidade | `UX-01C` DONE; **os dois APKs já existem em `dist/`** (2026-08-11) — falta instalar e rodar o QA em aparelho |
-| 1b | `ADMIN-02A` | `READY` | P1 | **Fila de aprovação de entregadores no painel** (fatia urgente do `ADMIN-02`, que já prevê "aprovar/suspender motoboy") — hoje aprovar é só `PATCH /couriers/:id/approve` por API, e sem isso o motoboy que se cadastra pelo APK fica parado | rota já existe; é só tela |
+| — | `ADMIN-02A` | `DONE` (2026-08-11) | P1 | **Fila de aprovação de entregadores no painel**: identidade (nome/e-mail) no payload, filtro por status, contador, documentos abríveis e confirmação individual. Não era "só tela" — a lista não trazia quem era o candidato | evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-ADMIN-02A.md`; **QA de navegador logado pendente** |
 | — | `B2C-02` | `DONE` (2026-08-08) | P1 | Preço v2 versionado com breakdown congelado | `DEC-02` decidida; evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-02-E-TEMA-ESCURO.md` |
 | — | `B2C-06` | `DONE` (2026-08-09) | P1 | Dual km imediato/agendado + settings admin | evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-SCHED-01-B2C-06.md` |
 | — | `SCHED-01` | `DONE` (2026-08-09) | P1 | Modo `SCHEDULED` individual + aceite antecipado | mesmo esforço e mesma evidência de `B2C-06` |

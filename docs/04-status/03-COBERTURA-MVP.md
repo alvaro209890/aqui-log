@@ -299,3 +299,27 @@ Registro append-only. Nada acima foi alterado.
 | Paginação da aba Concluídas | Planejado | Pendência aberta de `COUR-01`; a lista cresce sem limite |
 
 Evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-APP-ENTREGADOR.md`.
+
+## `ADMIN-02A` — fila de aprovação de entregadores (2026-08-11, 3ª rodada) ✅
+
+Registro append-only. Nada acima foi alterado.
+
+| Funcionalidade | Estado | Observação |
+| --- | --- | --- |
+| Fila de cadastros pendentes no painel | Funcional | Seção própria em cartões, carregada com `?status=PENDING`; contador no cabeçalho |
+| **Identidade do candidato** | Funcional | `GET /couriers` passou a juntar `users`: nome e e-mail no payload — antes a tela só tinha UUID + CPF |
+| Dados de revisão na fila | Funcional | CPF formatado, veículo, placa, data do cadastro e **tempo de espera** ("há 3 h") |
+| Documentos enviados | Funcional | `documentUrls` viram links abríveis; sem documento, a tela diz que não há |
+| Aprovar / Recusar com confirmação individual | Funcional | Modal com resumo do cadastro; aprovação em lote continua proibida (`PLANO_ADMIN` §7) |
+| **Motivo na recusa** | Planejado | `PLANO_ADMIN` §2.3 pede, mas `PATCH /couriers/:id/reject` não aceita motivo — é `ADMIN-02`. A tela não pede o que o servidor descartaria |
+| Filtro por status na lista completa | Funcional | `?status=`; valor inválido é ignorado em vez de derrubar a página |
+| Contador da fila | Funcional | `GET /couriers/pending-count` |
+| Estados de loading / vazio / erro | Funcional | Vazio distingue "nenhum cadastro" de "nenhum com esse filtro"; erro tem "tentar de novo" |
+| Auditoria e notificação da decisão | Funcional | Já existiam em `CouriersService` (`COURIER_APPROVED`/`COURIER_REJECTED`); conferidos em HTTP vivo |
+| Efeito da aprovação | Documentado | `approve` → `ACTIVE`, mas `available=false` e posição `null`: receber oferta ainda exige o entregador ficar online no app |
+| **QA de navegador logado** | **Não executado** | O painel exige login de admin; receita de 6 passos na evidência §6, com 2 cadastros pendentes deixados no banco |
+| Paginação da fila | Planejado | Busca até 50 pendentes; acima disso, usar o filtro da lista completa |
+| Visualizador de documentos embutido | Planejado | Links abrem em aba nova; visualizador é `ADMIN-02` |
+| Suspender / reativar | Funcional (inalterado) | Continuam na lista completa, sem confirmação — fora do escopo desta fatia |
+
+Evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-ADMIN-02A.md`.

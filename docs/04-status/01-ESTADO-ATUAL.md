@@ -5,8 +5,10 @@
 > `DEC-26`): API, dashboard, Postgres e Redis rodam neste PC sob
 > `*.cursar.space`, com início automático ao ligar. Detalhes operacionais em
 > `docs/03-referencia/05-RUNTIME-ACER.md`.
-> **Baseline de código:** `5ca60e0` (`OPS-01A`) + o **app do entregador**
-> concluído nesta rodada
+> **Baseline de código:** `49deec0` (app do entregador) + **`ADMIN-02A`**
+> (fila de aprovação no painel) desta rodada
+> (`docs/04-status/entregas/2026-08-11-EVIDENCIA-ADMIN-02A.md`). Antes:
+> `5ca60e0` (`OPS-01A`) e o **app do entregador**
 > (`docs/04-status/entregas/2026-08-11-EVIDENCIA-APP-ENTREGADOR.md`), sobre o
 > fechamento do `PAY-01` + app cliente + `OPS-01A`
 > (`docs/04-status/entregas/2026-08-11-EVIDENCIA-APK-E-RUNTIME.md`). Antes:
@@ -43,12 +45,42 @@ coluna `company_id`).
 | Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso/modo**), **modo agendado com janela e aceite antecipado**, ofertas com **reserva de agenda** e **reoferta por anéis de raio com limite de rodadas e de tempo**, tracking, **preço v2 versionado com breakdown congelado**, **código de recolhimento na coleta**, **aviso de demora da busca + ações do cliente (tentar de novo, editar, cancelar) + aumento com consentimento**, dashboard e storage local | migrations revalidadas em banco vivo em 2026-08-10 (**13 migrations**) |
 | App cliente Flutter | Cadastro/login **com auto-login (sessão persistida + refresh na abertura)**, pedido estruturado **com foto obrigatória**, **escolha entre agora e agendar (com janela)**, **código de recolhimento visível após o aceite**, **status da busca com aviso de demora e ações de recuperação (tentar/editar/cancelar/aceitar aumento)**, histórico, acompanhamento, avaliação e **carteira (saldo/reservado/extrato)**. **APK release arm64 gerado** apontando para a API pública | QA em dispositivo/emulador pendente (`UX-02`); **recarga de saldo não existe** até `PAY-02` |
 | App motoboy Flutter | **Cadastro dentro do app (com aviso de análise)**, login **com auto-login**, disponibilidade, oferta (**agendada mostra a janela e aceita antecipado**, **com o repasse visível antes do aceite**), **abas Em andamento / Agenda / Concluídas**, **coleta com código de recolhimento**, prova, entrega e **carteira do ledger**. **APK release arm64 gerado** apontando para a API pública | **aprovação do cadastro é manual e só por API** (sem tela no painel); sem botão de cancelar (é `COUR-02`); não avalia o cliente (`B2C-03` BLOCKED); sem saque; QA em dispositivo/emulador pendente |
-| Dashboard React | KPIs, entregas (**filtro e coluna de modo**), mapa, motoboys, usuários, auditoria, **configurações completas de preço/multas/agendamento/reoferta** (inclui **aviso de demora** e **aumento de destrava da busca**), relatórios; identidade laranja + **tema claro/escuro**; **gráfico de pizza e gauge corrigidos (2026-08-10)** | seções "Modo agendado" e **"Reoferta por aneis"** ainda **sem QA de navegador**; busca da `TopBar` continua decorativa (não corrigida — é feature nova, fora do escopo da auditoria) |
+| Dashboard React | KPIs, entregas (**filtro e coluna de modo**), mapa, motoboys (**fila de aprovação com identidade, documentos e confirmação individual**), usuários, auditoria, **configurações completas de preço/multas/agendamento/reoferta** (inclui **aviso de demora** e **aumento de destrava da busca**), relatórios; identidade laranja + **tema claro/escuro**; **gráfico de pizza e gauge corrigidos (2026-08-10)** | seções "Modo agendado" e **"Reoferta por aneis"** ainda **sem QA de navegador**; busca da `TopBar` continua decorativa (não corrigida — é feature nova, fora do escopo da auditoria) |
 | Backend — ledger (`PAY-01`) | Pedido **pré-pago**: criação reserva o preço, cancelamento libera, `DELIVERED` liquida (receita da plataforma + obrigação com o motoboy); ajuste administrativo auditado; extrato e resumo com autorização por papel; `402` sem saldo | **crédito só por operação de admin** — recarga PIX/cartão é `PAY-02` |
 | Postgres/Redis | Containers `aqui-log-postgres` (5433) e `aqui-log-redis` (6379) ativos, `restart=unless-stopped`; dados do Postgres em `~/Documentos/Bando_de_dados/Aqui_Log` (`DEC-26`, migrados 2026-08-11) | banco ainda é descartável; **sem backup automatizado** (`OPS-01`) |
 | Cloud | Scaffolds Render/Vercel/Firebase; alvos **decididos** (`DEC-25`) | nenhum projeto ou credencial conectado — evolução posterior ao runtime local |
 
 ## 3. Evidência das rodadas técnicas
+
+### `ADMIN-02A` — fila de aprovação de entregadores (rodada de 2026-08-11, 3ª)
+
+O backlog dizia "é só tela". Não era: contra a API viva, `GET /couriers`
+devolvia só as colunas de `couriers` — **sem nome e sem e-mail**. O operador
+aprovava um UUID, e aprovar cadastro é revisão humana (`PLANO_ADMIN` §7 proíbe
+aprovação em lote "porque documentos exigem olho humano"). Além disso não havia
+fila: a lista era dos **87** entregadores do banco, paginada em 20, sem filtro e
+sem contador, e a tela ignorava `documentUrls` e `createdAt`, que já vinham.
+
+- backend: `findAll` com junção explícita com `users` (nome + e-mail), filtro
+  `?status=` (status inválido é ignorado em vez de virar 500) e
+  `GET /couriers/pending-count`. `approve`/`reject` não foram tocados — já
+  gravavam auditoria e notificação;
+- painel: seção **Fila de aprovação** em cartões com nome, e-mail, CPF
+  formatado, veículo, placa, tempo de espera e **documentos abríveis**;
+  contador no cabeçalho; **confirmação individual** com resumo antes de aprovar
+  ou recusar; filtro por status e colunas de identidade na lista completa;
+  estados de erro com "tentar de novo";
+- **efeito real da aprovação medido**: `approve` deixa `status=ACTIVE` mas
+  `available=false` e posição `null` — o entregador ainda precisa **abrir o app
+  e ficar online** para receber oferta. A confirmação da tela diz isso ("aprovar
+  não coloca ninguém na rua");
+- `pnpm build`/`lint` verdes e `pnpm --filter backend test` em **26 suítes /
+  224 testes** (+1 suíte, +5 testes que travam o contrato da fila);
+  `pnpm smoke` aprovado pelo domínio público;
+- **QA de navegador logado NÃO executado** (o painel exige login de admin) —
+  ver §4 e a evidência.
+
+Documento: `docs/04-status/entregas/2026-08-11-EVIDENCIA-ADMIN-02A.md`.
 
 ### App do entregador completo + APK (rodada de 2026-08-11, 2ª)
 
@@ -372,7 +404,10 @@ Evidência anterior (mobile, 2026-08-07):
 - [x] Gerar o APK do app cliente (release arm64) apontando para a API pública.
 - [ ] Fazer QA de navegador das seções "Modo agendado" e "Reoferta por aneis" do painel.
 - [x] Gerar o APK atual do app do motoboy (2026-08-11).
-- [ ] Criar tela de aprovação de entregadores no painel (hoje só por API) — `ADMIN-*`.
+- [x] Criar tela de aprovação de entregadores no painel (`ADMIN-02A`, 2026-08-11).
+- [ ] **QA de navegador logado da fila de aprovação** — a receita de 6 passos
+      está em `2026-08-11-EVIDENCIA-ADMIN-02A.md` §6, e dois cadastros pendentes
+      ficaram no banco de propósito para isso.
 - [ ] Fazer QA visual dos apps em emulador/dispositivo — o APK do cliente existe,
       mas ninguém o instalou ainda.
 - [ ] Fazer login de admin no painel público pelo navegador (o carregamento e o
@@ -399,12 +434,11 @@ Pendência aberta de `OPS-01A`: sem backup automatizado e sem monitoramento (é
 `OPS-01`); o dashboard é público e protegido só pelo login de admin da própria
 API.
 
-Pendência aberta do app do entregador (2026-08-11): a **aprovação do cadastro é
-manual e só existe por API** (`PATCH /couriers/:id/approve`) — um motoboy que
-instala o APK e se cadastra fica parado até alguém aprovar, e o painel não tem
-fila de aprovação. É a trava operacional equivalente ao `PAY-02` do lado do
-cliente. O entregador também **não avalia o cliente** (`B2C-03`, `BLOCKED`), não
-cancela corrida (`COUR-02`) e não saca saldo.
+Pendência aberta do app do entregador (2026-08-11): a aprovação do cadastro
+**deixou de ser só por API** — `ADMIN-02A` entregou a fila no painel. O que
+resta: a **recusa não aceita motivo** (o `PLANO_ADMIN` §2.3 pede; a rota não
+suporta — é `ADMIN-02`), o entregador **não avalia o cliente** (`B2C-03`,
+`BLOCKED`), não cancela corrida (`COUR-02`) e não saca saldo.
 
 Pendência aberta de `DISP-02`: o app cliente acompanha a busca por
 **polling/refresh** — os eventos `delivery:warning`/`delivery:dispatch-ended`/

@@ -4,6 +4,41 @@ Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
 ## Fluxo cliente↔prestador nos planos — 2026-08-07
 
+## `ADMIN-02A`: fila de aprovação de entregadores no painel — 2026-08-11
+
+- **O backlog dizia "é só tela". Não era.** A rota `PATCH /couriers/:id/approve`
+  existia e a página já tinha os botões, mas `GET /couriers` devolvia só as
+  colunas de `couriers`: **sem nome e sem e-mail**. Quem aprovava via um UUID,
+  um CPF e um tipo de veículo — e aprovar cadastro é revisão humana
+  (`PLANO_ADMIN` §7 proíbe aprovação em lote justamente porque "documentos
+  exigem olho humano").
+- **Também não havia fila**: a lista era dos 87 entregadores do banco, ordenada
+  por data e paginada em 20, sem filtro e sem contador. Um cadastro novo entrava
+  no topo hoje e afundava amanhã. E a tela ignorava `documentUrls` e
+  `createdAt`, que **já vinham** no payload.
+- **Backend**: `findAll` passou a juntar `users` para trazer nome e e-mail,
+  ganhou filtro `?status=` (status inválido é **ignorado** em vez de virar um
+  500 que esvaziaria a página) e um `GET /couriers/pending-count`.
+  `approve`/`reject` não foram tocados — já gravavam auditoria e notificação.
+- **Painel**: seção *Fila de aprovação* em cartões, com nome, e-mail, CPF
+  formatado, veículo, placa, **tempo de espera** e **documentos abríveis**;
+  contador no cabeçalho; **confirmação individual** com o resumo do cadastro
+  antes de aprovar ou recusar; filtro por status e colunas de identidade na
+  lista completa; e erro com "tentar de novo" em vez de tabela vazia e um toast.
+- **Achado que virou texto na tela**: aprovar deixa `status=ACTIVE` mas
+  `available=false` e posição `null` — o entregador ainda precisa abrir o app e
+  ficar online para receber oferta. A confirmação diz isso com todas as letras:
+  *"aprovar não coloca ninguém na rua"*.
+- `pnpm build`/`lint` verdes; `pnpm --filter backend test` em **26 suítes / 224
+  testes** (+1 suíte, +5 testes travando o contrato da fila); `pnpm smoke`
+  aprovado pelo domínio público.
+- **Pendente**: QA de navegador **logado** (o painel exige login de admin) — a
+  receita está na evidência §6, e dois cadastros pendentes ficaram no banco de
+  propósito. A **recusa não aceita motivo**: o `PLANO_ADMIN` pede, a rota não
+  suporta, e a tela não finge — o campo é `ADMIN-02`.
+
+Evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-ADMIN-02A.md`.
+
 ## App do entregador completo e distribuível — 2026-08-11
 
 - **O mesmo achado crítico do app cliente estava aqui**: a URL padrão da API era
