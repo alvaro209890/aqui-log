@@ -5,11 +5,13 @@ class LoginScreen extends StatefulWidget {
   const LoginScreen({
     super.key,
     required this.onSubmit,
+    this.onCreateAccount,
     this.error,
     this.loading = false,
   });
 
   final Future<bool> Function(String email, String password) onSubmit;
+  final VoidCallback? onCreateAccount;
   final String? error;
   final bool loading;
 
@@ -84,6 +86,24 @@ class _LoginScreenState extends State<LoginScreen> {
                             );
                           },
                     child: Text(widget.loading ? 'Entrando...' : 'Entrar'),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Ainda não trabalha com a gente?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AquiLogColors.muted, fontSize: 13),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    onPressed: widget.onCreateAccount,
+                    child: const Text('Quero ser entregador'),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'O cadastro passa por análise da equipe antes de liberar '
+                    'as ofertas.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AquiLogColors.muted, fontSize: 12),
                   ),
                 ],
               ),

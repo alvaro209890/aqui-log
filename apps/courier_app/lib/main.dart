@@ -9,6 +9,7 @@ import 'screens/login_screen.dart';
 import 'screens/my_deliveries_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/proof_screen.dart';
+import 'screens/register_screen.dart';
 import 'screens/wallet_screen.dart';
 
 void main() => runApp(const CourierApp());
@@ -26,6 +27,14 @@ class _CourierAppState extends State<CourierApp> {
   late final CourierAppState state = widget.state ?? CourierAppState();
 
   @override
+  void initState() {
+    super.initState();
+    // Auto-login: tenta restaurar a sessão gravada antes de decidir qual tela
+    // mostrar. Enquanto isso a `home` é a abertura, não o login.
+    if (!state.booted) state.bootstrap();
+  }
+
+  @override
   void dispose() {
     if (widget.state == null) state.dispose();
     super.dispose();
@@ -39,16 +48,54 @@ class _CourierAppState extends State<CourierApp> {
         title: 'Aqui Log Entregador',
         debugShowCheckedModeBanner: false,
         theme: AquiLogTheme.light(),
-        home: state.isAuthenticated
+        home: !state.booted
+            ? const _SplashScreen()
+            : state.isAuthenticated
             ? CourierShell(state: state)
             : LoginScreen(
                 loading: state.loading,
                 error: state.error,
                 onSubmit: state.login,
+                onCreateAccount: _openRegister,
               ),
       ),
     );
   }
+
+  void _openRegister() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RegisterScreen(
+          loading: state.loading,
+          error: state.error,
+          onSubmit: state.register,
+        ),
+      ),
+    );
+  }
+}
+
+/// Abertura do app enquanto a sessão gravada é restaurada (auto-login).
+class _SplashScreen extends StatelessWidget {
+  const _SplashScreen();
+
+  @override
+  Widget build(BuildContext context) => const Scaffold(
+    body: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AquiLogBrand(),
+          SizedBox(height: 28),
+          SizedBox(
+            width: 26,
+            height: 26,
+            child: CircularProgressIndicator(strokeWidth: 2.5),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class CourierShell extends StatefulWidget {
@@ -63,7 +110,7 @@ class _CourierShellState extends State<CourierShell> {
   int index = 0;
   List<Map<String, dynamic>> offers = [];
   List<DeliverySummary> deliveries = [];
-  Map<String, dynamic>? statement;
+  WalletStatement? statement;
   bool loading = true;
 
   @override
@@ -85,9 +132,11 @@ class _CourierShellState extends State<CourierShell> {
           )
           .toList();
       deliveries = await widget.state.api.deliveries();
-      statement = await widget.state.api.statement().catchError(
-        (_) => <String, dynamic>{},
-      );
+      // A carteira não pode derrubar a tela: se o extrato falhar, ofertas e
+      // corridas continuam valendo e a carteira só fica sem dado.
+      try {
+        statement = await widget.state.api.walletStatement();
+      } catch (_) {}
     } catch (_) {
       // keep previous
     } finally {
@@ -178,7 +227,7 @@ class _CourierShellState extends State<CourierShell> {
       ),
       ProfileScreen(
         userName: widget.state.userName,
-        email: '${widget.state.session?.user['email'] ?? ''}',
+        email: widget.state.userEmail,
         available: widget.state.available,
         onToggleAvailable: widget.state.setAvailable,
         onLogout: widget.state.logout,

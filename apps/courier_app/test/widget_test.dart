@@ -1,3 +1,4 @@
+import 'package:aqui_log_entregador/app_state.dart';
 import 'package:aqui_log_entregador/main.dart';
 import 'package:aqui_log_entregador/screens/available_deliveries_screen.dart';
 import 'package:aqui_log_entregador/screens/delivery_detail_screen.dart';
@@ -5,6 +6,7 @@ import 'package:aqui_log_entregador/screens/login_screen.dart';
 import 'package:aqui_log_entregador/screens/my_deliveries_screen.dart';
 import 'package:aqui_log_entregador/screens/profile_screen.dart';
 import 'package:aqui_log_entregador/screens/proof_screen.dart';
+import 'package:aqui_log_entregador/screens/register_screen.dart';
 import 'package:aqui_log_entregador/screens/wallet_screen.dart';
 import 'package:aqui_log_core/aqui_log_core.dart';
 import 'package:flutter/material.dart';
@@ -490,12 +492,19 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: WalletScreen(
-            statement: const {
-              'balanceCents': 1800,
-              'entries': [
-                {'description': 'Credito', 'amountCents': 1800},
+            statement: const WalletStatement(
+              availableCents: 1800,
+              reservedCents: 0,
+              balanceCents: 1800,
+              entries: [
+                WalletEntry(
+                  id: 't1',
+                  type: 'SETTLEMENT',
+                  amountCents: 1800,
+                  description: 'Credito da entrega AQL-1',
+                ),
               ],
-            },
+            ),
             loading: false,
             onRefresh: () async {},
           ),
@@ -503,7 +512,9 @@ void main() {
       ),
     );
     expect(find.text('Carteira'), findsOneWidget);
-    expect(find.textContaining('18'), findsWidgets);
+    // Valor em real brasileiro: antes a tela imprimia "R$ 18.00" com ponto.
+    expect(find.text(r'R$ 18,00'), findsWidgets);
+    expect(find.text('Credito da entrega AQL-1'), findsOneWidget);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -523,8 +534,321 @@ void main() {
   });
 
   testWidgets('CourierApp boots login', (tester) async {
-    await tester.pumpWidget(const CourierApp());
-    await tester.pump();
+    // Sem sessão gravada, a abertura termina no login.
+    final state = CourierAppState(store: MemorySessionStore());
+    await tester.pumpWidget(CourierApp(state: state));
+    await tester.pumpAndSettle();
     expect(find.text('Acesso do entregador'), findsOneWidget);
+  });
+
+  // Auto-login: quem já entrou não vê a tela de login de novo ao reabrir.
+  testWidgets('CourierApp restaura a sessao gravada (auto-login)', (
+    tester,
+  ) async {
+    final state = CourierAppState(
+      store: MemorySessionStore(
+        const StoredSession(
+          accessToken: 'token-guardado',
+          // Sem refresh token o bootstrap não chama a rede: o teste cobre a
+          // restauração, não o servidor.
+          refreshToken: null,
+          user: {'id': 'u1', 'name': 'Rafael', 'email': 'rafael@teste.com'},
+        ),
+      ),
+    );
+
+    // O shell autenticado liga o envio periódico de localização (15 s), e um
+    // timer periódico nunca "assenta" — por isso `pump()` em vez de
+    // `pumpAndSettle()`, e o timer é desligado no fim.
+    addTearDown(state.stopLocationUpdates);
+    await tester.pumpWidget(CourierApp(state: state));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Acesso do entregador'), findsNothing);
+    expect(state.isAuthenticated, isTrue);
+    expect(state.api.accessToken, 'token-guardado');
+    expect(state.userName, 'Rafael');
+    state.stopLocationUpdates();
+  });
+
+  test('logout apaga a sessao gravada do entregador', () async {
+    final store = MemorySessionStore(
+      const StoredSession(
+        accessToken: 'token-guardado',
+        refreshToken: null,
+        user: {'id': 'u1', 'name': 'Rafael'},
+      ),
+    );
+    final state = CourierAppState(store: store);
+    await state.bootstrap();
+    expect(state.isAuthenticated, isTrue);
+
+    await state.logout();
+
+    expect(state.isAuthenticated, isFalse);
+    expect(await store.read(), isNull);
+  });
+
+  // OPS-01A / DEC-26: um APK instalado num celular de verdade não enxerga
+  // localhost nem o 10.0.2.2 do emulador.
+  test('a URL padrao da API e o dominio publico', () {
+    expect(kDefaultApiBaseUrl, 'https://aquilog-api.cursar.space/api/v1');
+  });
+
+  // O cadastro do entregador NÃO faz auto-login: a API cria a conta como
+  // PENDING e o login só passa depois da aprovação do admin.
+  testWidgets('RegisterScreen coleta os dados e confirma a analise', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    Map<String, String?>? enviado;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RegisterScreen(
+          onSubmit:
+              ({
+                required name,
+                required email,
+                required password,
+                required document,
+                required vehicleType,
+                String? vehiclePlate,
+              }) async {
+                enviado = {
+                  'name': name,
+                  'email': email,
+                  'document': document,
+                  'vehicleType': vehicleType,
+                  'vehiclePlate': vehiclePlate,
+                };
+                return const CourierRegistration(
+                  courierId: 'c1',
+                  status: 'PENDING',
+                );
+              },
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Nome completo'),
+      'Rafael Entregador',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'E-mail'),
+      'rafael@teste.com',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Senha'),
+      'SenhaForte123',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'CPF (somente números)'),
+      '123.456.789-09',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Placa'),
+      'abc1d23',
+    );
+    await tester.tap(find.text('Enviar cadastro'));
+    await tester.pumpAndSettle();
+
+    // CPF vai só com dígitos, como o servidor guarda.
+    expect(enviado?['document'], '12345678909');
+    expect(enviado?['vehicleType'], 'MOTORCYCLE');
+    // A confirmação diz que a conta está em análise — não finge que entrou.
+    expect(find.text('Cadastro enviado!'), findsOneWidget);
+    expect(find.textContaining('em análise'), findsOneWidget);
+  });
+
+  // Bicicleta não tem placa; exigir uma travaria o cadastro.
+  testWidgets('RegisterScreen nao pede placa para bicicleta', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RegisterScreen(
+          onSubmit:
+              ({
+                required name,
+                required email,
+                required password,
+                required document,
+                required vehicleType,
+                String? vehiclePlate,
+              }) async =>
+                  const CourierRegistration(courierId: 'c1', status: 'PENDING'),
+        ),
+      ),
+    );
+
+    expect(find.widgetWithText(TextFormField, 'Placa'), findsOneWidget);
+
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bicicleta').last);
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(TextFormField, 'Placa'), findsNothing);
+  });
+
+  // O repasse é o número que decide o aceite; ele já vinha no payload da
+  // oferta mas o card não mostrava.
+  testWidgets('AvailableDeliveriesScreen mostra o repasse da oferta', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AvailableDeliveriesScreen(
+            offers: const [
+              {
+                'id': 'o1',
+                'delivery': {
+                  'id': 'd1',
+                  'code': 'AQL-REPASSE',
+                  'courierFeeCents': 1104,
+                  'priceCents': 1380,
+                },
+              },
+            ],
+            loading: false,
+            available: true,
+            onToggleAvailable: (_) {},
+            onAccept: (_) async {},
+            onReject: (_) async {},
+            onRefresh: () async {},
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Você recebe'), findsOneWidget);
+    expect(find.text(r'R$ 11,04'), findsOneWidget);
+  });
+
+  // Oferta expirada / já aceita por outro: 409 e 404 viram uma frase que o
+  // entregador entende, em vez de sumir sem explicação.
+  testWidgets('AvailableDeliveriesScreen explica oferta que sumiu', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AvailableDeliveriesScreen(
+            offers: const [
+              {
+                'id': 'o1',
+                'delivery': {'id': 'd1', 'code': 'AQL-SUMIU'},
+              },
+            ],
+            loading: false,
+            available: true,
+            onToggleAvailable: (_) {},
+            onAccept: (_) async =>
+                throw const ApiException('Oferta nao encontrada', 404),
+            onReject: (_) async {},
+            onRefresh: () async {},
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.text('Aceitar'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Essa oferta não está mais disponível.'),
+      findsWidgets,
+    );
+  });
+
+  // Offline o servidor não oferta nada; o app precisa dizer por quê.
+  testWidgets('AvailableDeliveriesScreen avisa quando esta offline', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AvailableDeliveriesScreen(
+            offers: const [],
+            loading: false,
+            available: false,
+            onToggleAvailable: (_) {},
+            onAccept: (_) async {},
+            onReject: (_) async {},
+            onRefresh: () async {},
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.textContaining('Offline você não recebe ofertas'), findsOneWidget);
+  });
+
+  // O servidor recusa AT_PICKUP fora da janela com 409; até esta rodada a
+  // recusa não aparecia em lugar nenhum.
+  testWidgets('DeliveryDetailScreen mostra a recusa do servidor', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DeliveryDetailScreen(
+          delivery: DeliverySummary.fromJson(const {
+            'id': 'd1',
+            'code': 'AQL-409',
+            'status': 'ACCEPTED',
+          }),
+          onProof: () {},
+          onStatus: (status, {proofUrl}) async =>
+              throw const ApiException('Fora da janela combinada', 409),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.text('Sai para entrega'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Fora da janela combinada'), findsOneWidget);
+  });
+
+  // PICK-01 / DEC-24 — trava de contrato: o app do entregador nunca deve
+  // conseguir ler o código da coleta, mesmo que o servidor volte a mandá-lo.
+  test('o app do entregador nao expoe o codigo de recolhimento', () {
+    final d = DeliverySummary.fromJson(const {
+      'id': 'd1',
+      'code': 'AQL-PICK',
+      'status': 'AT_PICKUP',
+      'pickupCodeRequired': true,
+      'pickupCodeAttemptsLeft': 3,
+    });
+    expect(d.pickupCodeRequired, isTrue);
+    expect(d.pickupCode, isNull);
   });
 }

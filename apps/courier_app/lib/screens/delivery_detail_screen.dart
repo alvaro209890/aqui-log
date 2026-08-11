@@ -5,7 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class DeliveryDetailScreen extends StatelessWidget {
+class DeliveryDetailScreen extends StatefulWidget {
   const DeliveryDetailScreen({
     super.key,
     required this.delivery,
@@ -17,6 +17,44 @@ class DeliveryDetailScreen extends StatelessWidget {
   final VoidCallback onProof;
   final Future<void> Function(String status, {String? proofUrl}) onStatus;
 
+  @override
+  State<DeliveryDetailScreen> createState() => _DeliveryDetailScreenState();
+}
+
+class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
+  /// Transição em curso. O servidor é a autoridade sobre o que é permitido
+  /// (`409` fora da janela do agendado, por exemplo); até esta rodada a
+  /// chamada era disparada e esquecida, então uma recusa do servidor não
+  /// aparecia em lugar nenhum e o entregador achava que tinha dado certo.
+  String? enviando;
+
+  Future<void> _mudarStatus(String status) async {
+    setState(() => enviando = status);
+    try {
+      await widget.onStatus(status);
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text('Status atualizado: ${_rotulo(status)}')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e is ApiException
+          ? e.message
+          : 'Não foi possível atualizar o status. Tente de novo.';
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
+    } finally {
+      if (mounted) setState(() => enviando = null);
+    }
+  }
+
+  static String _rotulo(String status) => switch (status) {
+    'AT_PICKUP' => 'na coleta',
+    'IN_TRANSIT' => 'a caminho da entrega',
+    _ => status,
+  };
+
   Future<void> _openMaps(double lat, double lng) async {
     final uri = Uri.parse(
       'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng',
@@ -26,7 +64,7 @@ class DeliveryDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final d = delivery;
+    final d = widget.delivery;
     final meta = d.orderMeta ?? OrderMeta.fromNotes(d.notes);
     final hasPickup = d.pickupLatitude != null && d.pickupLongitude != null;
     final hasDrop = d.deliveryLatitude != null && d.deliveryLongitude != null;
@@ -239,9 +277,40 @@ class DeliveryDetailScreen extends StatelessWidget {
               ),
             ),
           ],
+          // O repasse desta corrida: é o que o entregador ganha ao concluir.
+          if (d.courierFeeCents != null) ...[
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.payments_outlined,
+                      color: AquiLogColors.success,
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Seu repasse',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const Spacer(),
+                    Text(
+                      formatCents(d.courierFeeCents!),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AquiLogColors.success,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: onProof,
+            onPressed: widget.onProof,
             icon: const Icon(Icons.photo_camera_outlined),
             label: const Text('Enviar comprovante'),
           ),
@@ -249,17 +318,25 @@ class DeliveryDetailScreen extends StatelessWidget {
           OutlinedButton(
             // DEC-20: antes da janela o servidor recusa a transicao; deixar o
             // botao ativo so produziria um erro que o prestador nao pediu.
-            onPressed: d.scheduledAhead ? null : () => onStatus('AT_PICKUP'),
+            onPressed: d.scheduledAhead || enviando != null
+                ? null
+                : () => _mudarStatus('AT_PICKUP'),
             child: Text(
               d.scheduledAhead
                   ? 'Coleta abre em ${formatPickupWindow(d.pickupWindowStart, d.pickupWindowEnd)}'
+                  : enviando == 'AT_PICKUP'
+                  ? 'Enviando...'
                   : 'Cheguei na coleta',
             ),
           ),
           const SizedBox(height: 8),
           OutlinedButton(
-            onPressed: () => onStatus('IN_TRANSIT'),
-            child: const Text('Sai para entrega'),
+            onPressed: enviando != null
+                ? null
+                : () => _mudarStatus('IN_TRANSIT'),
+            child: Text(
+              enviando == 'IN_TRANSIT' ? 'Enviando...' : 'Sai para entrega',
+            ),
           ),
         ],
       ),
