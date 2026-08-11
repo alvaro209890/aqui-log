@@ -51,10 +51,13 @@ export class FinanceController {
       return this.finance.resolveOwner(user.id, user.role).then((owner) => {
         // Papel de participante só enxerga a PRÓPRIA carteira: se tentou
         // consultar ownerType/ownerId de outra pessoa, 403 (DEC-05 §5).
+        // `owner.ownerType` é um LedgerOwnerType e `ownerType` vem cru da query:
+        // comparar como string mantém o eslint fora de uma comparação entre
+        // tipos sem enum compartilhado, sem mudar a regra.
         if (
           ownerType &&
           ownerId &&
-          (ownerType.toUpperCase() !== owner.ownerType ||
+          (ownerType.toUpperCase() !== (owner.ownerType as string) ||
             ownerId !== owner.ownerId)
         ) {
           throw new ForbiddenException(

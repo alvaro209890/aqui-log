@@ -65,6 +65,13 @@ refresh_token="$(jq -er '.refreshToken' <<<"$admin_login")"
 refreshed="$(api POST /auth/refresh "" "$(jq -nc --arg refreshToken "$refresh_token" '{refreshToken:$refreshToken}')")"
 jq -er '.accessToken' <<<"$refreshed" >/dev/null
 
+# PAY-01: GET /finance/summary agrega o ledger INTEIRO do banco (todas as contas,
+# de todas as execucoes anteriores). O banco local nao e zerado entre rodadas,
+# entao a asserção final compara o DELTA desta execucao, nao o total acumulado.
+# Baseline capturada antes de qualquer pedido deste run.
+summary_baseline="$(api GET /finance/summary "$admin_token")"
+baseline_courier_obligation="$(jq -er '.courierObligationCents' <<<"$summary_baseline")"
+
 # Cliente pessoa física: registro auto-aprovado com auto-login (B2C)
 customer_login="$(api POST /auth/register/customer "" "$(jq -nc --arg name 'Cliente Teste' --arg email "$CUSTOMER_EMAIL" --arg password "$TEST_PASSWORD" --arg document "$RUN_DOC" --arg phone '+5531999999999' '{name:$name,email:$email,password:$password,document:$document,phone:$phone}')")"
 customer_token="$(jq -er '.accessToken' <<<"$customer_login")"
@@ -550,7 +557,20 @@ api GET "/finance/statement?ownerType=COURIER&ownerId=$courier_id" "$admin_token
 api GET /finance/statement "$courier_token" | jq -e --arg code "$delivery_code" '.entries[0].type == "SETTLEMENT" and (.entries[0].description | test("Credito da entrega")) and (.entries[0].description | test($code))' >/dev/null
 
 # 9. Resumo admin enxerga as contas do ledger (obrigacao com motoboys e
-# receita retida).
-api GET /finance/summary "$admin_token" | jq -e --argjson fee "$courier_fee" '.courierObligationCents == $fee and .platformRevenueCents > 0' >/dev/null
+# receita retida). O summary e GLOBAL (soma todas as contas do banco, inclusive
+# de execucoes anteriores), entao a asserção compara o DELTA desta execucao
+# contra a baseline capturada no inicio: a unica entrega DELIVERED do fluxo
+# principal deve ter acrescentado exatamente o repasse do motoboy.
+summary_final="$(api GET /finance/summary "$admin_token")"
+if ! jq -e \
+  --argjson fee "$courier_fee" \
+  --argjson base "$baseline_courier_obligation" \
+  '(.courierObligationCents - $base) == $fee and .platformRevenueCents > 0' \
+  <<<"$summary_final" >/dev/null; then
+  printf 'Resumo admin: obrigacao com motoboys deveria crescer %s centavos nesta execucao (baseline %s), veio %s.\n' \
+    "$courier_fee" "$baseline_courier_obligation" \
+    "$(jq -r '.courierObligationCents' <<<"$summary_final")" >&2
+  exit 1
+fi
 
 printf 'Smoke test aprovado: %s (%s) + agendado %s (%s) + reoferta %s\n' "$delivery_code" "$delivery_id" "$scheduled_code" "$scheduled_id" "$disp_id"
