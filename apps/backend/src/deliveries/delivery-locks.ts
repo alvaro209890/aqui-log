@@ -15,3 +15,14 @@ export function dispatchLockKey(deliveryId: string): string {
 }
 
 export const DISPATCH_LOCK_TTL_SECONDS = 10;
+
+/**
+ * COUR-02 — um clique duplo no cancelar não pode debitar duas vezes nem
+ * deixar o pedido em estados diferentes. O TTL é curto: a operação cabe
+ * numa transação de banco + um redespacho.
+ */
+export function courierCancelLockKey(deliveryId: string): string {
+  return `lock:delivery:courier-cancel:${deliveryId}`;
+}
+
+export const COURIER_CANCEL_LOCK_TTL_SECONDS = 10;

@@ -264,6 +264,83 @@ void main() {
       ),
     );
     expect(find.text('Enviar comprovante'), findsOneWidget);
+    // Sem a flag do servidor, o botão de COUR-02 não aparece.
+    expect(find.text('Cancelar corrida'), findsNothing);
+  });
+
+  testWidgets('DeliveryDetailScreen mostra cancelar só quando o servidor autoriza', (
+    tester,
+  ) async {
+    var cancelou = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DeliveryDetailScreen(
+          delivery: const DeliverySummary(
+            id: 'd-c02',
+            code: 'AQL-C02',
+            status: 'ACCEPTED',
+            courierCancelAllowed: true,
+            courierCancelFeeCents: 300,
+          ),
+          onProof: () {},
+          onStatus: (s, {proofUrl}) async {},
+          onCancel: () async {
+            cancelou = true;
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Cancelar corrida'), findsOneWidget);
+
+    await tester.tap(find.text('Cancelar corrida'));
+    await tester.pumpAndSettle();
+    expect(find.text('Cancelar esta corrida?'), findsOneWidget);
+    expect(find.textContaining('R\$ 3,00'), findsOneWidget);
+
+    await tester.tap(find.text('Voltar'));
+    await tester.pumpAndSettle();
+    expect(cancelou, isFalse);
+    expect(find.text('Cancelar corrida'), findsOneWidget);
+
+    await tester.tap(find.text('Cancelar corrida'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancelar mesmo assim'));
+    await tester.pumpAndSettle();
+    expect(cancelou, isTrue);
+  });
+
+  testWidgets('DeliveryDetailScreen mostra a recusa do cancelamento', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DeliveryDetailScreen(
+          delivery: const DeliverySummary(
+            id: 'd-c02b',
+            code: 'AQL-C02B',
+            status: 'ACCEPTED',
+            courierCancelAllowed: true,
+            courierCancelFeeCents: 300,
+          ),
+          onProof: () {},
+          onStatus: (s, {proofUrl}) async {},
+          onCancel: () async => throw const ApiException(
+            'Saldo insuficiente para a taxa de cancelamento. O cancelamento foi recusado.',
+            409,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.text('Cancelar corrida'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancelar mesmo assim'));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Saldo insuficiente para a taxa de cancelamento'),
+      findsOneWidget,
+    );
   });
 
   // SCHED-01 / DEC-20: o agendado aparece na mesma lista de ofertas e pode ser

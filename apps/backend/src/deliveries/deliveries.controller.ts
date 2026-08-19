@@ -184,6 +184,20 @@ export class DeliveriesController {
   }
 
   /**
+   * COUR-02 / DEC-22 — desistência do prestador com débito da taxa congelada.
+   * O pedido volta a `REQUESTED` e reentra na busca; não é cancelamento do
+   * cliente (`PATCH .../status CANCELED`).
+   */
+  @Post(':id/courier-cancel')
+  @Roles(UserRole.COURIER)
+  cancelByCourier(
+    @Param('id') id: string,
+    @Req() req: Request & { user: AuthenticatedUser },
+  ) {
+    return this.deliveries.cancelByCourier(id, req.user);
+  }
+
+  /**
    * PICK-01 / DEC-24: fallback de código perdido ou ilegível. Só admin/suporte,
    * com motivo obrigatório e auditoria; não avança o status sozinho.
    */

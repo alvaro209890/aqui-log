@@ -26,9 +26,11 @@ import {
 import {
   adjustmentKey,
   assertBalanced,
+  buildCourierCancelFeePostings,
   buildReleasePostings,
   buildReservationPostings,
   buildSettlementPostings,
+  courierCancelFeeKey,
   describeTransaction,
   opposite,
   PLATFORM_OWNER,
@@ -396,6 +398,59 @@ export class FinanceService {
           delivery.priceCents,
           delivery.courierFeeCents,
         ),
+      );
+    });
+  }
+
+  /**
+   * COUR-02 / DEC-22 — débito da taxa congelada no aceite. Contrapartida na
+   * receita da plataforma (mesma conta `RESERVED` da liquidação). Saldo
+   * insuficiente recusa com `409` e não gera saldo negativo. Taxa 0 ou nula
+   * é no-op (desistência ainda acontece no serviço de entregas). Idempotente
+   * por `courier-cancel-fee:delivery:<id>`.
+   */
+  debitCourierCancelFee(delivery: Delivery, manager?: EntityManager) {
+    const fee = delivery.courierCancelFeeCents ?? 0;
+    if (!delivery.courierId || fee <= 0) return null;
+    return this.run(manager, async (m) => {
+      const courierAvailable = await this.account(
+        m,
+        LedgerOwnerType.COURIER,
+        delivery.courierId!,
+        LedgerAccountPurpose.AVAILABLE,
+      );
+      const platformRevenue = await this.account(
+        m,
+        PLATFORM_OWNER.ownerType,
+        PLATFORM_OWNER.ownerId,
+        LedgerAccountPurpose.RESERVED,
+      );
+      await this.lockAccounts(m, [courierAvailable, platformRevenue]);
+      const existing = await m.findOneBy(LedgerTransaction, {
+        idempotencyKey: courierCancelFeeKey(delivery.id),
+      });
+      if (existing) return existing;
+      const balance = await this.balanceOf(m, courierAvailable.id);
+      if (balance < fee) {
+        throw new ConflictException(
+          'Saldo insuficiente para a taxa de cancelamento. O cancelamento foi recusado.',
+        );
+      }
+      return this.applyTransaction(
+        m,
+        {
+          type: LedgerTransactionType.COURIER_CANCEL_FEE,
+          referenceType: 'delivery',
+          referenceId: delivery.id,
+          idempotencyKey: courierCancelFeeKey(delivery.id),
+          status: LedgerTransactionStatus.COMPLETED,
+          metadata: {
+            deliveryCode: delivery.code,
+            feeCents: fee,
+            courierId: delivery.courierId,
+          },
+        },
+        buildCourierCancelFeePostings(courierAvailable, platformRevenue, fee),
       );
     });
   }

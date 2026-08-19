@@ -11,11 +11,15 @@ class DeliveryDetailScreen extends StatefulWidget {
     required this.delivery,
     required this.onProof,
     required this.onStatus,
+    this.onCancel,
   });
 
   final DeliverySummary delivery;
   final VoidCallback onProof;
   final Future<void> Function(String status, {String? proofUrl}) onStatus;
+
+  /// COUR-02: desistência com taxa. Nulo quando o servidor não autoriza.
+  final Future<void> Function()? onCancel;
 
   @override
   State<DeliveryDetailScreen> createState() => _DeliveryDetailScreenState();
@@ -27,6 +31,52 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
   /// chamada era disparada e esquecida, então uma recusa do servidor não
   /// aparecia em lugar nenhum e o entregador achava que tinha dado certo.
   String? enviando;
+
+  Future<void> _cancelarCorrida() async {
+    final onCancel = widget.onCancel;
+    if (onCancel == null) return;
+    final fee = widget.delivery.courierCancelFeeCents ?? 0;
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancelar esta corrida?'),
+        content: Text(
+          fee > 0
+              ? 'Serão debitados ${formatCents(fee)} do seu saldo. O pedido volta para a busca de outro entregador.'
+              : 'O pedido volta para a busca de outro entregador. Não há taxa nesta corrida.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Voltar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Cancelar mesmo assim'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true || !mounted) return;
+    setState(() => enviando = 'CANCEL');
+    try {
+      await onCancel();
+      if (!mounted) return;
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e is ApiException
+          ? e.message
+          : 'Não foi possível cancelar a corrida. Tente de novo.';
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
+    } finally {
+      if (mounted) setState(() => enviando = null);
+    }
+  }
 
   Future<void> _mudarStatus(String status) async {
     setState(() => enviando = status);
@@ -338,6 +388,18 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
               enviando == 'IN_TRANSIT' ? 'Enviando...' : 'Sai para entrega',
             ),
           ),
+          if (d.courierCancelAllowed && widget.onCancel != null) ...[
+            const SizedBox(height: 16),
+            OutlinedButton(
+              onPressed: enviando != null ? null : _cancelarCorrida,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AquiLogColors.errorText,
+              ),
+              child: Text(
+                enviando == 'CANCEL' ? 'Cancelando...' : 'Cancelar corrida',
+              ),
+            ),
+          ],
         ],
       ),
     );

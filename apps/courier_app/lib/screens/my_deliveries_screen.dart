@@ -136,8 +136,8 @@ class _Secao extends StatelessWidget {
 /// Cartão de corrida do prestador (plano §5.2): código, modo, janela,
 /// endereços, encomenda, repasse e status.
 ///
-/// Não há botão de cancelar: o cancelamento com taxa é `COUR-02` e depende de
-/// `PAY-01`. Botão desabilitado aqui só prometeria uma saída que não existe.
+/// O cancelamento com taxa (`COUR-02`) fica no detalhe, com confirmação da
+/// multa — o cartão só abre o fluxo.
 class CorridaCard extends StatelessWidget {
   const CorridaCard({super.key, required this.delivery, required this.onTap});
 

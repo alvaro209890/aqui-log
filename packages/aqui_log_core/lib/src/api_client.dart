@@ -144,6 +144,16 @@ class AquiLogApiClient {
   Future<void> rejectOffer(String offerId) =>
       _request('PATCH', '/deliveries/offers/$offerId/reject');
 
+  /// COUR-02 / DEC-22 — desistência do prestador com débito da taxa
+  /// congelada. O pedido volta à busca; não é `PATCH .../status CANCELED`.
+  Future<DeliverySummary> cancelCourierDelivery(String deliveryId) async {
+    final data = await _request(
+      'POST',
+      '/deliveries/$deliveryId/courier-cancel',
+    ) as Map<String, dynamic>;
+    return DeliverySummary.fromJson(data);
+  }
+
   Future<void> setAvailability(bool available) => _request(
     'PATCH',
     '/couriers/me/availability',

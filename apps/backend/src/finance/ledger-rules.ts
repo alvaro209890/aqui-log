@@ -169,6 +169,34 @@ export function adjustmentKey(clientKey: string): string {
   return `adjust:${clientKey}`;
 }
 
+export function courierCancelFeeKey(deliveryId: string): string {
+  return `courier-cancel-fee:delivery:${deliveryId}`;
+}
+
+/**
+ * Taxa de desistência do prestador (`COUR-02` / `DEC-22`): sai do disponível
+ * do motoboy e entra como receita da plataforma. Soma zero; saldo negativo é
+ * recusado no serviço, não aqui.
+ */
+export function buildCourierCancelFeePostings(
+  courierAvailable: FinancialAccount,
+  platformRevenue: FinancialAccount,
+  feeCents: number,
+): LedgerPosting[] {
+  return [
+    {
+      account: courierAvailable,
+      direction: LedgerEntryDirection.DEBIT,
+      amountCents: feeCents,
+    },
+    {
+      account: platformRevenue,
+      direction: LedgerEntryDirection.CREDIT,
+      amountCents: feeCents,
+    },
+  ];
+}
+
 /** Rótulo legível do extrato para cada tipo de transação. */
 export function describeTransaction(
   type: LedgerTransactionType,
@@ -192,5 +220,7 @@ export function describeTransaction(
         ? reason
         : 'Ajuste administrativo';
     }
+    case LedgerTransactionType.COURIER_CANCEL_FEE:
+      return `Taxa de cancelamento do pedido ${code}`.trim();
   }
 }

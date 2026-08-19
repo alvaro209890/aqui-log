@@ -1,19 +1,13 @@
 # Estado atual observado
 
-> **Data de referência:** 2026-08-11
+> **Data de referência:** 2026-08-19
 > **Ambiente:** PC `acer`. **O runtime de distribuição está NO AR** (`OPS-01A` /
 > `DEC-26`): API, dashboard, Postgres e Redis rodam neste PC sob
 > `*.cursar.space`, com início automático ao ligar. Detalhes operacionais em
 > `docs/03-referencia/05-RUNTIME-ACER.md`.
-> **Baseline de código:** `49deec0` (app do entregador) + **`ADMIN-02A`**
-> (fila de aprovação no painel) desta rodada
-> (`docs/04-status/entregas/2026-08-11-EVIDENCIA-ADMIN-02A.md`). Antes:
-> `5ca60e0` (`OPS-01A`) e o **app do entregador**
-> (`docs/04-status/entregas/2026-08-11-EVIDENCIA-APP-ENTREGADOR.md`), sobre o
-> fechamento do `PAY-01` + app cliente + `OPS-01A`
-> (`docs/04-status/entregas/2026-08-11-EVIDENCIA-APK-E-RUNTIME.md`). Antes:
-> `eb211d4` (auditoria pós-DISP-02) e `3a48f6c`/`DISP-02` sobre
-> `b57cfb6`/`bc0d553` (DISP-01).
+> **Baseline de código:** **`COUR-02`** (cancelamento do prestador com taxa)
+> (`docs/04-status/entregas/2026-08-19-EVIDENCIA-COUR-02.md`). Antes:
+> `0d3ea55` (`ADMIN-02A`) + app do entregador + `PAY-01` + `OPS-01A`.
 
 ## 0. Runtime de distribuição no acer (`OPS-01A` — `DONE` 2026-08-11)
 
@@ -42,15 +36,26 @@ coluna `company_id`).
 
 | Superfície | Estado observado na última rodada técnica | Limitação aberta |
 | --- | --- | --- |
-| Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso/modo**), **modo agendado com janela e aceite antecipado**, ofertas com **reserva de agenda** e **reoferta por anéis de raio com limite de rodadas e de tempo**, tracking, **preço v2 versionado com breakdown congelado**, **código de recolhimento na coleta**, **aviso de demora da busca + ações do cliente (tentar de novo, editar, cancelar) + aumento com consentimento**, dashboard e storage local | migrations revalidadas em banco vivo em 2026-08-10 (**13 migrations**) |
+| Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso/modo**), **modo agendado com janela e aceite antecipado**, ofertas com **reserva de agenda** e **reoferta por anéis de raio com limite de rodadas e de tempo**, tracking, **preço v2 versionado com breakdown congelado**, **código de recolhimento na coleta**, **aviso de demora da busca + ações do cliente (tentar de novo, editar, cancelar) + aumento com consentimento**, **desistência do prestador com taxa no ledger (`COUR-02`)**, dashboard e storage local | **15 migrations** (enum `COURIER_CANCEL_FEE` em 2026-08-19) |
 | App cliente Flutter | Cadastro/login **com auto-login (sessão persistida + refresh na abertura)**, pedido estruturado **com foto obrigatória**, **escolha entre agora e agendar (com janela)**, **código de recolhimento visível após o aceite**, **status da busca com aviso de demora e ações de recuperação (tentar/editar/cancelar/aceitar aumento)**, histórico, acompanhamento, avaliação e **carteira (saldo/reservado/extrato)**. **APK release arm64 gerado** apontando para a API pública | QA em dispositivo/emulador pendente (`UX-02`); **recarga de saldo não existe** até `PAY-02` |
-| App motoboy Flutter | **Cadastro dentro do app (com aviso de análise)**, login **com auto-login**, disponibilidade, oferta (**agendada mostra a janela e aceita antecipado**, **com o repasse visível antes do aceite**), **abas Em andamento / Agenda / Concluídas**, **coleta com código de recolhimento**, prova, entrega e **carteira do ledger**. **APK release arm64 gerado** apontando para a API pública | **aprovação do cadastro é manual e só por API** (sem tela no painel); sem botão de cancelar (é `COUR-02`); não avalia o cliente (`B2C-03` BLOCKED); sem saque; QA em dispositivo/emulador pendente |
+| App motoboy Flutter | **Cadastro dentro do app (com aviso de análise)**, login **com auto-login**, disponibilidade, oferta (**agendada mostra a janela e aceita antecipado**, **com o repasse visível antes do aceite**), **abas Em andamento / Agenda / Concluídas**, **coleta com código de recolhimento**, **cancelar corrida com confirmação da taxa (`COUR-02`)**, prova, entrega e **carteira do ledger**. **APK release arm64 gerado** apontando para a API pública | rebuild do APK e QA em aparelho pendentes (`UX-02`); não avalia o cliente (`B2C-03` BLOCKED); sem saque |
 | Dashboard React | KPIs, entregas (**filtro e coluna de modo**), mapa, motoboys (**fila de aprovação com identidade, documentos e confirmação individual**), usuários, auditoria, **configurações completas de preço/multas/agendamento/reoferta** (inclui **aviso de demora** e **aumento de destrava da busca**), relatórios; identidade laranja + **tema claro/escuro**; **gráfico de pizza e gauge corrigidos (2026-08-10)** | seções "Modo agendado" e **"Reoferta por aneis"** ainda **sem QA de navegador**; busca da `TopBar` continua decorativa (não corrigida — é feature nova, fora do escopo da auditoria) |
-| Backend — ledger (`PAY-01`) | Pedido **pré-pago**: criação reserva o preço, cancelamento libera, `DELIVERED` liquida (receita da plataforma + obrigação com o motoboy); ajuste administrativo auditado; extrato e resumo com autorização por papel; `402` sem saldo | **crédito só por operação de admin** — recarga PIX/cartão é `PAY-02` |
+| Backend — ledger (`PAY-01` + `COUR-02`) | Pedido **pré-pago**: criação reserva o preço, cancelamento do cliente libera, `DELIVERED` liquida; **desistência do prestador debita a taxa congelada** (recusa se saldo insuficiente); ajuste administrativo auditado; extrato e resumo com autorização por papel; `402` sem saldo | **crédito só por operação de admin** — recarga PIX/cartão é `PAY-02` |
 | Postgres/Redis | Containers `aqui-log-postgres` (5433) e `aqui-log-redis` (6379) ativos, `restart=unless-stopped`; dados do Postgres em `~/Documentos/Bando_de_dados/Aqui_Log` (`DEC-26`, migrados 2026-08-11) | banco ainda é descartável; **sem backup automatizado** (`OPS-01`) |
 | Cloud | Scaffolds Render/Vercel/Firebase; alvos **decididos** (`DEC-25`) | nenhum projeto ou credencial conectado — evolução posterior ao runtime local |
 
 ## 3. Evidência das rodadas técnicas
+
+### `COUR-02` — cancelamento do prestador com taxa (2026-08-19)
+
+O motoboy desiste só em `ACCEPTED`, dentro do cutoff (`DEC-22` / `FLOW-DEC-01`).
+A taxa congelada no aceite sai do saldo dele; o pedido volta à busca sem
+soltar a reserva do cliente; quem desistiu não recebe a mesma corrida de
+volta. Saldo insuficiente, coleta já começada e prazo esgotado recusam com
+`409`. O atalho `PATCH .../status CANCELED` pelo entregador foi fechado —
+cancelaria o pedido de graça.
+
+Documento: `docs/04-status/entregas/2026-08-19-EVIDENCIA-COUR-02.md`.
 
 ### `ADMIN-02A` — fila de aprovação de entregadores (rodada de 2026-08-11, 3ª)
 

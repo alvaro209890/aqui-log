@@ -323,3 +323,24 @@ Registro append-only. Nada acima foi alterado.
 | Suspender / reativar | Funcional (inalterado) | Continuam na lista completa, sem confirmação — fora do escopo desta fatia |
 
 Evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-ADMIN-02A.md`.
+
+## `COUR-02` — cancelamento do prestador com taxa (2026-08-19) ✅
+
+Registro append-only. Nada acima foi alterado.
+
+| Funcionalidade | Estado | Observação |
+| --- | --- | --- |
+| Desistência só em `ACCEPTED`, antes da coleta | Funcional | `AT_PICKUP` e além → `409`; pós-coleta continua só suporte |
+| Cutoff imediato | Funcional | `acceptedAt + courierCancelCutoffMinutesImmediate` (default 5 min, `FLOW-DEC-01`) |
+| Cutoff agendado | Funcional | `pickupWindowStart − courierCancelCutoffMinutesScheduled` (default 60 min) |
+| Taxa congelada no aceite | Funcional | Debita `courier_cancel_fee_cents` do saldo disponível (`DEC-22`) |
+| Saldo insuficiente recusa | Funcional | `409`; pedido permanece `ACCEPTED`; sem saldo negativo |
+| Pedido volta à busca | Funcional | Status `REQUESTED` + `dispatch(..., { reopen: true })`; reserva do cliente **não** é solta |
+| Desistente excluído da reoferta | Funcional | Oferta `ACCEPTED` anterior conta como tentado (mesmo critério de recusa) |
+| Atalho `PATCH .../status CANCELED` pelo motoboy | Bloqueado | `400` — cancelaria o pedido de graça e estornaria o cliente |
+| App entregador: botão + confirmação da taxa | Funcional | Só no detalhe, quando `courierCancelAllowed`; cartão da lista sem botão |
+| Recusa visível no app | Funcional | `409` do servidor vira SnackBar (saldo/cutoff/coleta) |
+| Índice de confiabilidade | Não existe | `courier_metrics` é `LOT-01`/`SUP-03`; a trilha ficou em auditoria `COURIER_CANCELED` + evento do pedido |
+| QA em aparelho / rebuild de APK | Não executado | Segue em `UX-02` |
+
+Evidência: `docs/04-status/entregas/2026-08-19-EVIDENCIA-COUR-02.md`.

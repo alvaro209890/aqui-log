@@ -48,6 +48,21 @@ void main() {
     });
     expect(d.pickupAddress, 'Rua A');
     expect(d.pickupLatitude, -15.6);
+    expect(d.courierCancelAllowed, isFalse);
+  });
+
+  test('DeliverySummary parseia a janela de cancelamento do prestador', () {
+    final d = DeliverySummary.fromJson({
+      'id': '9',
+      'code': 'AQL-C02',
+      'status': 'ACCEPTED',
+      'courierCancelFeeCents': 300,
+      'courierCancelAllowed': true,
+      'courierCancelUntil': '2026-08-19T15:05:00.000Z',
+    });
+    expect(d.courierCancelAllowed, isTrue);
+    expect(d.courierCancelFeeCents, 300);
+    expect(d.courierCancelUntil, isNotNull);
   });
 
   test('OrderMeta serializa codigos estaveis para a API', () {

@@ -1,84 +1,63 @@
 # Handoff vigente
 
-- **Data/hora:** 2026-08-11 (3ª rodada do dia)
-- **Agente:** Claude (Opus 5)
-- **Tarefa:** `ADMIN-02A` — fila de aprovação de entregadores no painel
-- **Branch/commit inicial:** `main` @ `49deec0`
-- **Estado:** ✅ entregue, commitado e pushado; CI verde. **Com uma pendência
-  explícita: o QA de navegador logado não foi executado** (decisão do Álvaro).
+- **Data/hora:** 2026-08-19
+- **Agente:** Grok 4.6
+- **Tarefa:** `COUR-02` — cancelamento do prestador com taxa no ledger
+- **Branch/commit inicial:** `main` @ `0d3ea55`
+- **Estado:** código, testes e docs prontos neste clone Windows
+  (`C:\GIS\aqui-log`). **Migration e smoke NÃO rodaram** — o runtime vive
+  no acer. Sem `pnpm db:migrate` lá, o enum novo não existe.
 
 ## Resultado
 
-Evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-ADMIN-02A.md`.
+Evidência: `docs/04-status/entregas/2026-08-19-EVIDENCIA-COUR-02.md`.
 
-O backlog dizia "rota já existe; é só tela". **Não era.** A rota existia e a
-página já tinha os botões Aprovar/Recusar, mas:
+O motoboy desiste só em `ACCEPTED`, dentro do cutoff (`DEC-22` /
+`FLOW-DEC-01`). A taxa congelada no aceite sai do saldo dele; o pedido
+volta à busca sem soltar a reserva do cliente; quem desistiu não recebe
+a mesma corrida de volta. Saldo insuficiente, coleta já começada e prazo
+esgotado recusam com `409`. O atalho `PATCH .../status CANCELED` pelo
+entregador foi fechado (`400`).
 
-- `GET /couriers` devolvia só as colunas de `couriers` — **sem nome e sem
-  e-mail**. O operador aprovava um UUID, e aprovar cadastro é revisão humana
-  (`PLANO_ADMIN` §7 proíbe aprovação em lote porque "documentos exigem olho
-  humano");
-- não havia fila: lista de **87** entregadores, paginada em 20, sem filtro nem
-  contador;
-- `documentUrls` e `createdAt` já vinham no payload e a tela ignorava os dois.
-
-Entregue: junção com `users` no backend, filtro `?status=`,
-`GET /couriers/pending-count`, e no painel uma seção *Fila de aprovação* em
-cartões (identidade, CPF, veículo, tempo de espera, documentos abríveis) com
-confirmação individual antes de aprovar ou recusar.
-
-Verificação: `pnpm build`/`lint` verdes, `pnpm --filter backend test` em **26
-suítes / 224 testes** (+1 suíte, +5 testes) e `pnpm smoke` aprovado pelo domínio
-público. Flutter/Dart não executados — nenhum arquivo Dart foi tocado.
+App: botão *Cancelar corrida* no detalhe, com confirmação do valor.
 
 ## Coisas que o próximo agente precisa saber
 
-1. **Aprovar não coloca ninguém na rua.** Medido: `approve` deixa
-   `status=ACTIVE` mas `available=false` e posição `null`. Receber oferta exige
-   o entregador abrir o app e ficar online (é o app que manda disponibilidade e
-   localização). A confirmação da tela já diz isso — não "corrigir" para
-   prometer o contrário.
-2. **A recusa não aceita motivo.** O `PLANO_ADMIN` §2.3 pede,
-   `PATCH /couriers/:id/reject` não suporta, e a tela **não pede** um motivo que
-   o servidor descartaria. Adicionar o campo é `ADMIN-02` (DTO + serviço +
-   auditoria).
-3. **Status inválido em `?status=` é ignorado de propósito** — um enum
-   inexistente no `WHERE` vira 500 do Postgres e a página fica vazia sem
-   explicação. Há teste travando isso.
-4. **`GET /couriers/pending-count` fica antes de `:id/...`** na ordem de rotas;
-   mover para baixo faz o Nest tratar `pending-count` como um id.
-5. Ficaram no banco, de propósito, **2 cadastros pendentes** para quem for fazer
-   o QA logado: *Motoboy Fila 1* (moto, placa `FIL1A23`, 1 documento) e
-   *Motoboy Fila 2* (bicicleta, sem placa, sem documento) — os dois caminhos da
-   tela.
+1. **Imediato vs agendado no relógio.** A fórmula "âncora − cutoff" do
+   plano só fecha no agendado. No imediato a âncora É o aceite, então o
+   cutoff é uma janela **depois** dele (senão o cancelamento imediato
+   seria impossível). Código e comentário em `courier-cancel.ts`.
+2. **Não é `CANCELED`.** `CANCELED` encerra o pedido e devolve a reserva
+   do cliente. COUR-02 devolve a `REQUESTED` e redespacha. Por isso a
+   rota é `POST /deliveries/:id/courier-cancel`, não o `PATCH` de status.
+3. **Índice de confiabilidade não existe.** `courier_metrics` é
+   `LOT-01`/`SUP-03`. A desistência fica na auditoria `COURIER_CANCELED`
+   e no evento do pedido — não inventar a tabela nesta fatia.
+4. **Migration `1785900000000` é só o enum.** `ALTER TYPE ... ADD VALUE`.
+   O `down` recria o tipo; falha se já houver lançamento com o valor novo.
+5. **Smoke.** O bloco COUR-02 assume o motoboy principal em
+   `DISP_LATITUDE` (estado no fim do DISP-02) e desconta a taxa no
+   `courierObligationCents` final. Sem aplicar a migration, o smoke
+   quebra no primeiro `POST .../courier-cancel`.
 
 ## Não feito e bloqueios
 
-- **QA de navegador logado da fila** — o painel exige login de admin e digitar
-  senha em formulário está fora do que este agente faz; o Álvaro optou por
-  fechar sem esse passo. **Receita de 6 passos na evidência §6.** O que foi
-  possível sem credencial está feito: página carrega em Chrome real pelo
-  domínio, e o bundle/CSS publicados contêm a fila nova.
-- **Motivo na recusa** (`ADMIN-02`), **visualizador de documentos embutido**
-  (`ADMIN-02`), **paginação da fila** (hoje busca até 50 pendentes).
-- Suspender/reativar continuam sem confirmação, como estavam — fora do escopo.
-- Fora de escopo por instrução: `ADMIN-02` completo, `COUR-02`, `PAY-02`,
-  `B2C-03`, `DISP-03`, cloud e rebuild de APK.
+- Migration + restart da API + `pnpm smoke` **no acer**.
+- QA em aparelho e rebuild de APK (`UX-02`).
+- `PAY-02` (recarga) — bloqueado por credenciais Pagar.me.
+- Motivo na recusa de cadastro (`ADMIN-02`).
+- `PAY-01A` (taxa de cancelamento do **cliente**) — fora deste ID.
 
 ## Próximo passo recomendado
 
-1. **`UX-02`** — QA visual. Junta as duas pendências abertas de QA: os dois APKs
-   em `dist/` esperando um aparelho, e a fila de aprovação esperando um login.
-2. Ou **`COUR-02`** — cancelamento do prestador com taxa, destravado pelo
-   `PAY-01`.
-3. **`PAY-02`** passa à frente das duas quando houver conta Pagar.me: sem
-   recarga, cliente novo não publica pedido.
+1. No acer: `git pull`, `pnpm db:migrate`, reiniciar `aqui-log-api`,
+   `pnpm smoke`.
+2. **`UX-02`** — QA visual (APKs + fila de aprovação logada + este botão).
+3. **`PAY-02`** passa na frente quando houver conta Pagar.me.
 
 ## Mensagem de retomada
 
-> `ADMIN-02A` fechou: o painel tem fila de aprovação de entregadores com
-> identidade, documentos e confirmação individual — antes a lista só mostrava
-> UUID. Falta o **QA logado** dessa tela (receita na evidência §6; 2 cadastros
-> pendentes já estão no banco). As travas de produto em aberto continuam sendo
-> `PAY-02` (recarga do cliente) e o **motivo na recusa** de cadastro
-> (`ADMIN-02`).
+> `COUR-02` fechou no código: o motoboy desiste com taxa no saldo, o
+> pedido volta à busca, saldo insuficiente recusa. Falta **aplicar a
+> migration e o smoke no acer**. Depois disso a fila volta a ser
+> `UX-02` (aparelho) e `PAY-02` (recarga, bloqueado por Pagar.me).

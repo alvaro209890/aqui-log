@@ -50,11 +50,18 @@ import {
   type TimeWindow,
 } from './scheduling';
 import {
+  COURIER_CANCEL_LOCK_TTL_SECONDS,
   DISPATCH_LOCK_TTL_SECONDS,
   OFFER_ACCEPT_LOCK_TTL_SECONDS,
+  courierCancelLockKey,
   dispatchLockKey,
   offerAcceptLockKey,
 } from './delivery-locks';
+import {
+  DEFAULT_COURIER_CANCEL_CUTOFFS,
+  evaluateCourierCancel,
+  type CourierCancelCutoffs,
+} from './courier-cancel';
 import {
   type DispatchEndReason,
   type DispatchRingConfig,
@@ -415,7 +422,10 @@ export class DeliveriesService {
     // DISP-02: o detalhe usa o percentual REAL das settings (Redis) para a
     // proposta de aumento bater com o que o consentimento vai aplicar.
     const platform = await this.settings.get();
-    return this.present(delivery, user, platform.dispatchPriceBoostPercent);
+    return this.present(delivery, user, platform.dispatchPriceBoostPercent, {
+      immediateMinutes: platform.courierCancelCutoffMinutesImmediate,
+      scheduledMinutes: platform.courierCancelCutoffMinutesScheduled,
+    });
   }
 
   async history(id: string, user: AuthenticatedUser) {
@@ -818,7 +828,10 @@ export class DeliveriesService {
           courierCancelFeeCents: delivery.courierCancelFeeCents,
         },
       });
-      return this.present(delivery, user);
+      return this.present(delivery, user, undefined, {
+        immediateMinutes: platform.courierCancelCutoffMinutesImmediate,
+        scheduledMinutes: platform.courierCancelCutoffMinutesScheduled,
+      });
     } finally {
       await this.redis.releaseLock(lockKey);
     }
@@ -1317,6 +1330,90 @@ export class DeliveriesService {
     return this.present(await this.getById(delivery.id), user);
   }
 
+  /**
+   * COUR-02 / DEC-22 — desistência do prestador antes da coleta.
+   *
+   * Não é `PATCH .../status CANCELED`: isso encerraria o pedido e devolveria
+   * a reserva do cliente. Aqui o pedido volta a `REQUESTED`, a taxa congelada
+   * no aceite sai do saldo do motoboy, e a busca reabre sem ele (quem já foi
+   * tentado continua excluído pelas ofertas).
+   */
+  async cancelByCourier(id: string, user: AuthenticatedUser) {
+    if (user.role !== UserRole.COURIER) {
+      throw new ForbiddenException(
+        'Somente o entregador da corrida pode desistir por este fluxo',
+      );
+    }
+    const lockKey = courierCancelLockKey(id);
+    const locked = await this.redis.acquireLock(
+      lockKey,
+      COURIER_CANCEL_LOCK_TTL_SECONDS,
+    );
+    if (!locked) {
+      throw new ConflictException(
+        'Cancelamento em processamento; tente novamente',
+      );
+    }
+    try {
+      const courier = await this.getCourierByUser(user.id);
+      const delivery = await this.getById(id);
+      if (delivery.courierId !== courier.id) {
+        throw new ForbiddenException('Entrega de outro entregador');
+      }
+      const platform = await this.settings.get();
+      const cutoffs: CourierCancelCutoffs = {
+        immediateMinutes: platform.courierCancelCutoffMinutesImmediate,
+        scheduledMinutes: platform.courierCancelCutoffMinutesScheduled,
+      };
+      const verdict = evaluateCourierCancel(delivery, cutoffs, new Date());
+      if (!verdict.allowed) {
+        throw new ConflictException(verdict.reason ?? 'Cancelamento recusado');
+      }
+      const fee = delivery.courierCancelFeeCents ?? 0;
+      const previousCourierId = delivery.courierId;
+      await this.dataSource.transaction(async (manager) => {
+        await this.finance.debitCourierCancelFee(delivery, manager);
+        delivery.status = DeliveryStatus.REQUESTED;
+        delivery.courierId = null;
+        await manager.save(Delivery, delivery);
+      });
+      await this.couriers.update(previousCourierId, { available: true });
+      const feeNote =
+        fee > 0 ? ` taxa de ${this.brl(fee)} debitada` : ' sem taxa';
+      await this.recordEvent(
+        delivery,
+        user.id,
+        `Prestador desistiu da corrida;${feeNote}`,
+      );
+      await this.notifyCreator(
+        delivery,
+        'Entregador desistiu da corrida',
+        `${delivery.code}: o entregador desistiu. Estamos procurando outro.`,
+      );
+      await this.audit.record({
+        actorId: user.id,
+        action: 'COURIER_CANCELED',
+        resourceType: 'delivery',
+        resourceId: delivery.id,
+        metadata: {
+          courierId: previousCourierId,
+          feeCents: fee,
+          fulfillmentMode: delivery.fulfillmentMode,
+          deadline: verdict.deadline?.toISOString() ?? null,
+        },
+      });
+      this.tracking.emitDeliveryUpdated(delivery.id);
+      try {
+        await this.dispatch(id, user.id, { reopen: true });
+      } catch {
+        // Sem candidato agora: o pedido segue REQUESTED e o job continua.
+      }
+      return this.present(await this.getById(id), user, undefined, cutoffs);
+    } finally {
+      await this.redis.releaseLock(lockKey);
+    }
+  }
+
   async updateStatus(
     id: string,
     dto: UpdateDeliveryStatusDto,
@@ -1447,6 +1544,7 @@ export class DeliveriesService {
     delivery: Delivery,
     user: AuthenticatedUser,
     boostPercent?: number,
+    cancelCutoffs?: CourierCancelCutoffs,
   ) {
     const {
       pickupCode,
@@ -1473,7 +1571,22 @@ export class DeliveriesService {
     // recusa estratégica (recusar de propósito para forçar o valor subir)
     // valer a pena. Por isso o cálculo fica DEPOIS do retorno antecipado do
     // `COURIER`, no mesmo espírito do corte de `pickupCode` acima.
-    if (user.role === UserRole.COURIER) return shared;
+    if (user.role === UserRole.COURIER) {
+      // COUR-02: o botão de cancelar no app lê estes campos. A taxa já vai
+      // em `courierCancelFeeCents` (congelada no aceite). O recorte do
+      // `pickupCode` permanece — desistir não revela o código.
+      const verdict = evaluateCourierCancel(
+        delivery,
+        cancelCutoffs ?? DEFAULT_COURIER_CANCEL_CUTOFFS,
+      );
+      return {
+        ...shared,
+        courierCancelAllowed: verdict.allowed,
+        courierCancelUntil: verdict.deadline
+          ? verdict.deadline.toISOString()
+          : null,
+      };
+    }
     // Só existe quando o ciclo terminou em motivo recuperável e há percentual
     // configurado > 0. É ela que o app mostra antes de pedir consentimento —
     // nunca o contrário. O percentual real (Redis) é passado por quem leu as
@@ -1815,6 +1928,11 @@ export class DeliveriesService {
     const courier = await this.getCourierByUser(user.id);
     if (delivery.courierId !== courier.id)
       throw new ForbiddenException('Entrega de outro entregador');
+    if (target === DeliveryStatus.CANCELED) {
+      throw new BadRequestException(
+        'Para desistir da corrida use POST /deliveries/:id/courier-cancel',
+      );
+    }
   }
 
   private async recordEvent(

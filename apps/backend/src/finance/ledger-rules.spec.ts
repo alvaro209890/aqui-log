@@ -8,9 +8,11 @@ import { FinancialAccount } from '../database/entities/financial-account.entity'
 import {
   adjustmentKey,
   assertBalanced,
+  buildCourierCancelFeePostings,
   buildReleasePostings,
   buildReservationPostings,
   buildSettlementPostings,
+  courierCancelFeeKey,
   describeTransaction,
   nextReservationStatus,
   PLATFORM_OWNER,
@@ -139,6 +141,7 @@ describe('PAY-01 — regras puras do ledger (plano §2/§3)', () => {
     expect(releaseKey('d-1')).toBe('release:delivery:d-1');
     expect(settlementKey('d-1')).toBe('settle:delivery:d-1');
     expect(adjustmentKey('client-key')).toBe('adjust:client-key');
+    expect(courierCancelFeeKey('d-1')).toBe('courier-cancel-fee:delivery:d-1');
     expect(reservationKey('d-1')).not.toBe(releaseKey('d-1'));
   });
 
@@ -186,5 +189,32 @@ describe('PAY-01 — regras puras do ledger (plano §2/§3)', () => {
         LedgerOwnerType.CUSTOMER,
       ),
     ).toBe('Credito de teste PAY-01');
+    expect(
+      describeTransaction(
+        LedgerTransactionType.COURIER_CANCEL_FEE,
+        metadata,
+        LedgerOwnerType.COURIER,
+      ),
+    ).toBe('Taxa de cancelamento do pedido AQL-1');
+  });
+
+  it('taxa de cancelamento do prestador debita o motoboy e credita a plataforma', () => {
+    const postings = buildCourierCancelFeePostings(
+      COURIER_AVAILABLE,
+      PLATFORM_REVENUE,
+      300,
+    );
+    assertBalanced(postings);
+    expect(postings).toHaveLength(2);
+    expect(postings[0]).toMatchObject({
+      account: COURIER_AVAILABLE,
+      direction: LedgerEntryDirection.DEBIT,
+      amountCents: 300,
+    });
+    expect(postings[1]).toMatchObject({
+      account: PLATFORM_REVENUE,
+      direction: LedgerEntryDirection.CREDIT,
+      amountCents: 300,
+    });
   });
 });

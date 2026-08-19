@@ -1,7 +1,7 @@
 # Backlog executável por agentes
 
-> **Atualizado:** 2026-08-11 (`PAY-01`, `OPS-01A` e `ADMIN-02A` fechados; apps
-> cliente e entregador com APK gerado)
+> **Atualizado:** 2026-08-19 (`COUR-02` fechado: cancelamento do prestador com
+> taxa no ledger)
 > **Papel:** converter o roadmap em pacotes pequenos, ordenados e verificáveis.
 > **Regra:** um agente executa um único ID por sessão, salvo autorização explícita.
 
@@ -24,7 +24,7 @@
 | — | `DISP-01` | `DONE` (2026-08-09) | P1 | Reoferta por anéis, exclusão de tentados, limite de rodadas e de tempo | evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-DISP-01.md` |
 | 4 | `DISP-02` | `DONE` (2026-08-10) | P1 | Avisar o cliente da demora e oferecer ação explícita (inclui aumento com consentimento, `DEC-03`) | `DISP-01` ✅; evidência: `docs/04-status/entregas/2026-08-10-EVIDENCIA-DISP-02.md` |
 | — | `PAY-01` | `DONE` (2026-08-11) | P2 | Ledger interno (cliente + prestador) sem gateway | evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-APK-E-RUNTIME.md` |
-| 2 | `COUR-02` | `READY` | P2 | Cancelamento prestador + taxa no saldo | `COUR-01` ✅; **`PAY-01` ✅ DONE — destravado**; `DEC-22` ✅ decidida |
+| — | `COUR-02` | `DONE` (2026-08-19) | P2 | Cancelamento prestador + taxa no saldo | evidência: `docs/04-status/entregas/2026-08-19-EVIDENCIA-COUR-02.md` |
 | 7 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-02B`, `B2C-03A`, `DISP-03` (`B2C-01B` ok); inclui backup do banco em `~/Documentos/Bando_de_dados/Aqui_Log` |
 | — | `OPS-01A` | `DONE` (2026-08-11) | P1 | **Runtime de distribuição no acer via Cloudflare Tunnel** (`DEC-26`): API (`aquilog-api.cursar.space`) + dashboard (`aquilog.cursar.space`) + Postgres/Redis no acer, com início automático e sem derrubar serviços existentes; banco em `~/Documentos/Bando_de_dados/Aqui_Log`; smoke público aprovado | evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-APK-E-RUNTIME.md`; operação: `docs/03-referencia/05-RUNTIME-ACER.md` |
 | 2b | `PAY-02` | `BLOCKED` | P1 | **Recarga de saldo (PIX/cartão, Pagar.me v5)** — sem ela o cliente que instala o APK não consegue publicar pedido | `DEC-06` ✅ decidida; falta conta/credenciais Pagar.me |
@@ -217,14 +217,14 @@ mostrava.
 
 Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-COUR-01.md`.
 
-## 3. Tarefa pronta — `PAY-01` ou `UX-02`
+## 3. Tarefa pronta — `UX-02`
 
-- **`PAY-01`** — ledger interno; destrava `COUR-02`.
 - **`UX-02`** — QA visual e de acessibilidade dos fluxos. O dashboard já saiu em
-  `UX-01C` + tema escuro; o que resta exige **dispositivo/emulador**, ainda
-  indisponível nesta máquina. Inclui o gráfico de pizza quebrado e as seções
-  "Modo agendado" e "Reoferta por aneis" do admin, que não passaram por Chrome
-  real.
+  `UX-01C` + tema escuro; o que resta exige **dispositivo/emulador**. Inclui a
+  fila de aprovação (`ADMIN-02A`, QA logado pendente) e o botão de cancelar
+  corrida (`COUR-02`) no app do entregador.
+- **`PAY-02`** — recarga PIX/cartão; bloqueado por credenciais Pagar.me. Sem
+  ela, cliente novo não publica pedido.
 
 ## 4. Pacotes do fluxo cliente↔prestador
 
@@ -240,7 +240,7 @@ Detalhe e aceite em
 | `SCHED-01` | ✅ `DONE` — modo agendado individual + aceite antecipado | — |
 | `COUR-01` | ✅ `DONE` — UI Em andamento / Agenda | — |
 | `PICK-01` | ✅ `DONE` — `pickup_code` + foto do prestador na coleta | — |
-| `COUR-02` | Cancelamento prestador + taxa no saldo | exige `PAY-01` |
+| `COUR-02` | ✅ `DONE` — cancelamento prestador + taxa no saldo | — |
 | `DISP-02` | ✅ `DONE` — aviso de demora + ações explícitas (tentar/editar/cancelar) + aumento com consentimento | `DISP-01`; evidência 2026-08-10 |
 
 ## 5. Regras para promover uma tarefa

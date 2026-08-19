@@ -5,9 +5,9 @@
 > **Rodada atual:** `DISP-02` fechado com evidência de runtime local (aviso de
 > demora idempotente, ações do cliente na busca esgotada e aumento com
 > consentimento — `DEC-03` completo).
-> **Próximo pacote:** `UX-02` (QA visual — os dois APKs existem e a fila de
-> aprovação espera QA logado) ou `COUR-02` (cancelamento do prestador,
-> destravado pelo `PAY-01`). Em 2026-08-11 fecharam `PAY-01`, `OPS-01A`,
+> **Próximo pacote:** `UX-02` (QA visual — os dois APKs existem, a fila de
+> aprovação espera QA logado, e o cancelar do prestador espera aparelho).
+> Em 2026-08-19 fechou `COUR-02`. Em 2026-08-11 fecharam `PAY-01`, `OPS-01A`,
 > os dois apps distribuíveis e `ADMIN-02A`.
 > **Produto principal:** cliente pessoa física → motoboy, sem intermediário no fluxo
 > **Regra operacional:** desenvolvimento e validação local primeiro; nenhuma cloud é ligada sem pedido explícito do Álvaro
@@ -161,7 +161,7 @@ Falha de aceite deve terminar em estado recuperável e compreensível, nunca em 
 | PAY-01 | ✅ | Autorização `DEC-05` ✅, `B2C-02` ✅ | **DONE 2026-08-11.** Ledger imutável; saldos cliente e prestador; reserva na criação, liberação no cancelamento, liquidação em `DELIVERED`; `402` sem saldo; ajuste administrativo auditado |
 | PAY-01A | ⏳ | `PAY-01`, `DEC-22` | Políticas de cancelamento (cliente + taxa do prestador no saldo) e liquidação idempotente |
 | PAY-01B | ⏳ | `PAY-01A` | Operação administrativa auditada para crédito manual de ambiente de teste |
-| COUR-02 | ▶️ | `PAY-01` ✅, `COUR-01` ✅, `DEC-22` ✅ — **destravado** | Cancelamento do prestador com cutoff + débito de taxa; recusa se saldo insuficiente |
+| COUR-02 | ✅ | `PAY-01` ✅, `COUR-01` ✅, `DEC-22` ✅ | Cancelamento do prestador com cutoff + débito de taxa; recusa se saldo insuficiente (2026-08-19) |
 
 Nenhuma integração PIX/cartão entra nesta fase. O objetivo é provar a contabilidade e as transições. O **modelo** de saldo sacável do prestador está decidido (`DEC-23`); saque real continua em `PAY-02`.
 
@@ -330,7 +330,7 @@ ser simplesmente omitida.
 - **`PAY-01`** — ✅ entregue 2026-08-11 (ledger interno sem gateway, `DEC-05`);
 - **`OPS-01A`** — ✅ entregue 2026-08-11 (runtime de distribuição no acer,
   `DEC-26`); ver `docs/03-referencia/05-RUNTIME-ACER.md`;
-- **`COUR-02`** — destravado pelo `PAY-01`: cancelamento do prestador com
+- **`COUR-02`** — ✅ entregue 2026-08-19: cancelamento do prestador com
   cutoff e débito da taxa no saldo (`DEC-22`);
 - **`ADMIN-02A`** — ✅ entregue 2026-08-11: fila de aprovação no painel. Achado
   do pacote: aprovar cadastro exige revisão humana e a lista não trazia **nome

@@ -556,21 +556,135 @@ api GET "/finance/statement?ownerType=COURIER&ownerId=$courier_id" "$admin_token
 # da unica entrega concluida do fluxo principal.
 api GET /finance/statement "$courier_token" | jq -e --arg code "$delivery_code" '.entries[0].type == "SETTLEMENT" and (.entries[0].description | test("Credito da entrega")) and (.entries[0].description | test($code))' >/dev/null
 
+# ---------------------------------------------------------------------------
+# COUR-02 — cancelamento do prestador com taxa (DEC-22).
+# ---------------------------------------------------------------------------
+# Depois do DISP-02 o motoboy principal está em DISP_LATITUDE. Os pedidos
+# novos deste bloco usam o mesmo ponto para o auto-dispatch cair nele.
+# courier2 fica a 5 km (fora do anel 1) para não roubar o aceite.
+api PATCH /couriers/me/location "$courier_token" "$(jq -nc --argjson latitude "$DISP_LATITUDE" --argjson longitude "$DISP_LONGITUDE" '{latitude:$latitude,longitude:$longitude}')" >/dev/null
+api PATCH /couriers/me/availability "$courier_token" '{"available":true}' >/dev/null
+api PATCH /couriers/me/location "$courier2_token" "$(jq -nc --argjson latitude "$DISP_FAR_LATITUDE" --argjson longitude "$DISP_LONGITUDE" '{latitude:$latitude,longitude:$longitude}')" >/dev/null
+
+cour02="$(api POST /deliveries "$customer_token" "$(disp_payload)")"
+cour02_id="$(jq -er '.id' <<<"$cour02")"
+cour02_offer="$(api GET /deliveries/offers/mine "$courier_token" | jq -r --arg deliveryId "$cour02_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
+if [[ -z "$cour02_offer" ]]; then
+  cour02_offer="$(api POST "/deliveries/$cour02_id/dispatch" "$admin_token" | jq -er '.offer.id')"
+fi
+api PATCH "/deliveries/offers/$cour02_offer/accept" "$courier_token" >/dev/null
+cour02_view="$(api GET "/deliveries/$cour02_id" "$courier_token")"
+jq -e '.status == "ACCEPTED" and .courierCancelAllowed == true and .courierCancelFeeCents == 300' <<<"$cour02_view" >/dev/null
+# O código de recolhimento continua cortado do app do entregador.
+if jq -e 'has("pickupCode")' <<<"$cour02_view" >/dev/null; then
+  printf 'O app do entregador NAO pode receber o codigo de recolhimento no cancelamento.\n' >&2
+  exit 1
+fi
+
+# Atalho antigo: PATCH CANCELED pelo motoboy cancelaria o pedido de graça.
+gratis="$(api_status PATCH "/deliveries/$cour02_id/status" "$courier_token" '{"status":"CANCELED"}')"
+if [[ "$(tail -n1 <<<"$gratis")" != "400" ]]; then
+  printf 'PATCH CANCELED pelo entregador deveria dar 400, veio %s.\n' "$(tail -n1 <<<"$gratis")" >&2
+  exit 1
+fi
+
+reserved_antes="$(api GET /finance/statement "$customer_token" | jq -er '.reservedCents')"
+saldo_antes="$(api GET /finance/statement "$courier_token" | jq -er '.availableCents')"
+cour02_fee="$(jq -er '.courierCancelFeeCents' <<<"$cour02_view")"
+api POST "/deliveries/$cour02_id/courier-cancel" "$courier_token" >/dev/null
+api GET "/deliveries/$cour02_id" "$customer_token" | jq -e '.status == "REQUESTED" or .status == "OFFERED"' >/dev/null
+api GET "/deliveries/$cour02_id" "$customer_token" | jq -e --arg cid "$courier_id" '.courierId == null or .courierId != $cid' >/dev/null
+# Reserva do cliente permanece (nao e cancelamento do pedido).
+api GET /finance/statement "$customer_token" | jq -e --argjson antes "$reserved_antes" '.reservedCents == $antes' >/dev/null
+api GET /finance/statement "$courier_token" | jq -e --argjson antes "$saldo_antes" --argjson fee "$cour02_fee" '.availableCents == ($antes - $fee) and .entries[0].type == "COURIER_CANCEL_FEE"' >/dev/null
+api GET /audit "$admin_token" | jq -e 'any(.action == "COURIER_CANCELED")' >/dev/null
+# Quem desistiu nao recebe a mesma corrida de volta.
+api GET /deliveries/offers/mine "$courier_token" | jq -e --arg deliveryId "$cour02_id" 'map(select(.delivery.id == $deliveryId)) | length == 0' >/dev/null
+
+# AT_PICKUP: ja passou da coleta — recusa, pedido intacto.
+cour02_coleta="$(api POST /deliveries "$customer_token" "$(disp_payload)")"
+cour02_coleta_id="$(jq -er '.id' <<<"$cour02_coleta")"
+cour02_coleta_offer="$(api GET /deliveries/offers/mine "$courier_token" | jq -r --arg deliveryId "$cour02_coleta_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
+if [[ -z "$cour02_coleta_offer" ]]; then
+  cour02_coleta_offer="$(api POST "/deliveries/$cour02_coleta_id/dispatch" "$admin_token" | jq -er '.offer.id')"
+fi
+api PATCH "/deliveries/offers/$cour02_coleta_offer/accept" "$courier_token" >/dev/null
+api PATCH "/deliveries/$cour02_coleta_id/status" "$courier_token" '{"status":"AT_PICKUP"}' >/dev/null
+coleta_recusa="$(api_status POST "/deliveries/$cour02_coleta_id/courier-cancel" "$courier_token")"
+if [[ "$(tail -n1 <<<"$coleta_recusa")" != "409" ]]; then
+  printf 'Cancelar em AT_PICKUP deveria dar 409, veio %s.\n' "$(tail -n1 <<<"$coleta_recusa")" >&2
+  exit 1
+fi
+api GET "/deliveries/$cour02_coleta_id" "$admin_token" | jq -e '.status == "AT_PICKUP"' >/dev/null
+# Libera o motoboy para o resto do bloco (cliente cancela o pedido de coleta).
+api PATCH "/deliveries/$cour02_coleta_id/status" "$customer_token" '{"status":"CANCELED","note":"limpa COUR-02 smoke apos recusa AT_PICKUP"}' >/dev/null
+
+# Saldo insuficiente: motoboy novo, sem credito, recusa e o pedido segue ACCEPTED.
+COURIER3_EMAIL="entregador3.${RUN_ID}@aquilog.test"
+courier3="$(api POST /auth/register/courier "" "$(jq -nc --arg name 'Entregador Sem Saldo' --arg email "$COURIER3_EMAIL" --arg password "$TEST_PASSWORD" --arg document "$(printf '%011d' $((RUN_ID + 9)))" '{name:$name,email:$email,password:$password,document:$document,vehicleType:"MOTORCYCLE",vehiclePlate:"AQL3T45",documentUrls:["https://example.com/documento-teste.pdf"]}')")"
+courier3_id="$(jq -er '.courierId' <<<"$courier3")"
+api PATCH "/couriers/$courier3_id/approve" "$admin_token" >/dev/null
+courier3_token="$(api POST /auth/login "" "$(jq -nc --arg email "$COURIER3_EMAIL" --arg password "$TEST_PASSWORD" '{email:$email,password:$password}')" | jq -er '.accessToken')"
+api PATCH /couriers/me/location "$courier3_token" "$(jq -nc --argjson latitude "$DISP_LATITUDE" --argjson longitude "$DISP_LONGITUDE" '{latitude:$latitude,longitude:$longitude}')" >/dev/null
+api PATCH /couriers/me/availability "$courier3_token" '{"available":true}' >/dev/null
+# Tira os outros da frente do anel 1.
+api PATCH /couriers/me/location "$courier_token" "$(jq -nc --argjson latitude "$DISP_FAR_LATITUDE" --argjson longitude "$DISP_LONGITUDE" '{latitude:$latitude,longitude:$longitude}')" >/dev/null
+
+cour02_pobre="$(api POST /deliveries "$customer_token" "$(disp_payload)")"
+cour02_pobre_id="$(jq -er '.id' <<<"$cour02_pobre")"
+cour02_pobre_offer="$(api GET /deliveries/offers/mine "$courier3_token" | jq -r --arg deliveryId "$cour02_pobre_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
+if [[ -z "$cour02_pobre_offer" ]]; then
+  cour02_pobre_offer="$(api POST "/deliveries/$cour02_pobre_id/dispatch" "$admin_token" | jq -er '.offer.id')"
+fi
+api PATCH "/deliveries/offers/$cour02_pobre_offer/accept" "$courier3_token" >/dev/null
+pobre_recusa="$(api_status POST "/deliveries/$cour02_pobre_id/courier-cancel" "$courier3_token")"
+if [[ "$(tail -n1 <<<"$pobre_recusa")" != "409" ]]; then
+  printf 'Cancelar sem saldo deveria dar 409, veio %s.\n' "$(tail -n1 <<<"$pobre_recusa")" >&2
+  sed '$d' <<<"$pobre_recusa" >&2
+  exit 1
+fi
+jq -e '.message | test("Saldo insuficiente")' < <(sed '$d' <<<"$pobre_recusa") >/dev/null
+api GET "/deliveries/$cour02_pobre_id" "$admin_token" | jq -e '.status == "ACCEPTED"' >/dev/null
+
+# Agendado com janela a 45 min: cutoff de 60 min ja passou — recusa.
+api PATCH /couriers/me/location "$courier_token" "$(jq -nc --argjson latitude "$DISP_LATITUDE" --argjson longitude "$DISP_LONGITUDE" '{latitude:$latitude,longitude:$longitude}')" >/dev/null
+api PATCH /couriers/me/availability "$courier_token" '{"available":true}' >/dev/null
+# courier3 ainda está em cima da coleta e ACCEPTED no pedido pobre — a
+# capacidade do imediato o tira do mercado. O agendado pode ir ao principal.
+cour02_agendado="$(api POST /deliveries "$customer_token" "$(scheduled_payload 45 | jq -c \
+  --argjson pickupLatitude "$DISP_LATITUDE" \
+  --argjson pickupLongitude "$DISP_LONGITUDE" \
+  --argjson deliveryLatitude "$DISP_FAR_LATITUDE" \
+  --argjson deliveryLongitude "$DISP_LONGITUDE" \
+  '.pickupLatitude=$pickupLatitude | .pickupLongitude=$pickupLongitude | .deliveryLatitude=$deliveryLatitude | .deliveryLongitude=$deliveryLongitude')")"
+cour02_agendado_id="$(jq -er '.id' <<<"$cour02_agendado")"
+cour02_agendado_offer="$(api GET /deliveries/offers/mine "$courier_token" | jq -r --arg deliveryId "$cour02_agendado_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
+if [[ -z "$cour02_agendado_offer" ]]; then
+  cour02_agendado_offer="$(api POST "/deliveries/$cour02_agendado_id/dispatch" "$admin_token" | jq -er '.offer.id')"
+fi
+api PATCH "/deliveries/offers/$cour02_agendado_offer/accept" "$courier_token" >/dev/null
+agendado_recusa="$(api_status POST "/deliveries/$cour02_agendado_id/courier-cancel" "$courier_token")"
+if [[ "$(tail -n1 <<<"$agendado_recusa")" != "409" ]]; then
+  printf 'Cancelar agendado dentro do cutoff de 60 min deveria dar 409, veio %s.\n' "$(tail -n1 <<<"$agendado_recusa")" >&2
+  exit 1
+fi
+
 # 9. Resumo admin enxerga as contas do ledger (obrigacao com motoboys e
 # receita retida). O summary e GLOBAL (soma todas as contas do banco, inclusive
 # de execucoes anteriores), entao a asserção compara o DELTA desta execucao
 # contra a baseline capturada no inicio: a unica entrega DELIVERED do fluxo
-# principal deve ter acrescentado exatamente o repasse do motoboy.
+# principal acrescentou o repasse; o COUR-02 debitou a taxa de desistencia.
 summary_final="$(api GET /finance/summary "$admin_token")"
 if ! jq -e \
   --argjson fee "$courier_fee" \
+  --argjson cancel "$cour02_fee" \
   --argjson base "$baseline_courier_obligation" \
-  '(.courierObligationCents - $base) == $fee and .platformRevenueCents > 0' \
+  '(.courierObligationCents - $base) == ($fee - $cancel) and .platformRevenueCents > 0' \
   <<<"$summary_final" >/dev/null; then
-  printf 'Resumo admin: obrigacao com motoboys deveria crescer %s centavos nesta execucao (baseline %s), veio %s.\n' \
-    "$courier_fee" "$baseline_courier_obligation" \
+  printf 'Resumo admin: obrigacao com motoboys deveria crescer %s-%s centavos nesta execucao (baseline %s), veio %s.\n' \
+    "$courier_fee" "$cour02_fee" "$baseline_courier_obligation" \
     "$(jq -r '.courierObligationCents' <<<"$summary_final")" >&2
   exit 1
 fi
 
-printf 'Smoke test aprovado: %s (%s) + agendado %s (%s) + reoferta %s\n' "$delivery_code" "$delivery_id" "$scheduled_code" "$scheduled_id" "$disp_id"
+printf 'Smoke test aprovado: %s (%s) + agendado %s (%s) + reoferta %s + cour-02 %s\n' "$delivery_code" "$delivery_id" "$scheduled_code" "$scheduled_id" "$disp_id" "$cour02_id"

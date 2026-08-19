@@ -273,7 +273,7 @@ fechar (`DONE`, mesma data) e liberou `PICK-01` para `READY`.
 | 4 | `SCHED-01` ✅ | Modo `SCHEDULED` individual + aceite antecipado | concluído 2026-08-09 |
 | 5 | `COUR-01` ▶️ | Tela Em andamento / Agenda | `SCHED-01` ✅, `DEC-21` ✅ |
 | 6 | `PICK-01` ✅ | `pickup_code` na coleta | concluído 2026-08-09 |
-| 7 | `COUR-02` | Cancelamento prestador + taxa no ledger | `PAY-01`, `COUR-01`, `DEC-22` |
+| 7 | `COUR-02` ✅ | Cancelamento prestador + taxa no ledger | concluído 2026-08-19 |
 | 8 | `PAY-01`… | Ledger + saldo sacável (modelo) | `DEC-23`, autorização `DEC-05` |
 
 `B2C-06` pode ser entregue como extensão de `B2C-02` no mesmo ciclo se o escopo
@@ -285,8 +285,8 @@ couber; senão, `B2C-02` entrega faixas peso/tamanho e `B2C-06` o dual km.
 - [x] Cotação `IMMEDIATE` > cotação equivalente `SCHEDULED` (mesmo km), com settings válidos. — `B2C-06`
 - [x] Settings com km agendado ≥ km imediato são rejeitados. — `B2C-02`, reconferido em `B2C-06`
 - [x] Prestador aceita `SCHEDULED` na criação. — `SCHED-01`; **a tela de Agenda em si continua em `COUR-01`**
-- [ ] Cancelamento prestador dentro do cutoff debita taxa; fora, recusa. — `COUR-02`
-- [ ] Sem saldo suficiente, cancelamento prestador recusa sem saldo negativo. — `COUR-02`
+- [x] Cancelamento prestador dentro do cutoff debita taxa; fora, recusa. — `COUR-02`
+- [x] Sem saldo suficiente, cancelamento prestador recusa sem saldo negativo. — `COUR-02`
 - [x] `PICKED_UP` exige código válido + foto; código errado não avança. — `PICK-01`
 - [x] Fallback de código só via papel admin/suporte auditado. — `PICK-01`
 - [ ] Lote rejeita mistura `IMMEDIATE`/`SCHEDULED`. — `LOT-01`

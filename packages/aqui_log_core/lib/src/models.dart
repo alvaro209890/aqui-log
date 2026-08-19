@@ -49,6 +49,9 @@ class DeliverySummary {
     this.dispatchEndReason,
     this.dispatchWarningAt,
     this.priceBoostProposal,
+    this.courierCancelFeeCents,
+    this.courierCancelAllowed = false,
+    this.courierCancelUntil,
   });
 
   final String id;
@@ -115,6 +118,16 @@ class DeliverySummary {
   /// busca esgotada. Só existe enquanto o ciclo terminou em motivo recuperável
   /// e o percentual está configurado — nunca aplicado sem consentimento.
   final PriceBoostProposal? priceBoostProposal;
+
+  /// COUR-02 / DEC-22: taxa de desistência congelada no aceite. Nula antes
+  /// do aceite e em pedido legado.
+  final int? courierCancelFeeCents;
+
+  /// O servidor já aplicou cutoff e status: o app só desenha o botão.
+  final bool courierCancelAllowed;
+
+  /// Limite exclusivo da janela de cancelamento (`now >= until` já recusa).
+  final DateTime? courierCancelUntil;
 
   bool get isScheduled => fulfillmentMode == 'SCHEDULED';
 
@@ -184,6 +197,10 @@ class DeliverySummary {
                 json['priceBoostProposal'] as Map<String, dynamic>,
               )
             : null,
+        courierCancelFeeCents: (json['courierCancelFeeCents'] as num?)
+            ?.toInt(),
+        courierCancelAllowed: json['courierCancelAllowed'] == true,
+        courierCancelUntil: _toDate(json['courierCancelUntil']),
       );
 }
 

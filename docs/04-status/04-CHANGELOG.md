@@ -2,6 +2,25 @@
 
 Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
+## `COUR-02`: cancelamento do prestador com taxa — 2026-08-19
+
+- **Regra:** só `ACCEPTED`, antes da coleta, dentro do cutoff (`FLOW-DEC-01`:
+  5 min após o aceite no imediato; 60 min antes da janela no agendado). Fora
+  disso, `409`; pós-coleta continua só suporte.
+- **Dinheiro:** debita `courier_cancel_fee_cents` (congelada no aceite) do
+  saldo disponível do motoboy, com contrapartida na receita da plataforma.
+  Saldo insuficiente recusa sem saldo negativo (`DEC-22`). A reserva do
+  cliente **não** é solta — o pedido volta a `REQUESTED` e redespacha.
+- **Atalho fechado:** `PATCH /deliveries/:id/status CANCELED` pelo entregador
+  agora é `400` (teria cancelado o pedido e estornado o cliente sem taxa).
+- **App:** botão *Cancelar corrida* no detalhe, com confirmação do valor;
+  recusa do servidor aparece em SnackBar. Cartão da lista segue sem botão.
+- **Trilha:** auditoria `COURIER_CANCELED` + evento no pedido. Índice de
+  confiabilidade (`courier_metrics`) ainda não existe — é `LOT-01`/`SUP-03`.
+- Migration aditiva: valor `COURIER_CANCEL_FEE` no enum do ledger.
+
+Evidência: `docs/04-status/entregas/2026-08-19-EVIDENCIA-COUR-02.md`.
+
 ## Fluxo cliente↔prestador nos planos — 2026-08-07
 
 ## `ADMIN-02A`: fila de aprovação de entregadores no painel — 2026-08-11

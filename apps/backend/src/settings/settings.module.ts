@@ -67,8 +67,8 @@ export type PlatformSettings = {
   pricingWeightBands: WeightBand[];
   pricingAboveTopBandCents: number;
   pricingSizeSurchargeCents: SizeSurcharges;
-  // Multas e cutoffs (FLOW-DEC-01). Valores provisórios e editáveis; a
-  // COBRANÇA em si é escopo de COUR-02/PAY-01 e ainda não existe.
+  // Multas e cutoffs (FLOW-DEC-01). Valores provisórios e editáveis.
+  // A cobrança da multa do prestador é `COUR-02` (débito no ledger).
   courierCancelFeeCents: number;
   courierCancelCutoffMinutesImmediate: number;
   courierCancelCutoffMinutesScheduled: number;

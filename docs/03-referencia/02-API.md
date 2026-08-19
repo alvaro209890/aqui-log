@@ -52,7 +52,8 @@ Rotas protegidas: `Authorization: Bearer <accessToken>`
 | `GET` | `/deliveries/offers/mine` | Ofertas pendentes do entregador |
 | `PATCH` | `/deliveries/offers/:offerId/accept` | Aceita (com **lock Redis**) |
 | `PATCH` | `/deliveries/offers/:offerId/reject` | Recusa e devolve ao despacho |
-| `PATCH` | `/deliveries/:id/status` | Avanca estado ou cancela |
+| `PATCH` | `/deliveries/:id/status` | Avanca estado ou cancela (cliente/admin). Entregador **nao** cancela por aqui. |
+| `POST` | `/deliveries/:id/courier-cancel` | COUR-02: prestador desiste (`ACCEPTED`, dentro do cutoff); debita taxa congelada; pedido volta a `REQUESTED` e redespacha |
 | `GET` | `/deliveries/:id/history` | Historico cronologico |
 | `POST` | `/deliveries/:id/rating` | Avaliação da entrega pelo cliente |
 | `GET` | `/deliveries/ratings` | Lista de avaliacoes (admin) |

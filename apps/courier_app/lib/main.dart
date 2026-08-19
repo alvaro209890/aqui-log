@@ -190,6 +190,7 @@ class _CourierShellState extends State<CourierShell> {
           },
           onStatus: (status, {proofUrl}) => widget.state.api
               .updateDeliveryStatus(d.id, status, proofUrl: proofUrl),
+          onCancel: () => widget.state.api.cancelCourierDelivery(d.id),
         ),
       ),
     );
