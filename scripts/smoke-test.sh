@@ -658,12 +658,36 @@ cour02_agendado="$(api POST /deliveries "$customer_token" "$(scheduled_payload 4
   --argjson deliveryLongitude "$DISP_LONGITUDE" \
   '.pickupLatitude=$pickupLatitude | .pickupLongitude=$pickupLongitude | .deliveryLatitude=$deliveryLatitude | .deliveryLongitude=$deliveryLongitude')")"
 cour02_agendado_id="$(jq -er '.id' <<<"$cour02_agendado")"
-cour02_agendado_offer="$(api GET /deliveries/offers/mine "$courier_token" | jq -r --arg deliveryId "$cour02_agendado_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
+# O auto-dispatch no create pode ofertar a qualquer motoboy no anel (e o
+# POST /dispatch do admin dá 409 se o pedido já saiu de REQUESTED).
+cour02_agendado_offer=""
+cour02_agendado_who=""
+for who_token in "$courier_token" "$courier2_token" "$courier3_token"; do
+  oid="$(api GET /deliveries/offers/mine "$who_token" | jq -r --arg deliveryId "$cour02_agendado_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
+  if [[ -n "$oid" ]]; then
+    cour02_agendado_offer="$oid"
+    cour02_agendado_who="$who_token"
+    break
+  fi
+done
 if [[ -z "$cour02_agendado_offer" ]]; then
-  cour02_agendado_offer="$(api POST "/deliveries/$cour02_agendado_id/dispatch" "$admin_token" | jq -er '.offer.id')"
+  api_status POST "/deliveries/$cour02_agendado_id/dispatch" "$admin_token" >/dev/null
+  for who_token in "$courier_token" "$courier2_token" "$courier3_token"; do
+    oid="$(api GET /deliveries/offers/mine "$who_token" | jq -r --arg deliveryId "$cour02_agendado_id" 'map(select(.delivery.id == $deliveryId)) | .[0].id // empty')"
+    if [[ -n "$oid" ]]; then
+      cour02_agendado_offer="$oid"
+      cour02_agendado_who="$who_token"
+      break
+    fi
+  done
 fi
-api PATCH "/deliveries/offers/$cour02_agendado_offer/accept" "$courier_token" >/dev/null
-agendado_recusa="$(api_status POST "/deliveries/$cour02_agendado_id/courier-cancel" "$courier_token")"
+if [[ -z "$cour02_agendado_offer" || -z "$cour02_agendado_who" ]]; then
+  printf 'Nao achei oferta do agendado COUR-02 para nenhum motoboy do bloco.\n' >&2
+  api GET "/deliveries/$cour02_agendado_id" "$admin_token" >&2
+  exit 1
+fi
+api PATCH "/deliveries/offers/$cour02_agendado_offer/accept" "$cour02_agendado_who" >/dev/null
+agendado_recusa="$(api_status POST "/deliveries/$cour02_agendado_id/courier-cancel" "$cour02_agendado_who")"
 if [[ "$(tail -n1 <<<"$agendado_recusa")" != "409" ]]; then
   printf 'Cancelar agendado dentro do cutoff de 60 min deveria dar 409, veio %s.\n' "$(tail -n1 <<<"$agendado_recusa")" >&2
   exit 1
