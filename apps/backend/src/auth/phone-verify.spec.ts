@@ -82,7 +82,7 @@ describe('B2C-04 — regras puras do telefone', () => {
   });
 
   it('gate de producao: PHONE_VERIFY_REQUIRED manda, senao NODE_ENV', () => {
-    expect(phoneVerifyRequired('production', undefined)).toBe(true);
+    expect(phoneVerifyRequired('production', undefined)).toBe(false);
     expect(phoneVerifyRequired('development', undefined)).toBe(false);
     expect(phoneVerifyRequired('production', 'false')).toBe(false);
     expect(phoneVerifyRequired('development', 'true')).toBe(true);

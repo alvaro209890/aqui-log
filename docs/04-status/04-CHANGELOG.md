@@ -11,8 +11,9 @@ Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 - Telefone normalizado para E.164; troca do número zera a verificação.
 - App cliente: tela *Confirmar celular* após o cadastro (dá para pular);
   perfil mostra o estado.
-- Criar pedido só exige telefone confirmado com `PHONE_VERIFY_REQUIRED`
-  ou `NODE_ENV=production` — local continua livre para o smoke.
+- Criar pedido só exige telefone confirmado com `PHONE_VERIFY_REQUIRED=true`.
+  O acer tem NODE_ENV=production e mesmo assim o gate fica desligado até o
+  flag explícito.
 
 Evidência: `docs/04-status/entregas/2026-08-19-EVIDENCIA-B2C-04.md`.
 

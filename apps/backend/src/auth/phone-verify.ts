@@ -126,11 +126,10 @@ export function shouldRevealDevCode(
   return nodeEnv !== 'production';
 }
 
+/** Só o flag explícito liga o gate. NODE_ENV=production no acer não basta. */
 export function phoneVerifyRequired(
-  nodeEnv: string | undefined,
+  _nodeEnv: string | undefined,
   flag: string | undefined,
 ): boolean {
-  if (flag === 'true') return true;
-  if (flag === 'false') return false;
-  return nodeEnv === 'production';
+  return flag === 'true';
 }
