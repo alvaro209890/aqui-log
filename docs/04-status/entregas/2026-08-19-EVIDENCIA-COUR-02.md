@@ -2,8 +2,9 @@
 
 > **Data:** 2026-08-19
 > **Agente:** Grok 4.6
-> **Ambiente:** PC Windows (`C:\GIS\aqui-log`); Node v22.22.0, Flutter 3.44.9
-> **Base:** `main` @ `0d3ea55` (`ADMIN-02A`)
+> **Ambiente:** código e testes no Windows (`C:\GIS\aqui-log`); migration,
+> restart da API e smoke no **acer** (runtime `*.cursar.space`)
+> **Base:** `main` @ `0d3ea55` (`ADMIN-02A`); entregue em `9492a53`
 > **Escopo:** somente `COUR-02` (`DEC-22`, `FLOW-DEC-01`, plano
 > `PLANO_FLUXO_CLIENTE_PRESTADOR` §6)
 
@@ -25,8 +26,8 @@
 | `dart analyze` / `dart test` no `aqui_log_core` | ✅ 30 testes |
 | `flutter analyze` / `flutter test` no app entregador | ✅ 30 testes |
 | `pnpm --filter dashboard build` | ✅ |
-| Migration em banco vivo | ❌ **NÃO EXECUTADO** neste PC (runtime está no acer) |
-| `pnpm smoke` | ❌ **NÃO EXECUTADO** neste PC |
+| Migration em banco vivo | ✅ `CourierCancelFeeLedger1785900000000` no Postgres do acer |
+| `PORT=3011 bash scripts/smoke-test.sh` | ✅ no acer, incluindo o bloco COUR-02 |
 | QA em aparelho / rebuild de APK | ❌ `UX-02` |
 
 ---
@@ -77,26 +78,24 @@
 | `dart analyze` + `dart test` (`aqui_log_core`) | PASS | 30 testes |
 | `flutter analyze` + `flutter test` (`courier_app`) | PASS | 30 testes |
 | `git diff --check` | PASS | |
-| `pnpm smoke` | NÃO EXECUTADO | runtime e banco vivem no acer |
-| Migration em Postgres vivo | NÃO EXECUTADO | aplicar `1785900000000` no acer antes de ligar o código novo |
+| `PORT=3011 bash scripts/smoke-test.sh` | PASS | acer, 2026-08-19; saída termina com `+ cour-02 9f882b47-…` |
+| Migration em Postgres vivo | PASS | `CourierCancelFeeLedger1785900000000` aplicada após `LedgerInternal` |
 | QA visual / APK | NÃO EXECUTADO | `UX-02` |
 
 O smoke ganhou um bloco COUR-02 (caminho feliz, atalho `CANCELED` do
 motoboy, `AT_PICKUP`, saldo insuficiente, agendado dentro do cutoff de
 60 min) e a asserção final do resumo admin passa a descontar a taxa
-debitada (`fee − cancel`).
+debitada (`fee − cancel`). `.env` do repo no acer ainda tem `PORT=3001`;
+a API systemd escuta **3011** — o smoke precisa de `PORT=3011`.
 
 ---
 
-## 3. Como aplicar no acer
+## 3. Aplicado no acer (2026-08-19)
 
-```bash
-cd /home/acer/Documentos/aqui-log
-git pull --ff-only origin main
-pnpm db:migrate
-# reiniciar a API (systemd user aqui-log-api)
-pnpm smoke
+```text
+git pull --ff-only origin main          # 1d89740 depois 9492a53
+pnpm db:migrate                         # CourierCancelFeeLedger1785900000000
+pnpm --filter backend build && systemctl --user restart aqui-log-api
+health público: status ok, db ok, redis ok
+PORT=3011 bash scripts/smoke-test.sh    # aprovado, bloco cour-02 incluso
 ```
-
-Sem a migration, o primeiro cancelamento real falha ao gravar
-`COURIER_CANCEL_FEE` no enum do Postgres.

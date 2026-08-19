@@ -4,9 +4,8 @@
 - **Agente:** Grok 4.6
 - **Tarefa:** `COUR-02` — cancelamento do prestador com taxa no ledger
 - **Branch/commit inicial:** `main` @ `0d3ea55`
-- **Estado:** código, testes e docs prontos neste clone Windows
-  (`C:\GIS\aqui-log`). **Migration e smoke NÃO rodaram** — o runtime vive
-  no acer. Sem `pnpm db:migrate` lá, o enum novo não existe.
+- **Estado:** entregue, commitado e pushado (`9492a53`). Migration aplicada
+  no acer, API reiniciada, smoke vivo **aprovado** (bloco COUR-02 incluso).
 
 ## Resultado
 
@@ -37,12 +36,13 @@ App: botão *Cancelar corrida* no detalhe, com confirmação do valor.
    O `down` recria o tipo; falha se já houver lançamento com o valor novo.
 5. **Smoke.** O bloco COUR-02 assume o motoboy principal em
    `DISP_LATITUDE` (estado no fim do DISP-02) e desconta a taxa no
-   `courierObligationCents` final. Sem aplicar a migration, o smoke
-   quebra no primeiro `POST .../courier-cancel`.
+   `courierObligationCents` final. O agendado de cutoff procura a
+   oferta em qualquer motoboy do bloco (o auto-dispatch não garante o
+   principal). Rodar com `PORT=3011` — o `.env` do repo no acer ainda
+   aponta 3001.
 
 ## Não feito e bloqueios
 
-- Migration + restart da API + `pnpm smoke` **no acer**.
 - QA em aparelho e rebuild de APK (`UX-02`).
 - `PAY-02` (recarga) — bloqueado por credenciais Pagar.me.
 - Motivo na recusa de cadastro (`ADMIN-02`).
@@ -50,14 +50,12 @@ App: botão *Cancelar corrida* no detalhe, com confirmação do valor.
 
 ## Próximo passo recomendado
 
-1. No acer: `git pull`, `pnpm db:migrate`, reiniciar `aqui-log-api`,
-   `pnpm smoke`.
-2. **`UX-02`** — QA visual (APKs + fila de aprovação logada + este botão).
-3. **`PAY-02`** passa na frente quando houver conta Pagar.me.
+1. **`UX-02`** — QA visual (APKs + fila de aprovação logada + este botão).
+2. **`PAY-02`** passa na frente quando houver conta Pagar.me.
 
 ## Mensagem de retomada
 
-> `COUR-02` fechou no código: o motoboy desiste com taxa no saldo, o
-> pedido volta à busca, saldo insuficiente recusa. Falta **aplicar a
-> migration e o smoke no acer**. Depois disso a fila volta a ser
-> `UX-02` (aparelho) e `PAY-02` (recarga, bloqueado por Pagar.me).
+> `COUR-02` fechou: o motoboy desiste com taxa no saldo, o pedido volta
+> à busca, saldo insuficiente recusa. Migration e smoke no acer
+> passaram. Fila: `UX-02` (aparelho) e `PAY-02` (recarga, bloqueado por
+> Pagar.me). `.env` do acer ainda diz `PORT=3001`; a API sobe em **3011**.
