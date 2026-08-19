@@ -2,6 +2,20 @@
 
 Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
+## `B2C-04`: verificação de telefone por código no app — 2026-08-19
+
+- **Sem SMS** (`DEC-04`): código de 6 dígitos gerado no servidor, hash no
+  banco, TTL 10 min, 5 tentativas, cooldown 60 s, bloqueio 15 min.
+- Adapter **local** (default fora de production) revela `devCode` na
+  resposta e no log; production omite os dois.
+- Telefone normalizado para E.164; troca do número zera a verificação.
+- App cliente: tela *Confirmar celular* após o cadastro (dá para pular);
+  perfil mostra o estado.
+- Criar pedido só exige telefone confirmado com `PHONE_VERIFY_REQUIRED`
+  ou `NODE_ENV=production` — local continua livre para o smoke.
+
+Evidência: `docs/04-status/entregas/2026-08-19-EVIDENCIA-B2C-04.md`.
+
 ## `COUR-02`: cancelamento do prestador com taxa — 2026-08-19
 
 - **Regra:** só `ACCEPTED`, antes da coleta, dentro do cutoff (`FLOW-DEC-01`:

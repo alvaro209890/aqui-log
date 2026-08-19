@@ -73,9 +73,32 @@ summary_baseline="$(api GET /finance/summary "$admin_token")"
 baseline_courier_obligation="$(jq -er '.courierObligationCents' <<<"$summary_baseline")"
 
 # Cliente pessoa física: registro auto-aprovado com auto-login (B2C)
+# B2C-04: telefone curto nao cadastra.
+telefone_curto="$(api_status POST /auth/register/customer "" "$(jq -nc --arg email "curto.${RUN_ID}@aquilog.test" --arg document "$(printf '%011d' $((RUN_ID + 3)))" '{name:"Curto",email:$email,password:"TesteSeguro123!",document:$document,phone:"999"}')")"
+if [[ "$(tail -n1 <<<"$telefone_curto")" != "400" ]]; then
+  printf 'Cadastro com telefone curto deveria dar 400, veio %s.\n' "$(tail -n1 <<<"$telefone_curto")" >&2
+  exit 1
+fi
+
 customer_login="$(api POST /auth/register/customer "" "$(jq -nc --arg name 'Cliente Teste' --arg email "$CUSTOMER_EMAIL" --arg password "$TEST_PASSWORD" --arg document "$RUN_DOC" --arg phone '+5531999999999' '{name:$name,email:$email,password:$password,document:$document,phone:$phone}')")"
 customer_token="$(jq -er '.accessToken' <<<"$customer_login")"
 customer_id="$(jq -er '.user.customerId' <<<"$customer_login")"
+jq -e '.user.phoneVerified == false and .user.phone == "+5531999999999"' <<<"$customer_login" >/dev/null
+
+# Adapter local revela o codigo; producao nao teria `devCode`.
+challenge="$(api POST /auth/phone/challenge "$customer_token" '{}')"
+dev_code="$(jq -er '.devCode' <<<"$challenge")"
+if [[ ! "$dev_code" =~ ^[0-9]{6}$ ]]; then
+  printf 'Challenge local deveria revelar um codigo de 6 digitos, veio "%s".\n' "$dev_code" >&2
+  exit 1
+fi
+errado_phone="$(api_status POST /auth/phone/verify "$customer_token" '{"code":"000000"}')"
+if [[ "$(tail -n1 <<<"$errado_phone")" != "400" ]]; then
+  printf 'Codigo de telefone errado deveria dar 400, veio %s.\n' "$(tail -n1 <<<"$errado_phone")" >&2
+  exit 1
+fi
+api POST /auth/phone/verify "$customer_token" "$(jq -nc --arg code "$dev_code" '{code:$code}')" | jq -e '.phoneVerified == true' >/dev/null
+api GET /auth/me "$customer_token" | jq -e '.phoneVerified == true' >/dev/null
 
 # PAY-01 / DEC-05: produto pré-pago. A criação de pedido reserva o preço no
 # ledger do cliente, então o smoke credita saldo de teste ANTES de qualquer

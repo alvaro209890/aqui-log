@@ -9,6 +9,7 @@ import 'screens/delivery_detail_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/new_order_screen.dart';
+import 'screens/phone_verify_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/wallet_screen.dart';
@@ -52,7 +53,14 @@ class _CustomerAppState extends State<CustomerApp> {
         home: !state.booted
             ? const _SplashScreen()
             : state.isAuthenticated
-            ? CustomerShell(state: state)
+            ? (state.needsPhoneVerify
+                  ? PhoneVerifyScreen(
+                      maskedPhone: state.userPhone,
+                      onChallenge: state.requestPhoneCode,
+                      onVerify: state.confirmPhone,
+                      onSkip: state.skipPhoneVerify,
+                    )
+                  : CustomerShell(state: state))
             : LoginScreen(
                 loading: state.loading,
                 error: state.error,
@@ -185,6 +193,18 @@ class _CustomerShellState extends State<CustomerShell> {
     if (created == true) await _load();
   }
 
+  void _openPhoneVerify() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PhoneVerifyScreen(
+          maskedPhone: widget.state.userPhone,
+          onChallenge: widget.state.requestPhoneCode,
+          onVerify: widget.state.confirmPhone,
+        ),
+      ),
+    );
+  }
+
   void _openWallet() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -230,6 +250,8 @@ class _CustomerShellState extends State<CustomerShell> {
         email: widget.state.userEmail,
         onLogout: widget.state.logout,
         onOpenWallet: _openWallet,
+        phoneVerified: widget.state.phoneVerified,
+        onVerifyPhone: _openPhoneVerify,
       ),
     ];
 

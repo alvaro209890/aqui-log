@@ -8,6 +8,8 @@ class SettingsScreen extends StatelessWidget {
     required this.email,
     required this.onLogout,
     this.onOpenWallet,
+    this.phoneVerified = false,
+    this.onVerifyPhone,
   });
 
   final String userName;
@@ -17,6 +19,9 @@ class SettingsScreen extends StatelessWidget {
   /// PAY-01: o pedido é pré-pago, então o cliente precisa de um lugar para ver
   /// o próprio saldo antes de descobrir o `402` na hora de publicar.
   final VoidCallback? onOpenWallet;
+
+  final bool phoneVerified;
+  final VoidCallback? onVerifyPhone;
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +38,22 @@ class SettingsScreen extends StatelessWidget {
             leading: const CircleAvatar(child: Icon(Icons.person)),
             title: Text(userName),
             subtitle: Text(email.isEmpty ? 'Conta cliente' : email),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.phone_iphone_outlined),
+            title: const Text('Celular'),
+            subtitle: Text(
+              phoneVerified
+                  ? 'Numero confirmado'
+                  : 'Confirme o numero para publicar pedidos',
+            ),
+            trailing: phoneVerified
+                ? const Icon(Icons.check_circle_outline)
+                : const Icon(Icons.chevron_right),
+            onTap: phoneVerified ? null : onVerifyPhone,
           ),
         ),
         const SizedBox(height: 12),

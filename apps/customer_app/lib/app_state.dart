@@ -34,6 +34,24 @@ class CustomerAppState extends ChangeNotifier {
 
   bool get isAuthenticated => session != null && api.accessToken != null;
 
+  /// B2C-04: a confirmação dá para pular no piloto (criar pedido ainda
+  /// não exige telefone verificado em local). Quem confirma some a tela.
+  bool phoneVerifySkipped = false;
+
+  bool get phoneVerified => session?.user['phoneVerified'] == true;
+
+  bool get needsPhoneVerify {
+    if (phoneVerifySkipped) return false;
+    final user = session?.user;
+    if (user == null || !user.containsKey('phoneVerified')) return false;
+    return user['phoneVerified'] != true;
+  }
+
+  String? get userPhone {
+    final phone = session?.user['phone'];
+    return phone is String && phone.isNotEmpty ? phone : null;
+  }
+
   String get userName {
     final name = session?.user['name'];
     return name is String && name.isNotEmpty ? name : 'Cliente';
@@ -145,10 +163,34 @@ class CustomerAppState extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> requestPhoneCode({String? phone}) =>
+      api.phoneChallenge(phone: phone);
+
+  Future<void> confirmPhone(String code) async {
+    await api.verifyPhone(code);
+    final atual = session;
+    if (atual != null) {
+      session = AuthSession(
+        accessToken: atual.accessToken,
+        refreshToken: atual.refreshToken,
+        user: {...atual.user, 'phoneVerified': true},
+      );
+      await _persist();
+    }
+    phoneVerifySkipped = false;
+    notifyListeners();
+  }
+
+  void skipPhoneVerify() {
+    phoneVerifySkipped = true;
+    notifyListeners();
+  }
+
   Future<void> _forgetSession() async {
     session = null;
     api.accessToken = null;
     api.refreshToken = null;
+    phoneVerifySkipped = false;
     try {
       await _store.clear();
     } catch (_) {}

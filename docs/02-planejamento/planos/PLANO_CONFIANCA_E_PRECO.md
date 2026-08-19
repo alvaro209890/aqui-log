@@ -235,7 +235,7 @@ Essas métricas alimentam `TRIP-00` e a futura decisão de aumento de preço.
 | 3 | `B2C-02` preço v2 | campos estruturados | Sim |
 | 4 | `B2C-03` avaliação mútua | nenhuma externa | Sim |
 | 5 | `DISP-01/02/03` resiliência | preço v2 + `DEC-03` | Sim |
-| 6 | `B2C-04` SMS | provedor/sandbox | Não sem decisão externa |
+| 6 | `B2C-04` ✅ | código no app (`DEC-04`) | Sim (2026-08-19); SMS/WhatsApp continuam futuros |
 
 ## 8. Fora de escopo
 

@@ -6,6 +6,7 @@ import 'package:aqui_log_cliente/screens/delivery_detail_screen.dart';
 import 'package:aqui_log_cliente/screens/home_screen.dart';
 import 'package:aqui_log_cliente/screens/login_screen.dart';
 import 'package:aqui_log_cliente/screens/new_order_screen.dart';
+import 'package:aqui_log_cliente/screens/phone_verify_screen.dart';
 import 'package:aqui_log_cliente/screens/register_screen.dart';
 import 'package:aqui_log_cliente/screens/settings_screen.dart';
 import 'package:aqui_log_core/aqui_log_core.dart';
@@ -308,6 +309,51 @@ void main() {
     expect(find.text('Criar conta'), findsNWidgets(2)); // AppBar + botão
     expect(find.text('CPF (somente números)'), findsOneWidget);
     expect(find.byType(TextFormField), findsNWidgets(5));
+  });
+
+  testWidgets('PhoneVerifyScreen pede o codigo e confirma', (tester) async {
+    var pediu = false;
+    String? enviado;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PhoneVerifyScreen(
+          maskedPhone: '****9999',
+          onChallenge: () async {
+            pediu = true;
+            return {'devCode': '424242'};
+          },
+          onVerify: (code) async {
+            enviado = code;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(pediu, isTrue);
+    expect(find.text('Codigo de teste: 424242'), findsOneWidget);
+    expect(find.textContaining('****9999'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), '424242');
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+    expect(enviado, '424242');
+  });
+
+  testWidgets('PhoneVerifyScreen mostra a recusa do servidor', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PhoneVerifyScreen(
+          onChallenge: () async => <String, dynamic>{},
+          onVerify: (_) async =>
+              throw const ApiException('Codigo invalido. Restam 4 tentativas', 400),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '000000');
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Codigo invalido'), findsOneWidget);
   });
 
   testWidgets('CustomerApp boots login shell', (tester) async {

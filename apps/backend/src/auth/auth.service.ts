@@ -25,6 +25,8 @@ import {
   ResetPasswordDto,
 } from './dto/auth.dto';
 import { generateRawToken, hashToken } from './token-crypto';
+import { normalizePhoneE164 } from './phone-verify';
+import type { AuthenticatedUser } from './jwt.strategy';
 
 @Injectable()
 export class AuthService {
@@ -53,7 +55,10 @@ export class AuthService {
     if (user.status !== AccountStatus.ACTIVE) {
       throw new UnauthorizedException('Cadastro ainda nao aprovado');
     }
-    return this.issueTokenPair(user);
+    return this.issueTokenPair(
+      user,
+      await this.customerPublicFields(user.customerId),
+    );
   }
 
   async refresh(dto: RefreshTokenDto) {
@@ -72,7 +77,10 @@ export class AuthService {
     }
     stored.revokedAt = new Date();
     await this.refreshTokens.save(stored);
-    return this.issueTokenPair(user);
+    return this.issueTokenPair(
+      user,
+      await this.customerPublicFields(user.customerId),
+    );
   }
 
   async logout(dto: RefreshTokenDto) {
@@ -175,8 +183,17 @@ export class AuthService {
     });
   }
 
+  async me(user: AuthenticatedUser) {
+    const extra = await this.customerPublicFields(user.customerId);
+    return { ...user, ...extra };
+  }
+
   async registerCustomer(dto: RegisterCustomerDto) {
     await this.ensureEmailAvailable(dto.email);
+    const phone = normalizePhoneE164(dto.phone);
+    if (!phone) {
+      throw new BadRequestException('Informe um celular valido com DDD');
+    }
     return this.dataSource.transaction(async (manager) => {
       const user = await manager.save(
         User,
@@ -195,14 +212,18 @@ export class AuthService {
         manager.create(Customer, {
           userId: user.id,
           document: dto.document.replace(/\D/g, ''),
-          phone: dto.phone,
+          phone,
           status: AccountStatus.ACTIVE,
         }),
       );
       user.customerId = customer.id;
       await manager.save(User, user);
-      // Auto-login: devolve o par de tokens igual ao /auth/login
-      return this.issueTokenPair(user);
+      // Auto-login: devolve o par de tokens igual ao /auth/login.
+      // Não reler o customer aqui: a transação ainda não commitou.
+      return this.issueTokenPair(user, {
+        phoneVerified: false,
+        phone,
+      });
     });
   }
 
@@ -212,7 +233,13 @@ export class AuthService {
     }
   }
 
-  private async issueTokenPair(user: User) {
+  private async issueTokenPair(
+    user: User,
+    extra: { phoneVerified: boolean; phone: string | null } = {
+      phoneVerified: false,
+      phone: null,
+    },
+  ) {
     const accessToken = await this.jwt.signAsync({
       sub: user.id,
       email: user.email,
@@ -241,7 +268,21 @@ export class AuthService {
         email: user.email,
         role: user.role,
         customerId: user.customerId,
+        ...extra,
       },
+    };
+  }
+
+  private async customerPublicFields(customerId: string | null) {
+    if (!customerId) {
+      return { phoneVerified: false, phone: null as string | null };
+    }
+    const customer = await this.dataSource.getRepository(Customer).findOneBy({
+      id: customerId,
+    });
+    return {
+      phoneVerified: customer?.phoneVerifiedAt != null,
+      phone: customer?.phone ?? null,
     };
   }
 }

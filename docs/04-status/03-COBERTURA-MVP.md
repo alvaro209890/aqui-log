@@ -344,3 +344,22 @@ Registro append-only. Nada acima foi alterado.
 | QA em aparelho / rebuild de APK | Não executado | Segue em `UX-02` |
 
 Evidência: `docs/04-status/entregas/2026-08-19-EVIDENCIA-COUR-02.md`.
+
+## `B2C-04` — verificação de telefone por código no app (2026-08-19) ✅
+
+Registro append-only. Nada acima foi alterado.
+
+| Funcionalidade | Estado | Observação |
+| --- | --- | --- |
+| Código de 6 dígitos, hash, TTL 10 min | Funcional | CSPRNG; hash SHA-256; nunca em texto no banco |
+| Limite de 5 tentativas + bloqueio 15 min | Funcional | `429` na 5ª; cooldown de 60 s entre reenvios |
+| Adapter local revela `devCode` | Funcional | `PHONE_VERIFY_ADAPTER=local` (default fora de production) |
+| Produção não revela o código | Funcional | `NODE_ENV=production` omite `devCode` e o log |
+| E.164 | Funcional | 11 dígitos BR viram `+55…`; inválido na criação → `400` |
+| Troca de telefone invalida verificação | Funcional | `POST /auth/phone/challenge { phone }` zera `phone_verified_at` |
+| Gate para criar pedido | Opcional | `PHONE_VERIFY_REQUIRED=true` ou production; local **não** bloqueia (smoke) |
+| App cliente: tela de confirmação | Funcional | Após cadastro; dá para confirmar depois; perfil tem o atalho |
+| SMS / WhatsApp | Fora de escopo | `DEC-04`: código no app por enquanto |
+| QA em aparelho | Não executado | `UX-02` |
+
+Evidência: `docs/04-status/entregas/2026-08-19-EVIDENCIA-B2C-04.md`.

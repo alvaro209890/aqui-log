@@ -140,7 +140,7 @@ O preço de uma oferta aceita é imutável. Qualquer aumento posterior exige nov
 | --- | --- | --- | --- |
 | B2C-03 | ⏳ | `B2C-01` | Avaliação mútua, uma por papel e entrega |
 | B2C-03A | ⏳ | `B2C-03` | Exibir média, contagem e contexto sem revelar dados sensíveis |
-| B2C-04 | ▶️ | `DEC-04` ✅ (código no app) | Verificação de telefone com expiração, limite de tentativas e ambiente local seguro (sem provedor SMS por enquanto) |
+| B2C-04 | ✅ | `DEC-04` ✅ (código no app) | Verificação de telefone com expiração, limite de tentativas e adapter local (sem provedor SMS) (2026-08-19) |
 
 SMS não bloqueia a fundação de dados nem o preço v2, mas é gate para abrir cadastro público em produção.
 

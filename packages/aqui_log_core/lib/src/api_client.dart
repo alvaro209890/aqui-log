@@ -69,6 +69,27 @@ class AquiLogApiClient {
           as Map<String, dynamic>;
 
   /// Registro de cliente pessoa física (B2C) — auto-aprovado, devolve tokens.
+  /// B2C-04: pede o código de verificação do telefone. Em local a resposta
+  /// pode trazer `devCode`; em produção esse campo não existe.
+  Future<Map<String, dynamic>> phoneChallenge({String? phone}) async =>
+      await _request(
+            'POST',
+            '/auth/phone/challenge',
+            body: {'phone': ?phone},
+          )
+          as Map<String, dynamic>;
+
+  Future<Map<String, dynamic>> verifyPhone(String code) async =>
+      await _request(
+            'POST',
+            '/auth/phone/verify',
+            body: {'code': code},
+          )
+          as Map<String, dynamic>;
+
+  Future<Map<String, dynamic>> me() async =>
+      await _request('GET', '/auth/me') as Map<String, dynamic>;
+
   Future<AuthSession> registerCustomer(Map<String, dynamic> form) async {
     final data = await _request(
       'POST',

@@ -4,18 +4,26 @@ import { JwtModule, type JwtModuleOptions } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Courier } from '../database/entities/courier.entity';
+import { Customer } from '../database/entities/customer.entity';
 import { PasswordResetToken } from '../database/entities/password-reset-token.entity';
 import { RefreshToken } from '../database/entities/refresh-token.entity';
 import { User } from '../database/entities/user.entity';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
+import { PhoneVerifyService } from './phone-verify.service';
 
 @Module({
   imports: [
     ConfigModule,
     PassportModule,
-    TypeOrmModule.forFeature([User, Courier, RefreshToken, PasswordResetToken]),
+    TypeOrmModule.forFeature([
+      User,
+      Courier,
+      Customer,
+      RefreshToken,
+      PasswordResetToken,
+    ]),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -27,7 +35,7 @@ import { JwtStrategy } from './jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [JwtModule, AuthService],
+  providers: [AuthService, JwtStrategy, PhoneVerifyService],
+  exports: [JwtModule, AuthService, PhoneVerifyService],
 })
 export class AuthModule {}

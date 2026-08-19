@@ -69,6 +69,18 @@ export class RegisterCourierDto {
   documentUrls?: string[];
 }
 
+export class ChallengePhoneDto {
+  @IsOptional()
+  @IsString()
+  phone?: string;
+}
+
+export class VerifyPhoneDto {
+  @IsString()
+  @IsNotEmpty()
+  code!: string;
+}
+
 export class RegisterCustomerDto {
   @IsString()
   @IsNotEmpty()

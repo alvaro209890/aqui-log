@@ -19,7 +19,9 @@ Rotas protegidas: `Authorization: Bearer <accessToken>`
 | `POST` | `/auth/logout` | Revoga refresh token |
 | `POST` | `/auth/forgot-password` | Sempre 200; em local o token vai no log do backend |
 | `POST` | `/auth/reset-password` | Body `{ token, password }` |
-| `GET` | `/auth/me` | Contexto autenticado |
+| `GET` | `/auth/me` | Contexto autenticado (`phoneVerified`, `phone` no cliente) |
+| `POST` | `/auth/phone/challenge` | B2C-04: pede codigo de 6 digitos (cliente). Local revela `devCode` |
+| `POST` | `/auth/phone/verify` | B2C-04: confirma o codigo; troca de telefone no challenge invalida a verificacao |
 | `GET` | `/users` | Lista administrativa (somente admin) |
 | `GET` | `/couriers` | Lista administrativa |
 | `PATCH` | `/couriers/:id/approve` | Aprova entregador |

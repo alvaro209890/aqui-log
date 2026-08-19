@@ -30,6 +30,8 @@ import {
   OfferStatus,
   UserRole,
 } from '../database/enums';
+import { Customer } from '../database/entities/customer.entity';
+import { phoneVerifyRequired } from '../auth/phone-verify';
 import { FinanceService } from '../finance/finance.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PricingService } from '../pricing/pricing.service';
@@ -154,6 +156,22 @@ export class DeliveriesService {
       throw new ForbiddenException('Somente clientes podem criar pedidos');
     if (isCustomer && !user.customerId)
       throw new ForbiddenException('Cliente sem cadastro completo');
+    if (
+      isCustomer &&
+      phoneVerifyRequired(
+        this.config.get('NODE_ENV'),
+        this.config.get('PHONE_VERIFY_REQUIRED'),
+      )
+    ) {
+      const customer = await this.dataSource.getRepository(Customer).findOneBy({
+        id: user.customerId!,
+      });
+      if (!customer?.phoneVerifiedAt) {
+        throw new ForbiddenException(
+          'Confirme seu telefone antes de publicar um pedido',
+        );
+      }
+    }
     // B2C-05 / DEC-01: o DTO já garante ao menos uma foto na criação; aqui só
     // resta provar que cada URL veio do storage desta instalação.
     const productPhotoUrls = dto.productPhotoUrls;
