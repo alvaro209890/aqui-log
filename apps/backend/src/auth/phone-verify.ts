@@ -111,14 +111,19 @@ export function registerPhoneVerifyFailure(
   };
 }
 
-/** Produção nunca revela. Fora dela o adapter `local` (default) revela. */
+/**
+ * Adapter explícito: `local` revela, `silent` nunca. Sem adapter, produção
+ * fica silent e o resto local — o piloto no acer é NODE_ENV=production, então
+ * precisa `PHONE_VERIFY_ADAPTER=local` para o smoke e o app de teste.
+ */
 export function shouldRevealDevCode(
   nodeEnv: string | undefined,
   adapter: string | undefined,
 ): boolean {
-  if (nodeEnv === 'production') return false;
-  const name = (adapter ?? 'local').toLowerCase();
-  return name === 'local';
+  const name = (adapter ?? '').toLowerCase();
+  if (name === 'local') return true;
+  if (name === 'silent') return false;
+  return nodeEnv !== 'production';
 }
 
 export function phoneVerifyRequired(

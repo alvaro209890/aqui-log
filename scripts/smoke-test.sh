@@ -87,9 +87,10 @@ jq -e '.user.phoneVerified == false and .user.phone == "+5531999999999"' <<<"$cu
 
 # Adapter local revela o codigo; producao nao teria `devCode`.
 challenge="$(api POST /auth/phone/challenge "$customer_token" '{}')"
-dev_code="$(jq -er '.devCode' <<<"$challenge")"
+dev_code="$(jq -r '.devCode // empty' <<<"$challenge")"
 if [[ ! "$dev_code" =~ ^[0-9]{6}$ ]]; then
-  printf 'Challenge local deveria revelar um codigo de 6 digitos, veio "%s".\n' "$dev_code" >&2
+  printf 'Challenge nao revelou devCode. No acer (NODE_ENV=production) defina PHONE_VERIFY_ADAPTER=local no EnvironmentFile e reinicie a API.\n' >&2
+  printf '%s\n' "$challenge" >&2
   exit 1
 fi
 errado_phone="$(api_status POST /auth/phone/verify "$customer_token" '{"code":"000000"}')"

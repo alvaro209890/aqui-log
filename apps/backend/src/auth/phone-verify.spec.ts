@@ -74,7 +74,8 @@ describe('B2C-04 — regras puras do telefone', () => {
   });
 
   it('producao nunca revela o codigo; local revela por default', () => {
-    expect(shouldRevealDevCode('production', 'local')).toBe(false);
+    expect(shouldRevealDevCode('production', 'local')).toBe(true);
+    expect(shouldRevealDevCode('production', undefined)).toBe(false);
     expect(shouldRevealDevCode('development', 'local')).toBe(true);
     expect(shouldRevealDevCode('development', 'silent')).toBe(false);
     expect(shouldRevealDevCode(undefined, undefined)).toBe(true);

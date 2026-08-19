@@ -83,7 +83,7 @@ export class PhoneVerifyService {
     );
     if (reveal) {
       this.logger.log(
-        `[phone-verify] to=${customer.phone} code=${code} (adapter local; nunca em producao)`,
+        `[phone-verify] to=${customer.phone} code=${code} (adapter local)`,
       );
     }
 
