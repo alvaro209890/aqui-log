@@ -1,6 +1,7 @@
 # Aqui Log — Roadmap executivo B2C
 
-> **Atualizado:** 2026-08-09
+> **Atualizado:** 2026-08-19 (as 7 `DEC-*` pendentes fechadas; `TRIP-*` cortados;
+> execução passa a ser autônoma — ver [`../05-execucao-autonoma/`](../05-execucao-autonoma/00-COMO-USAR.md))
 > **Status:** fonte de verdade para prioridade, dependências e ordem de execução
 > **Rodada atual:** `DISP-02` fechado com evidência de runtime local (aviso de
 > demora idempotente, ações do cliente na busca esgotada e aumento com
@@ -90,7 +91,7 @@ Plano detalhado do fluxo: [PLANO_FLUXO_CLIENTE_PRESTADOR.md](planos/PLANO_FLUXO_
 | Carteira do motoboy | ✅ básica | Crédito MVP; falta ledger + taxa cancelamento + saque (`DEC-22/23`) |
 | Carteira/pagamento do cliente | Não existe | Exige ledger, política de cancelamento e idempotência antes de gateway |
 | Dashboard | ✅ operacional + filtros B2C + **identidade laranja** (`UX-01C`, 2026-08-08) | busca da `TopBar` é decorativa (`UX-02`) |
-| Cloud | Alvos decididos (`DEC-25`); scaffold Render/Vercel/Firebase — sem credencial conectada |
+| Cloud | Alvos decididos (`DEC-25`); scaffold Render/Vercel/Firebase | Sem credencial conectada; ligar exige os itens 2–4 do runbook |
 
 ## 6. Caminho crítico de implementação
 
@@ -203,8 +204,8 @@ O dono decidiu (2026-08-07) que o **motoboy pode aceitar vários pedidos juntos*
 inclusive **lotes agendados de um município para outro**, com **lógica anti-atraso**;
 e que o **dashboard deve monitorar localização dos prestadores, coleta de cada pedido
 e trajeto durante a viagem**. O aceite de lote manual **não** depende do gate de
-densidade (é o motoboy quem busca o lote); o agrupamento automático da plataforma
-continua atrás de `TRIP-00`.
+densidade (é o motoboy quem busca o lote); o **agrupamento automático da
+plataforma foi cancelado** pela `DEC-07` (2026-08-19).
 
 | ID | Status | Dependências | Entrega |
 | --- | --- | --- | --- |
@@ -212,12 +213,16 @@ continua atrás de `TRIP-00`.
 | LOT-02 | ⏳ | `LOT-01` | Blocos agendados intermunicipais (`scheduled_lots`, candidatura, reserva de capacidade) |
 | FROTA-01 | ⏳ | `DISP-03`, `DEC-12`, `DEC-14` | Desacoplar heartbeat; mapa, trilha, lista e `FROTA-ALERTA-01..07` |
 | FROTA-02 | ⏳ | `FROTA-01`, `LOT-01` | Progresso de viagem multi-parada no dashboard (`/trips/:id/stops`) |
-| TRIP-00 | 🔬 | Telemetria `DISP-03` + operação estável | Medir densidade de pedidos compatíveis, desvio e economia potencial — gate do **agrupamento automático** |
-| TRIP-01 | ⏳ | `TRIP-00` aprovado com limiares registrados | Modelo de viagens e agrupador em shadow mode, sem afetar ofertas reais |
-| TRIP-02 | ⏳ | `TRIP-01` validado | Piloto com no máximo 3 pedidos, capacidade e prova por pacote |
+| ~~TRIP-00~~ | ❌ | — | **CANCELADO** pela `DEC-07` (2026-08-19) |
+| ~~TRIP-01~~ | ❌ | — | **CANCELADO** pela `DEC-07` (2026-08-19) |
+| ~~TRIP-02~~ | ❌ | — | **CANCELADO** pela `DEC-07` (2026-08-19) |
 
-Não implementar CRUD/telas de rota do agrupamento automático antes de `TRIP-00`
-demonstrar demanda suficiente; o lote manual (`LOT-01/02`) não espera esse gate.
+⚠️ **A `DEC-07` (2026-08-19) encerrou o agrupamento automático de rotas.** Não
+haverá plataforma agrupando pedidos: **lote é sempre manual**, montado pelo
+motoboy (`DEC-08`). `TRIP-00`, `TRIP-01` e `TRIP-02` saem do caminho crítico e
+não devem ser implementados, nem parcialmente. Como consequência, `LOT-01` e
+`LOT-02` **deixam de depender do gate de densidade** e seguem só pelas próprias
+dependências de código.
 
 ### Fase 8 — painel admin e suporte/reclamações
 
@@ -271,7 +276,16 @@ Para a fila próxima:
   AquiResolve); falta conta/credenciais do Aqui Log para `PAY-02`;
 - `DEC-02` bloqueia os **valores finais** de `B2C-02`/`B2C-06` (estrutura liberada);
 - `DEC-03` está **DECIDIDA** (2026-08-09: ampliar raio + aumento com consentimento) e libera `DISP-01`;
-- cloud, SMS e pagamentos reais continuam atrás de autorização explícita.
+- **em 2026-08-19 as 7 decisões que faltavam foram fechadas** — `DEC-07` (sem
+  agrupamento automático), `DEC-09` (candidatura livre), `DEC-12` (retenção
+  7/30/90 d), `DEC-13` (estorno pós-coleta até R$ 30, só do frete), `DEC-14`
+  (ocioso coarsificado), `DEC-15` (longa distância no lugar de deadhead) e
+  `DEC-16` (juiz rápido até R$ 25). **Não há mais `DEC-*` pendente**;
+- `DEC-27` registrou que o código iOS é escrito agora e compilado quando o
+  MacBook chegar;
+- cloud, SMS e pagamentos reais continuam atrás de credencial — o passo a passo
+  de cada um está em
+  [`../05-execucao-autonoma/90-RUNBOOK-ALVARO.md`](../05-execucao-autonoma/90-RUNBOOK-ALVARO.md).
 
 ## 9. Definition of Done comum
 
@@ -302,7 +316,7 @@ ser simplesmente omitida.
 | Reoferta infinita | Limite de anéis/rodadas e estado terminal recuperável |
 | Misturar cor de marca com status | Tokens semânticos e QA conforme as [diretrizes visuais](../01-produto/02-DIRETRIZES-VISUAIS.md) |
 | Ligar cloud cedo demais | Gates `OPS-02/03` dependem de pedido explícito e credenciais |
-| Construir rota multi-pedido sem densidade | Gate de descoberta `TRIP-00` antes de código operacional |
+| Construir rota multi-pedido sem densidade | Risco encerrado: a `DEC-07` cancelou o agrupamento automático; só existe lote manual |
 | Dupla oferta do mesmo pedido (individual × lote) | Reserva global por `delivery_id` + aceite atômico com locks |
 | Atraso em lote multi-pedido | Regras D-R1..D-R13, ETAs recalculados, redespacho e índice de pontualidade |
 | Expor localização em tempo real sem controle | Permissão "ver frota" distinta, exposição só em viagem ativa, audit log e ciência do motoboy |
@@ -316,7 +330,23 @@ ser simplesmente omitida.
 | Coleta sem prova de posse | `pickup_code` + foto obrigatórios (`DEC-24`) |
 | Preço/km errado após mudança de settings | Snapshot de `km_rate` e versão no pedido (`DEC-19`) |
 
-## 11. Próximo pacote recomendado
+## 11. Execução autônoma (a partir de 2026-08-19)
+
+A ordem de execução de tudo que falta passou a viver em
+[`../05-execucao-autonoma/01-ONDAS.md`](../05-execucao-autonoma/01-ONDAS.md), e o
+agente **escolhe a própria tarefa** por lá, sem esperar alguém apontar o ID. O
+roadmap continua sendo a fonte de **prioridade, dependência e gate**; a pasta nova
+é a fonte de **como executar sem humano**.
+
+Três regras mudaram e prevalecem sobre o texto abaixo:
+
+1. **`BLOCKED` não para a cadeia.** O agente registra o passo do Álvaro no runbook
+   e segue para a próxima tarefa desbloqueada.
+2. **QA visual deixou de exigir humano.** `UX-02` foi absorvido pela onda 1
+   (emulador dirigido + Playwright); cada onda faz o próprio QA no portão.
+3. **`TRIP-*` não existe mais** (`DEC-07`).
+
+## 11b. Próximo pacote recomendado (histórico de 2026-08-11)
 
 `BASE-04`, `B2C-01B`, `B2C-05`, `UX-01C` e `B2C-02` fecharam em 2026-08-08 e
 `PICK-01` em 2026-08-09, todos com evidência de runtime local. Os `READY` agora:

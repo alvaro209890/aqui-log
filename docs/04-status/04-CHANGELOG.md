@@ -2,6 +2,22 @@
 
 Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
+## 2026-08-19 — execução autônoma: 7 decisões fechadas e pasta de ondas
+
+Mudança documental, sem código. As 7 `DEC-*` pendentes foram fechadas pelo Álvaro
+e `DEC-27` foi criada (iOS: código agora, build quando o MacBook chegar).
+`DEC-07` cancelou o agrupamento automático de rotas, e com ele `TRIP-00/01/02`.
+
+Criada `docs/05-execucao-autonoma/` com 14 documentos: protocolo de execução sem
+humano, ordem completa das 40 tarefas até o fim do produto, portão de verificação
+automatizado (emulador dirigido + Playwright), runbook do Álvaro com 9 itens que
+dependem dele, e registro de execução. `UX-02` foi cancelado como ID e absorvido
+pela onda 1. `AGENTS.md` passou a autorizar push, restart do runtime, migration
+local, emulador e APK sem perguntar — e `BLOCKED` deixou de encerrar a sessão.
+
+Evidência: N/A — nenhum código tocado; 129 links locais verificados, 0 quebrados.
+
+
 ## `B2C-04`: verificação de telefone por código no app — 2026-08-19
 
 - **Sem SMS** (`DEC-04`): código de 6 dígitos gerado no servidor, hash no

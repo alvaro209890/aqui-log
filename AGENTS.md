@@ -9,12 +9,14 @@ devem ser em português do Brasil.
 Leia, nesta ordem:
 
 1. `AGENTS.md`;
-2. `docs/README.md`;
-3. `docs/04-status/01-ESTADO-ATUAL.md`;
-4. `docs/02-planejamento/02-BACKLOG.md`;
-5. `docs/02-planejamento/01-ROADMAP.md`;
-6. `docs/02-planejamento/03-DECISOES.md` se houver qualquer gate `DEC-*`;
-7. o plano detalhado e as referências ligados à tarefa escolhida.
+2. **`docs/05-execucao-autonoma/00-COMO-USAR.md`** — o protocolo de execução;
+3. `docs/README.md` — mapa da documentação;
+4. `docs/04-status/01-ESTADO-ATUAL.md`;
+5. **`docs/05-execucao-autonoma/01-ONDAS.md`** — de onde sai a tarefa;
+6. `docs/02-planejamento/02-BACKLOG.md` (estado dos IDs);
+7. `docs/02-planejamento/01-ROADMAP.md`;
+8. `docs/02-planejamento/03-DECISOES.md` se houver qualquer gate `DEC-*`;
+9. o plano detalhado e as referências ligados à tarefa escolhida.
 
 Não use documentos em `docs/99-arquivo/` como instrução vigente.
 
@@ -36,12 +38,14 @@ O backlog só escolhe itens permitidos pelo roadmap.
 
 ## 3. Regra de execução
 
-1. Escolha somente uma tarefa com ID e estado `READY`.
+1. Escolha somente uma tarefa com ID e estado `READY`, pela ordem de `docs/05-execucao-autonoma/01-ONDAS.md`. **Você escolhe sozinho** — não espere alguém apontar o ID.
 2. Confirme dependências, gates e escopo antes de editar.
 3. Mude para `IN_PROGRESS` apenas enquanto a tarefa estiver realmente em curso.
 4. Não misture feature, refatoração oportunista, deploy e correções não relacionadas.
 5. Não marque `DONE` sem critérios de aceite e evidências executadas.
-6. Se faltar decisão, credencial ou autorização, marque `BLOCKED` e registre o motivo.
+6. Se faltar decisão, credencial ou autorização: marque `BLOCKED`, **escreva o
+   passo do Álvaro em `docs/05-execucao-autonoma/90-RUNBOOK-ALVARO.md`** e
+   **siga para a próxima tarefa desbloqueada** — bloqueio não encerra a sessão.
 7. Ao encerrar, atualize estado, backlog, handoff e changelog na medida aplicável.
 
 Estados permitidos: `READY`, `BLOCKED`, `IN_PROGRESS`, `DONE` e `CANCELED`.
@@ -58,11 +62,17 @@ Estados permitidos: `READY`, `BLOCKED`, `IN_PROGRESS`, `DONE` e `CANCELED`.
   **Firebase**. Não provisionar, conectar nem publicar sem credenciais e pacote OPS.
 - Não commitar `.env`, tokens, chaves, dados pessoais ou credenciais.
 - Não declarar deploy, migration, smoke, APK ou QA visual sem executá-los.
+- **Sem agrupamento automático de rotas** (`DEC-07`): lote é sempre manual.
+  `TRIP-00/01/02` foram cancelados — não implementar nem preparar terreno.
+- **Não compilar iOS** (`DEC-27`): este PC é Linux e o MacBook ainda não chegou.
+  O código iOS é escrito; o build espera o Mac.
 
 ## 5. Qualidade e evidência
 
-Use o conjunto aplicável à mudança. O checklist completo está em
-`docs/00-governanca/02-CHECKLIST-DE-SESSAO.md`.
+Use o conjunto aplicável à mudança. O portão obrigatório — incluindo o **QA
+automatizado de app e de navegador**, que substituiu a validação visual humana —
+está em `docs/05-execucao-autonoma/02-PORTAO-DE-VERIFICACAO.md`. O checklist de
+sessão continua em `docs/00-governanca/02-CHECKLIST-DE-SESSAO.md`.
 
 ```bash
 pnpm build
@@ -81,7 +91,11 @@ válida; “deve passar” não é.
 
 - Comece verificando `git status --short --branch` e preserve mudanças alheias.
 - Não reescreva histórico, não force push e não descarte trabalho de outro agente.
-- Commit e push só quando pedidos ou autorizados no contexto da tarefa.
+- **Commit e push direto no `main` estão permanentemente autorizados** desde
+  2026-08-19, sem PR — junto com reiniciar as units `aqui-log-*`, rodar migration
+  no banco local de produção, subir emulador/Waydroid e gerar APK. A lista
+  completa está em `docs/05-execucao-autonoma/00-COMO-USAR.md` §3. Não pergunte
+  de novo o que já foi autorizado.
 - Use o template de `docs/00-governanca/04-TEMPLATE-DE-HANDOFF.md`.
 - O handoff vigente fica em `docs/04-status/02-HANDOFF.md`; não acumule diário nele.
 

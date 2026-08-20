@@ -1,52 +1,59 @@
 # Handoff vigente
 
-- **Data/hora:** 2026-08-19
-- **Agente:** Grok 4.6
-- **Tarefa:** `B2C-04` — verificação de telefone por código no app
-- **Branch/commit inicial:** `main` @ `b09d1dc` (`COUR-02`)
-- **Estado:** entregue, pushado (`ee0c3f7`). Migration no acer, API
-  reiniciada, `PHONE_VERIFY_ADAPTER=local` no EnvironmentFile, smoke
-  vivo **aprovado**.
+- **Data/hora:** 2026-08-19 (2ª rodada do dia)
+- **Agente:** Claude Opus 5
+- **Tarefa:** criar a pasta de execução autônoma (mudança documental, sem código)
+- **Branch/commit inicial:** `main` @ `7b904fa`
+- **Estado:** entregue e pushado. Nenhum arquivo de código tocado.
 
 ## Resultado
 
-Evidência: `docs/04-status/entregas/2026-08-19-EVIDENCIA-B2C-04.md`.
+O Álvaro fechou **as 7 `DEC-*` que faltavam** e autorizou a execução autônoma do
+que resta do produto. Foi criada `docs/05-execucao-autonoma/` com 14 documentos
+escritos para agentes, não para humanos.
 
-Cliente confirma o celular com código de 6 dígitos, sem SMS (`DEC-04`).
-Adapter local revela `devCode`; production não. Trocar o número zera a
-verificação. O app mostra a tela depois do cadastro (dá para pular).
+Decisões fechadas (registro canônico em `../02-planejamento/03-DECISOES.md`):
 
-## Coisas que o próximo agente precisa saber
+| ID | Decisão |
+| --- | --- |
+| `DEC-07` | **Sem agrupamento automático de rotas** — lote é sempre manual. `TRIP-00/01/02` cancelados |
+| `DEC-09` | Bloco agendado por candidatura livre, filtrada por pontualidade |
+| `DEC-12` | Trilha de frota: crua 7 d / agregada 30 d / diária 90 d + job de limpeza |
+| `DEC-13` | Estorno pós-coleta automático até R$ 30, só do frete; acima disso, humano |
+| `DEC-14` | Ocioso coarsificado (~1 km) na zona operacional, oculto fora; exato só em viagem ativa |
+| `DEC-15` | Modelo Uber: sem pagamento de retorno vazio; adicional de longa distância (15 km / +20%) |
+| `DEC-16` | Juiz rápido até R$ 25 por caso, acumulado R$ 100/cliente/30 d |
+| `DEC-27` | iOS: código agora, compilação quando o MacBook chegar (já pedido) |
 
-1. **Gate de pedido está desligado em local.** Só `PHONE_VERIFY_REQUIRED=true`
-   ou `NODE_ENV=production` bloqueia `POST /deliveries`. Não ligar no
-   acer sem avisar: o piloto ainda cria pedido com crédito de admin.
-2. **`devCode` exige `PHONE_VERIFY_ADAPTER=local`.** O acer tem
-   `NODE_ENV=production`; sem o adapter o challenge não revela o código
-   e o smoke quebra. O valor já está no EnvironmentFile.
-3. **Migration `1786000000000`** adiciona colunas em `customers`. Sem ela
-   o challenge 500.
-4. **Sessão antiga no app** sem a chave `phoneVerified` **não** força a
-   tela (senão todo cliente já logado cai nela). Cadastro/login novos
-   mandam o booleano.
-5. Entregador não verifica telefone neste pacote.
+## O que mudou no processo
 
-## Não feito e bloqueios
+1. O agente **escolhe a própria tarefa** por `05-execucao-autonoma/01-ONDAS.md`.
+2. **`BLOCKED` não para a cadeia**: escreve o passo do Álvaro em
+   `90-RUNBOOK-ALVARO.md` e segue para a próxima desbloqueada.
+3. **QA visual deixou de exigir humano** — `UX-02` foi cancelado como ID e virou a
+   onda 1 (`QA-01`/`QA-02`/`QA-03`).
+4. Autorizações permanentes no `AGENTS.md`: push no `main`, restart das units
+   `aqui-log-*`, migration no banco local, emulador/Waydroid, APK.
 
-- QA visual / rebuild de APK (`UX-02`) — Álvaro adiou.
-- `PAY-02` (Pagar.me).
-- SMS de verdade.
-- Ligar `PHONE_VERIFY_REQUIRED=true` (bloqueia pedido sem telefone
-  confirmado).
+## Verificação executada
 
-## Próximo passo recomendado
+- 129 links locais conferidos nos arquivos novos e alterados — **0 quebrados**.
+- Toolchain de QA confirmado neste PC: AVD `Medium_Phone_API_36.0`, Waydroid,
+  Chromium do Playwright em `~/.cache/ms-playwright`, JDK 17 em
+  `/usr/lib/jvm/java-17-openjdk-amd64`.
+- `pnpm build/lint/test/smoke` e Flutter/Dart: **N/A** — nenhum arquivo de código,
+  teste, migration ou configuração de build foi tocado nesta sessão.
 
-1. Código: `B2C-02B` (prévia de preço) ou `PAY-01A` (cancelamento do
-   cliente). Sem credencial, `PAY-02` continua bloqueado.
-2. `UX-02` quando houver aparelho.
+## Pendências que ficam para a próxima sessão
 
-## Mensagem de retomada
+- ⚠️ **O aparato de QA ainda não existe.** Ele é o trabalho da onda 1; até
+  `QA-03` fechar, vale o portão base.
+- Nenhuma tarefa de produto avançou nesta sessão — de propósito.
+- O runbook nasceu com **9 itens abertos**; o que mais pesa no produto continua
+  sendo o item 1 (conta Pagar.me), porque sem `PAY-02` um cliente novo não
+  consegue publicar pedido.
 
-> `B2C-04` fechou: telefone por código no app, sem SMS. Migration e
-> smoke no acer passaram (`PHONE_VERIFY_ADAPTER=local`). Gate de pedido
-> só liga com `PHONE_VERIFY_REQUIRED=true`. Álvaro pulou `UX-02`.
+## Próximo ID
+
+**`QA-01`** — `integration_test` nos dois apps e emulador dirigível sem humano.
+Plano em `../05-execucao-autonoma/10-ONDA-1-QA-AUTOMATIZADO.md`.

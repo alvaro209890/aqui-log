@@ -428,7 +428,35 @@ Evidência anterior (mobile, 2026-08-07):
       acesso à API a partir da origem pública já estão provados).
 - [ ] Automatizar backup do banco no caminho novo (`OPS-01`).
 
+## 4b. Virada de processo — execução autônoma (2026-08-19)
+
+Mudança **documental**, sem código tocado. Registrada aqui porque muda o que a
+próxima sessão deve fazer:
+
+- as **7 `DEC-*` que faltavam** foram fechadas pelo Álvaro (`DEC-07`, `DEC-09`,
+  `DEC-12`, `DEC-13`, `DEC-14`, `DEC-15`, `DEC-16`) e `DEC-27` foi criada (iOS:
+  código agora, compilação quando o MacBook chegar). **Não há mais `DEC-*`
+  pendente** no registro canônico;
+- **`TRIP-00/01/02` foram cancelados** pela `DEC-07` — não haverá agrupamento
+  automático de rotas; lote é sempre manual;
+- criada a pasta [`../05-execucao-autonoma/`](../05-execucao-autonoma/00-COMO-USAR.md)
+  com o protocolo, a ordem completa das tarefas até o fim do produto, o portão de
+  verificação, o runbook do Álvaro e o registro de execução;
+- **`BLOCKED` deixou de parar a cadeia**: o agente escreve o passo do Álvaro no
+  runbook e segue para a próxima tarefa desbloqueada;
+- **`UX-02` foi cancelado como ID** e absorvido pela onda 1 (`QA-01`/`QA-02`/`QA-03`).
+
+⚠️ O aparato de QA automatizado ainda **não existe** — ele é o trabalho da onda 1.
+Até `QA-03` fechar, vale o portão base. Levantado e confirmado neste PC: AVD
+`Medium_Phone_API_36.0`, Waydroid, Chromium do Playwright em
+`~/.cache/ms-playwright` e JDK 17 em `/usr/lib/jvm/java-17-openjdk-amd64` (o
+`java` do PATH é o 21, e o Gradle dos apps exige 17).
+
 ## 5. Próximo passo
+
+**A próxima tarefa é `QA-01`** — a primeira de
+[`../05-execucao-autonoma/01-ONDAS.md`](../05-execucao-autonoma/01-ONDAS.md), e a
+partir de agora o agente a escolhe sozinho por lá.
 
 `BASE-04`, `B2C-01B`, `B2C-05`, `UX-01C`, `B2C-02`, `PICK-01`, `B2C-06`,
 `SCHED-01`, `COUR-01`, `DISP-01`, `DISP-02`, **`PAY-01`** e **`OPS-01A`** estão

@@ -1,9 +1,24 @@
 # Backlog executável por agentes
 
-> **Atualizado:** 2026-08-19 (`B2C-04` fechado: verificação de telefone por
-> código no app, `DEC-04`)
+> **Atualizado:** 2026-08-19 (2ª rodada: as 7 `DEC-*` pendentes fechadas; execução
+> passa a ser autônoma)
 > **Papel:** converter o roadmap em pacotes pequenos, ordenados e verificáveis.
-> **Regra:** um agente executa um único ID por sessão, salvo autorização explícita.
+> **Regra:** um agente executa um único ID por sessão, e **escolhe o ID sozinho**
+> pela ordem de [`../05-execucao-autonoma/01-ONDAS.md`](../05-execucao-autonoma/01-ONDAS.md).
+
+> ## ⚠️ Leia antes de escolher tarefa
+>
+> A fila desta página cobre o que foi planejado até 2026-08-19. **A fila completa
+> até o fim do produto**, com todos os IDs novos (`QA-*`, `CLI-*`, `COUR-03..07`,
+> `IOS-*`) e a ordem de dependência, está em
+> [`../05-execucao-autonoma/01-ONDAS.md`](../05-execucao-autonoma/01-ONDAS.md).
+> O protocolo de execução sem humano está em
+> [`../05-execucao-autonoma/00-COMO-USAR.md`](../05-execucao-autonoma/00-COMO-USAR.md).
+>
+> Mudou o comportamento em três pontos: o agente **escolhe a própria tarefa**;
+> **`BLOCKED` não para a cadeia** (registra o passo no runbook e segue para a
+> próxima desbloqueada); e **nenhuma tarefa fecha sem o portão automatizado** de
+> [`../05-execucao-autonoma/02-PORTAO-DE-VERIFICACAO.md`](../05-execucao-autonoma/02-PORTAO-DE-VERIFICACAO.md).
 
 ## 1. Fila vigente
 
@@ -13,7 +28,7 @@
 | — | `B2C-01B` | `DONE` (2026-08-08) | P0 | Dashboard filtra e relata encomendas B2C | QA de navegador executado; mesma evidência |
 | — | `B2C-05` | `DONE` (2026-08-08) | P0 | Foto + campos obrigatórios na criação | evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-05.md` |
 | — | `UX-01C` | `DONE` (2026-08-08) | P1 | Dashboard usa tokens laranja equivalentes | evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-UX-01C.md` |
-| 1 | `UX-02` | `READY` | P1 | Fluxos principais passam por QA visual/acessibilidade | `UX-01C` DONE; Álvaro adiou — não bloqueia código |
+| — | `UX-02` | `CANCELED` | P1 | Cancelado como ID próprio e **absorvido pela onda 1** (`QA-01`/`QA-02`/`QA-03`): QA de app por emulador dirigido e QA de painel por Playwright, dentro do portão de cada tarefa | ver [`../05-execucao-autonoma/10-ONDA-1-QA-AUTOMATIZADO.md`](../05-execucao-autonoma/10-ONDA-1-QA-AUTOMATIZADO.md) |
 | — | `B2C-04` | `DONE` (2026-08-19) | P1 | Verificação de telefone por código no app (sem SMS) | evidência: `docs/04-status/entregas/2026-08-19-EVIDENCIA-B2C-04.md` |
 | — | `ADMIN-02A` | `DONE` (2026-08-11) | P1 | **Fila de aprovação de entregadores no painel**: identidade (nome/e-mail) no payload, filtro por status, contador, documentos abríveis e confirmação individual. Não era "só tela" — a lista não trazia quem era o candidato | evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-ADMIN-02A.md`; **QA de navegador logado pendente** |
 | — | `B2C-02` | `DONE` (2026-08-08) | P1 | Preço v2 versionado com breakdown congelado | `DEC-02` decidida; evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-02-E-TEMA-ESCURO.md` |
@@ -21,18 +36,18 @@
 | — | `SCHED-01` | `DONE` (2026-08-09) | P1 | Modo `SCHEDULED` individual + aceite antecipado | mesmo esforço e mesma evidência de `B2C-06` |
 | — | `COUR-01` | `DONE` (2026-08-09) | P1 | App prestador: Em andamento + Agenda | evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-COUR-01.md` |
 | — | `PICK-01` | `DONE` (2026-08-09) | P1 | Código de recolhimento + foto do prestador na coleta | evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-PICK-01.md` |
-| 3 | `B2C-03` | `BLOCKED` | P1 | Avaliação mútua por papel | baseline estável e migração de ratings definida |
+| 3 | `B2C-03` | `READY` | P1 | Avaliação mútua por papel | destravado 2026-08-19: a baseline estável existe desde `PAY-01`/`OPS-01A`, e a migração de ratings é decisão técnica do próprio pacote |
 | — | `DISP-01` | `DONE` (2026-08-09) | P1 | Reoferta por anéis, exclusão de tentados, limite de rodadas e de tempo | evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-DISP-01.md` |
 | 4 | `DISP-02` | `DONE` (2026-08-10) | P1 | Avisar o cliente da demora e oferecer ação explícita (inclui aumento com consentimento, `DEC-03`) | `DISP-01` ✅; evidência: `docs/04-status/entregas/2026-08-10-EVIDENCIA-DISP-02.md` |
 | — | `PAY-01` | `DONE` (2026-08-11) | P2 | Ledger interno (cliente + prestador) sem gateway | evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-APK-E-RUNTIME.md` |
 | — | `COUR-02` | `DONE` (2026-08-19) | P2 | Cancelamento prestador + taxa no saldo | evidência: `docs/04-status/entregas/2026-08-19-EVIDENCIA-COUR-02.md` |
 | 7 | `OPS-01` | `BLOCKED` | P2 | Prontidão operacional local comprovada | `B2C-02B`, `B2C-03A`, `DISP-03` (`B2C-01B` ok); inclui backup do banco em `~/Documentos/Bando_de_dados/Aqui_Log` |
 | — | `OPS-01A` | `DONE` (2026-08-11) | P1 | **Runtime de distribuição no acer via Cloudflare Tunnel** (`DEC-26`): API (`aquilog-api.cursar.space`) + dashboard (`aquilog.cursar.space`) + Postgres/Redis no acer, com início automático e sem derrubar serviços existentes; banco em `~/Documentos/Bando_de_dados/Aqui_Log`; smoke público aprovado | evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-APK-E-RUNTIME.md`; operação: `docs/03-referencia/05-RUNTIME-ACER.md` |
-| 2b | `PAY-02` | `BLOCKED` | P1 | **Recarga de saldo (PIX/cartão, Pagar.me v5)** — sem ela o cliente que instala o APK não consegue publicar pedido | `DEC-06` ✅ decidida; falta conta/credenciais Pagar.me |
+| 2b | `PAY-02` | `BLOCKED` | P1 | **Recarga de saldo (PIX/cartão, Pagar.me v5)** — sem ela o cliente que instala o APK não consegue publicar pedido. A parte que não depende de credencial vai até o fim com adapter falso | runbook item 1; ver [`14-ONDA-5-PAGAMENTO.md`](../05-execucao-autonoma/14-ONDA-5-PAGAMENTO.md) |
 | 8 | `OPS-DB-01` | `BLOCKED` | P2 | Modelo + migração Postgres → Firestore | `DEC-25`; credenciais Firebase |
 | 9 | `OPS-02` | `BLOCKED` | P2 | Firebase Firestore/Storage/FCM reais | pedido + credenciais; ver `PLANO_HOSPEDAGEM.md` |
 | 10 | `OPS-03` | `BLOCKED` | P2 | Deploy Render + Vercel + smoke público | `OPS-01`, `OPS-02`, credenciais |
-| 11 | `LOT-01` | `BLOCKED` | P3 | Aceite atômico de lote manual | código: `B2C-02B`, `B2C-03A`, `DISP-03`; gates `DEC-08/10/11` ✅ decididas 2026-08-09 |
+| 11 | `LOT-01` | `BLOCKED` | P3 | Aceite atômico de lote manual | código: `B2C-02B`, `B2C-03A`, `DISP-03`. Gates todos ✅ — a `DEC-07` cancelou `TRIP-*`, então nada mais espera medição de densidade |
 
 Cloud: alvos **decididos** (`DEC-25` — Render / Vercel / Firebase). Ligar projetos
 ainda exige credenciais e pacote OPS. PIX (Pagar.me) definido; falta conta/credenciais. SMS e lote automático idem.
@@ -218,14 +233,23 @@ mostrava.
 
 Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-COUR-01.md`.
 
-## 3. Tarefa pronta — `UX-02`
+## 3. Tarefa pronta — `QA-01`
 
-- **`UX-02`** — QA visual e de acessibilidade dos fluxos. O dashboard já saiu em
-  `UX-01C` + tema escuro; o que resta exige **dispositivo/emulador**. Inclui a
-  fila de aprovação (`ADMIN-02A`, QA logado pendente) e o botão de cancelar
-  corrida (`COUR-02`) no app do entregador.
-- **`PAY-02`** — recarga PIX/cartão; bloqueado por credenciais Pagar.me. Sem
-  ela, cliente novo não publica pedido.
+A partir de 2026-08-19 a próxima tarefa sai de
+[`../05-execucao-autonoma/01-ONDAS.md`](../05-execucao-autonoma/01-ONDAS.md) e o
+agente a escolhe sozinho. A primeira da fila é:
+
+- **`QA-01`** — `integration_test` nos dois apps e emulador dirigível sem humano.
+  Destrava o portão de verificação de **todas** as tarefas seguintes, e é o que
+  finalmente quita a dívida que o `UX-02` acumulou desde 2026-08-08 (QA logado da
+  fila do `ADMIN-02A`, botão de cancelar do `COUR-02`, seções "Modo agendado" e
+  "Reoferta por anéis").
+
+Bloqueadas por credencial, com a parte de código indo até o fim mesmo assim:
+
+- **`PAY-02`** — recarga PIX/cartão. Sem ela, cliente novo não publica pedido.
+  Passo do Álvaro no item 1 do
+  [runbook](../05-execucao-autonoma/90-RUNBOOK-ALVARO.md).
 
 ## 4. Pacotes do fluxo cliente↔prestador
 
