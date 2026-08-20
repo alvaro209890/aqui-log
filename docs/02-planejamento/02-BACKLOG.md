@@ -239,13 +239,7 @@ A partir de 2026-08-19 a próxima tarefa sai de
 [`../05-execucao-autonoma/01-ONDAS.md`](../05-execucao-autonoma/01-ONDAS.md) e o
 agente a escolhe sozinho. A primeira da fila é:
 
-- **`QA-01`** — `integration_test` nos dois apps e emulador dirigível sem humano.
-  Destrava o portão de verificação de **todas** as tarefas seguintes, e é o que
-  finalmente quita a dívida que o `UX-02` acumulou desde 2026-08-08 (QA logado da
-  fila do `ADMIN-02A`, botão de cancelar do `COUR-02`, seções "Modo agendado" e
-  "Reoferta por anéis").
-
-Bloqueadas por credencial, com a parte de código indo até o fim mesmo assim:
+- **`QA-01`** — `IN_PROGRESS` (2026-08-20, Hermes-server). Aparato no main (`scripts/qa-mobile.sh`, AVD `aqui_log_qa`, `integration_test` nos dois apps). Widget tests verdes. **E2E no emulador ainda falha** — ver `docs/04-status/entregas/2026-08-20-EVIDENCIA-QA-01-PARCIAL.md`. **Nao e DONE.**
 
 - **`PAY-02`** — recarga PIX/cartão. Sem ela, cliente novo não publica pedido.
   Passo do Álvaro no item 1 do

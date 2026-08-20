@@ -26,7 +26,9 @@ class CourierApp extends StatefulWidget {
 class _CourierAppState extends State<CourierApp> {
   late final CourierAppState state = widget.state ?? CourierAppState();
 
-  @override
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+    @override
   void initState() {
     super.initState();
     // Auto-login: tenta restaurar a sessão gravada antes de decidir qual tela
@@ -48,6 +50,7 @@ class _CourierAppState extends State<CourierApp> {
         title: 'Aqui Log Entregador',
         debugShowCheckedModeBanner: false,
         theme: AquiLogTheme.light(),
+        navigatorKey: navigatorKey,
         home: !state.booted
             ? const _SplashScreen()
             : state.isAuthenticated
@@ -63,7 +66,7 @@ class _CourierAppState extends State<CourierApp> {
   }
 
   void _openRegister() {
-    Navigator.of(context).push(
+    navigatorKey.currentState!.push(
       MaterialPageRoute(
         builder: (_) => RegisterScreen(
           loading: state.loading,

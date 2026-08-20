@@ -26,6 +26,11 @@ Regras:
 
 ## Registro
 
+- **2026-08-20** · `QA-01` · *(este commit)* · aparato no main: AVD `aqui_log_qa`, `scripts/qa-mobile.sh`, `integration_test` nos dois apps, `navigatorKey` (botao Criar conta estava quebrado). Widget tests 23+30 e analyze verdes. **E2E no emulador ainda falha** depois de publicar (scroll no TextField, nao na ListView). **Nao e DONE.**
+  · portao: customer analyze 0 issues + flutter test 23 passed; courier analyze 0 issues + flutter test 30 passed; qa-mobile.sh customer_app exit 1
+  · runbook: —
+  · proximo: `QA-01` (fechar o e2e; depois `QA-02`)
+
 - **2026-08-19** · `—` · `<este commit>` · pasta de execução autônoma criada; as 7
   `DEC-*` pendentes fechadas pelo Álvaro e `DEC-27` (iOS sem compilar) registrada;
   `TRIP-00/01/02` cortados do roadmap pela `DEC-07`

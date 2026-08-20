@@ -52,6 +52,15 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   bool photoMissing = false;
   String? error;
 
+  @override
+  void initState() {
+    super.initState();
+    const fixture = String.fromEnvironment("QA_FIXTURE_PHOTO");
+    if (fixture.isNotEmpty) {
+      photo = XFile(fixture);
+    }
+  }
+
   bool get isScheduled => fulfillmentMode == FulfillmentMode.scheduled;
 
   /// Primeiro horário aceitável, já com a antecedência do `FLOW-DEC-02`.
@@ -308,6 +317,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             ),
             const SizedBox(height: 14),
             TextFormField(
+              key: const ValueKey("qa-peso"),
               controller: weight,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
@@ -358,6 +368,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             _sectionTitle('De onde sai'),
             const SizedBox(height: 10),
             TextFormField(
+              key: const ValueKey("qa-retirada"),
               controller: pickup,
               decoration: const InputDecoration(
                 labelText: 'Endereço de retirada',
@@ -369,6 +380,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             _sectionTitle('Para onde vai'),
             const SizedBox(height: 10),
             TextFormField(
+              key: const ValueKey("qa-entrega"),
               controller: delivery,
               decoration: const InputDecoration(
                 labelText: 'Endereço de entrega',
@@ -380,6 +392,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             _sectionTitle('Destinatário'),
             const SizedBox(height: 10),
             TextFormField(
+              key: const ValueKey("qa-destinatario"),
               controller: recipient,
               decoration: const InputDecoration(
                 labelText: 'Nome de quem recebe',
@@ -389,6 +402,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             ),
             const SizedBox(height: 14),
             TextFormField(
+              key: const ValueKey("qa-tel-dest"),
               controller: phone,
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(

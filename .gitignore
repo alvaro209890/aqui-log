@@ -29,3 +29,6 @@ build/
 data/
 uploads/
 apps/backend/uploads/
+
+# rodadas locais do qa-mobile.sh (log da API pode vazar env)
+docs/04-status/entregas/qa-01-*/

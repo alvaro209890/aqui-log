@@ -28,7 +28,9 @@ class CustomerApp extends StatefulWidget {
 class _CustomerAppState extends State<CustomerApp> {
   late final CustomerAppState state = widget.state ?? CustomerAppState();
 
-  @override
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+    @override
   void initState() {
     super.initState();
     // Auto-login: tenta restaurar a sessão gravada antes de decidir qual tela
@@ -50,6 +52,7 @@ class _CustomerAppState extends State<CustomerApp> {
         title: 'Aqui Log Cliente',
         debugShowCheckedModeBanner: false,
         theme: AquiLogTheme.light(),
+        navigatorKey: navigatorKey,
         home: !state.booted
             ? const _SplashScreen()
             : state.isAuthenticated
@@ -72,7 +75,7 @@ class _CustomerAppState extends State<CustomerApp> {
   }
 
   void _openRegister() {
-    Navigator.of(context).push(
+    navigatorKey.currentState!.push(
       MaterialPageRoute(
         builder: (_) => RegisterScreen(
           loading: state.loading,

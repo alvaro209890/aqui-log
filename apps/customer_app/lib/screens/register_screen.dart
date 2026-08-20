@@ -68,6 +68,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 22),
                 TextFormField(
+                  key: const ValueKey("qa-nome"),
                   controller: nameCtrl,
                   textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
@@ -79,6 +80,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
+                  key: const ValueKey("qa-email"),
                   controller: emailCtrl,
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
@@ -93,6 +95,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
+                  key: const ValueKey("qa-celular"),
                   controller: phoneCtrl,
                   keyboardType: TextInputType.phone,
                   inputFormatters: [
@@ -115,6 +118,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
+                  key: const ValueKey("qa-cpf"),
                   controller: documentCtrl,
                   keyboardType: TextInputType.number,
                   inputFormatters: [
@@ -129,6 +133,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
+                  key: const ValueKey("qa-senha"),
                   controller: passwordCtrl,
                   obscureText: true,
                   decoration: const InputDecoration(

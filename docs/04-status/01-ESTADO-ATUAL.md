@@ -1,5 +1,8 @@
 # Estado atual observado
 
+> **Atualizacao 2026-08-20 (Hermes-server):** QA-01 IN_PROGRESS no main — aparato de emulador+integration_test existe; e2e ainda nao fecha. Evidencia: docs/04-status/entregas/2026-08-20-EVIDENCIA-QA-01-PARCIAL.md. Widget tests dos apps verdes.
+
+
 > **Data de referência:** 2026-08-19 (`B2C-04` + `COUR-02`)
 > **Ambiente:** PC `acer`. **O runtime de distribuição está NO AR** (`OPS-01A` /
 > `DEC-26`): API, dashboard, Postgres e Redis rodam neste PC sob
