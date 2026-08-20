@@ -84,3 +84,37 @@ válida; “deve passar” não é.
 - Commit e push só quando pedidos ou autorizados no contexto da tarefa.
 - Use o template de `docs/00-governanca/04-TEMPLATE-DE-HANDOFF.md`.
 - O handoff vigente fica em `docs/04-status/02-HANDOFF.md`; não acumule diário nele.
+
+## 7. Ambiente de desenvolvimento (JS/TS)
+
+Alvo primário de dev e teste é a stack JS/TS: API NestJS (`apps/backend`) e
+dashboard React/Vite (`apps/dashboard`). Os apps Flutter (`apps/customer_app`,
+`apps/courier_app`) exigem toolchain Android/emulador e ficam fora de ambientes
+sem esse suporte, como VMs de agente em nuvem. `apps/company_app` é legado B2B e
+não recebe trabalho novo (ver limite permanente na seção 4).
+
+Endereços e serviços:
+
+- API: `http://localhost:3001/api/v1`, Swagger em `/docs`, health em `/api/v1/health`;
+- dashboard: `http://localhost:5173`;
+- Postgres 17 + Redis 7: `docker compose --env-file .env -f infra/docker-compose.yml up -d`;
+- `pnpm dev` sobe API e dashboard em paralelo.
+
+Armadilhas verificadas:
+
+- Postgres e Redis são **obrigatórios** para a API subir e para `pnpm smoke` e o
+  dashboard funcionarem. O health devolve `checks.db` e `checks.redis`; os dois
+  precisam estar `ok`.
+- A porta do Postgres no host é **5433**, não 5432 (`DATABASE_PORT` no `.env`).
+  Passe sempre `--env-file .env` ao compose para o mapeamento bater.
+- Banco novo: `cp .env.example .env` (se faltar), depois `pnpm db:migrate` e
+  `pnpm db:admin` (idempotente; cria `admin@aquilog.com.br` com `ADMIN_PASSWORD`).
+- Não carregue o `.env` no shell com `. ./.env` — valores como `ADMIN_NAME` têm
+  espaços e quebram. A aplicação lê o `.env` via dotenv sozinha.
+- O dev server loga toda query do TypeORM e roda jobs de expiração de oferta e
+  redespacho a cada ~10s. Log verboso é o normal, não é erro.
+- Firebase vem desligado por padrão (`STORAGE_DRIVER=local`); o aviso
+  `FIREBASE_ENABLED=true but credentials incomplete` durante os testes é inócuo.
+- Em VM de agente sem Docker ativo, suba o daemon antes do compose
+  (`sudo dockerd > /tmp/dockerd.log 2>&1 &`). Em host com `fuse-overlayfs`, o
+  `containerd-snapshotter` precisa ficar desabilitado em `/etc/docker/daemon.json`.
