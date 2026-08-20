@@ -88,7 +88,10 @@ pnpm qa
 
 | Fato deste PC | Consequência |
 | --- | --- |
-| AVD disponível: `Medium_Phone_API_36.0` | `emulator -avd Medium_Phone_API_36.0 -no-window -no-audio -gpu swiftshader_indirect` |
+| AVD do QA: **`aqui_log_qa`** (criado pelo `QA-01`) | `emulator -avd aqui_log_qa -partition-size 8192 -no-window -no-audio -no-snapshot -gpu swiftshader_indirect` |
+| ⚠️ O `Medium_Phone_API_36.0` é do **AquiResolve** e está com o `/data` a 97% | não usar, não limpar, não dar `-wipe-data` |
+| Boot leva **~53 s** e passa por `offline` | esperar `sys.boot_completed`, nunca só `adb devices` |
+| O emulador é **x86_64**; o APK de release é **arm64** | QA compila com `--target-platform android-x64`; o release continua arm64 |
 | `java` do PATH é o **21**, Gradle dos apps exige **17** | exportar `JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64` antes de qualquer build Android |
 | Chromium do Playwright já baixado | `~/.cache/ms-playwright` — não rebaixar, só apontar |
 | Waydroid instalado (`Session: STOPPED`) | alternativa ao AVD se o emulador falhar; não é o caminho principal |

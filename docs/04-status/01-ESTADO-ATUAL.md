@@ -447,10 +447,26 @@ próxima sessão deve fazer:
 - **`UX-02` foi cancelado como ID** e absorvido pela onda 1 (`QA-01`/`QA-02`/`QA-03`).
 
 ⚠️ O aparato de QA automatizado ainda **não existe** — ele é o trabalho da onda 1.
-Até `QA-03` fechar, vale o portão base. Levantado e confirmado neste PC: AVD
-`Medium_Phone_API_36.0`, Waydroid, Chromium do Playwright em
-`~/.cache/ms-playwright` e JDK 17 em `/usr/lib/jvm/java-17-openjdk-amd64` (o
-`java` do PATH é o 21, e o Gradle dos apps exige 17).
+Até `QA-03` fechar, vale o portão base.
+
+A cadeia foi **medida nesta sessão**, não suposta: o emulador headless sobe em
+**53 s** e chega a `device` (Android 16 / API 36), `flutter devices` o enxerga
+como `android-x64`, e `flutter build apk --debug` compila em **242 s** com
+`JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64` (o `java` do PATH é o 21 e o
+Gradle dos apps exige 17). Chromium do Playwright já em `~/.cache/ms-playwright`.
+
+Dois bloqueios reais foram encontrados e registrados em
+`../05-execucao-autonoma/10-ONDA-1-QA-AUTOMATIZADO.md`:
+
+1. **o emulador é x86_64 e o APK de release é arm64** — o APK de `dist/` não
+   instala nele; o QA precisa compilar com `--target-platform android-x64`;
+2. **o AVD `Medium_Phone_API_36.0` está com o `/data` a 97%** (204 MB livres) e a
+   instalação falha com `not enough space`; além disso ele **é compartilhado com
+   o QA do AquiResolve** (`com.aquiresolve.app` instalado). O `QA-01` deve criar
+   um AVD dedicado `aqui_log_qa` em vez de limpar o existente.
+
+Também corrigido um engano registrado na memória do projeto: "o AVD ficou
+offline" não é defeito — `offline` é o estado normal durante os ~53 s de boot.
 
 ## 5. Próximo passo
 

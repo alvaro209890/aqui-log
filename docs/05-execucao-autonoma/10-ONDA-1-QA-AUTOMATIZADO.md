@@ -30,6 +30,69 @@ ninguém tinha ligado as peças.
 | `integration_test` nos apps | — | **não existe; é o trabalho do `QA-01`** |
 | Playwright no repo | — | **não existe; é o trabalho do `QA-02`** |
 
+## Medido em 2026-08-19, não suposto
+
+Antes de escrever este plano, a cadeia inteira foi executada neste PC. Três elos
+funcionam e **dois bloqueios reais** apareceram — os dois teriam custado a
+primeira sessão de quem pegasse o `QA-01` no escuro.
+
+| Elo | Resultado medido |
+| --- | --- |
+| Emulador sobe headless | ✅ **boot completo em 53 s**, estado `device` (Android 16 / API 36) |
+| Flutter enxerga o emulador | ✅ `emulator-5554 • android-x64` |
+| Gradle compila com JDK 17 | ✅ `flutter build apk --debug` em **242 s** (APK de 65 MB) |
+| Instalar no emulador | ❌ **falhou** — ver bloqueio 2 |
+
+> ℹ️ A memória do projeto dizia "o AVD do ADB ficou offline em sessões passadas".
+> **Não é defeito do AVD:** `offline` é o estado normal durante o boot, que leva
+> ~53 s. Quem consultou `adb devices` cedo demais concluiu errado. Espere o
+> `sys.boot_completed`, não o `adb devices`.
+
+### 🔴 Bloqueio 1 — o emulador é x86_64 e os APKs são arm64
+
+`flutter devices` reporta **`android-x64`**. Os APKs de release do projeto são
+gerados com `--target-platform android-arm64` (foi assim em 2026-08-11, e é o
+certo para celular real). **Esse APK não instala neste emulador.**
+
+Para o QA, compile para a arquitetura do emulador:
+
+```bash
+flutter build apk --debug --target-platform android-x64
+```
+
+Não troque o alvo do APK de release para "resolver" isso — o release continua
+arm64, que é o que roda no aparelho do cliente.
+
+### 🔴 Bloqueio 2 — o AVD atual está sem espaço e é compartilhado
+
+O `Medium_Phone_API_36.0` está com o `/data` a **97%** (5,8 GB de capacidade,
+**204 MB livres**) e a instalação falha com
+`java.io.IOException: Requested internal only, but not enough space`, mesmo com
+um APK de 65 MB — o instalador do Android recusa antes de encher o disco.
+
+E ele **não é só nosso**: tem `com.aquiresolve.app` instalado, ou seja, é o mesmo
+emulador que o QA do AquiResolve usa. Limpar ou dar `-wipe-data` nele destrói o
+ambiente de outro projeto.
+
+**A primeira coisa que o `QA-01` faz é criar um AVD dedicado ao Aqui Log**, e
+nunca mais disputar espaço com outro produto:
+
+```bash
+export ANDROID_SDK_ROOT="$HOME/Android/Sdk"
+"$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/avdmanager" create avd \
+  -n aqui_log_qa \
+  -k "system-images;android-36;google_apis_playstore;x86_64" \
+  -d pixel_6
+# e um /data folgado no boot:
+"$ANDROID_SDK_ROOT/emulator/emulator" -avd aqui_log_qa -partition-size 8192 \
+  -no-window -no-audio -no-snapshot -gpu swiftshader_indirect &
+```
+
+Conferido: a system image `android-36/google_apis_playstore` já está baixada,
+`avdmanager` existe em `cmdline-tools/latest/bin/`, e o host tem **146 GB
+livres**. Todos os comandos deste arquivo passam a usar `aqui_log_qa`, não o
+`Medium_Phone_API_36.0`.
+
 ---
 
 ## `QA-01` — dirigir os dois apps num emulador, sem humano
@@ -56,6 +119,7 @@ visto de dentro do emulador).
 - [ ] **App prestador — fluxo dirigido de ponta a ponta:** cadastrar (nasce
       `PENDING`) → aprovar por API → login → ficar disponível → receber oferta →
       ver o repasse → aceitar → coletar com código → entregar com prova.
+- [ ] **Criar o AVD dedicado `aqui_log_qa`** (ver bloqueio 2) — antes de tudo.
 - [ ] `scripts/qa-mobile.sh <app>` que faz tudo sozinho: sobe o emulador headless,
       espera o boot, sobe a API local numa porta livre com `PUBLIC_API_URL`
       alinhado, semeia os dados que o fluxo precisa, roda o teste, colhe
@@ -68,9 +132,10 @@ visto de dentro do emulador).
 ```bash
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64          # Gradle exige 17; o PATH tem 21
 export ANDROID_SDK_ROOT="$HOME/Android/Sdk"
-"$ANDROID_SDK_ROOT/emulator/emulator" -avd Medium_Phone_API_36.0 \
+"$ANDROID_SDK_ROOT/emulator/emulator" -avd aqui_log_qa -partition-size 8192 \
   -no-window -no-audio -no-snapshot -gpu swiftshader_indirect &
 adb wait-for-device
+# ~53 s medidos: espere o boot_completed, NUNCA só o `adb devices`
 adb shell 'while [ "$(getprop sys.boot_completed)" != 1 ]; do sleep 1; done'
 
 cd apps/customer_app
@@ -85,7 +150,9 @@ flutter test integration_test/app_test.dart \
       com sufixo único, não com e-mail fixo).
 - [ ] Falha de verdade **derruba o script** com saída não-zero — nada de aprovar
       em falso, que é exatamente o defeito que o smoke teve até 2026-08-08.
-- [ ] O emulador é encerrado mesmo quando o teste falha.
+- [ ] O emulador é encerrado mesmo quando o teste falha (`adb emu kill`).
+- [ ] O QA usa o AVD `aqui_log_qa` e **não toca** no `Medium_Phone_API_36.0`, que
+      é do AquiResolve.
 - [ ] Portão base verde.
 
 ### O que NÃO fazer

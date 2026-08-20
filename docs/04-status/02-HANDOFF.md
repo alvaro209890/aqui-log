@@ -38,9 +38,11 @@ Decisões fechadas (registro canônico em `../02-planejamento/03-DECISOES.md`):
 ## Verificação executada
 
 - 129 links locais conferidos nos arquivos novos e alterados — **0 quebrados**.
-- Toolchain de QA confirmado neste PC: AVD `Medium_Phone_API_36.0`, Waydroid,
-  Chromium do Playwright em `~/.cache/ms-playwright`, JDK 17 em
-  `/usr/lib/jvm/java-17-openjdk-amd64`.
+- **Cadeia de QA da onda 1 executada de verdade** (não só descrita): emulador
+  headless sobe em 53 s e chega a `device` (API 36); `flutter devices` o vê como
+  `android-x64`; `flutter build apk --debug` compila em 242 s com JDK 17. A
+  instalação **falhou**, e a falha rendeu os dois bloqueios abaixo.
+- Chromium do Playwright confirmado em `~/.cache/ms-playwright`.
 - `pnpm build/lint/test/smoke` e Flutter/Dart: **N/A** — nenhum arquivo de código,
   teste, migration ou configuração de build foi tocado nesta sessão.
 
@@ -48,6 +50,11 @@ Decisões fechadas (registro canônico em `../02-planejamento/03-DECISOES.md`):
 
 - ⚠️ **O aparato de QA ainda não existe.** Ele é o trabalho da onda 1; até
   `QA-03` fechar, vale o portão base.
+- 🔴 **Dois bloqueios medidos, já documentados na onda 1:** (1) o emulador é
+  x86_64 e o APK de release é arm64 — o QA precisa compilar `--target-platform
+  android-x64`; (2) o AVD `Medium_Phone_API_36.0` está com o `/data` a 97% e é
+  **compartilhado com o QA do AquiResolve**, então o `QA-01` deve criar um AVD
+  dedicado `aqui_log_qa` em vez de limpar o existente.
 - Nenhuma tarefa de produto avançou nesta sessão — de propósito.
 - O runbook nasceu com **9 itens abertos**; o que mais pesa no produto continua
   sendo o item 1 (conta Pagar.me), porque sem `PAY-02` um cliente novo não

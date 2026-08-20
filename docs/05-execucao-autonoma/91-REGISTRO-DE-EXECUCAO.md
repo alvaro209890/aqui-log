@@ -29,6 +29,11 @@ Regras:
 - **2026-08-19** · `—` · `<este commit>` · pasta de execução autônoma criada; as 7
   `DEC-*` pendentes fechadas pelo Álvaro e `DEC-27` (iOS sem compilar) registrada;
   `TRIP-00/01/02` cortados do roadmap pela `DEC-07`
-  · portão: N/A — mudança documental, sem código tocado
+  · portão: N/A — mudança documental, sem código tocado. **Mas a cadeia de QA da
+  onda 1 foi medida de verdade:** emulador headless sobe em 53 s (`device`,
+  API 36), `flutter devices` o vê como `android-x64`, `flutter build apk --debug`
+  com JDK 17 compila em 242 s — e a instalação **falhou**, revelando 2 bloqueios
+  registrados no plano da onda 1 (APK arm64 × emulador x86_64; AVD atual sem
+  espaço e compartilhado com o AquiResolve)
   · runbook: criado com 9 itens abertos
   · próximo: `QA-01` ([`10-ONDA-1-QA-AUTOMATIZADO.md`](10-ONDA-1-QA-AUTOMATIZADO.md))
