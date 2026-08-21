@@ -24,9 +24,15 @@ EMU_PID=""
 EVID_DIR="$ROOT_DIR/docs/04-status/entregas/qa-01-${RUN_ID}"
 mkdir -p "$EVID_DIR"
 
-env_value() { sed -n "s/^$1=//p" "$HOME/.config/aqui-log/env" 2>/dev/null | tail -1; }
+env_value() {
+  for f in "$HOME/.config/aqui-log/env" "$ROOT_DIR/.env"; do
+    v="$(sed -n "s/^$1=//p" "$f" 2>/dev/null | tail -1)"
+    [ -n "$v" ] && { echo "$v"; return; }
+  done
+}
 ADMIN_EMAIL_VALUE="${ADMIN_EMAIL:-$(env_value ADMIN_EMAIL)}"
 ADMIN_PASSWORD_VALUE="${ADMIN_PASSWORD:-$(env_value ADMIN_PASSWORD)}"
+echo "DBG admin_email=[$ADMIN_EMAIL_VALUE] has_pw=[${ADMIN_PASSWORD_VALUE:+yes}]" >&2
 DB_USER="${DATABASE_USER:-$(env_value DATABASE_USER)}"
 DB_USER="${DB_USER:-aqui_log}"
 
@@ -128,18 +134,23 @@ if [[ "$APP" == "courier_app" ]]; then
   export SEED_CUSTOMER_EMAIL SEED_CUSTOMER_PASSWORD RUN_ID
   export SEED_OUT="$EVID_DIR/seed-delivery-id.txt"
   python3 - <<'PY'
-import json, os, urllib.request
+import json, os, sys, urllib.request, urllib.error
 
 def req(method, path, body=None, token=None):
+    print("REQ", method, path, "tok=yes" if token else "tok=no", file=sys.stderr)
     url = f"http://127.0.0.1:{os.environ['PORT']}/api/v1{path}"
     data = None if body is None else json.dumps(body).encode()
     r = urllib.request.Request(url, data=data, method=method)
     r.add_header("Content-Type", "application/json")
     if token:
         r.add_header("Authorization", f"Bearer {token}")
-    with urllib.request.urlopen(r) as resp:
-        raw = resp.read()
-        return json.loads(raw) if raw else {}
+    try:
+        with urllib.request.urlopen(r) as resp:
+            raw = resp.read()
+            return json.loads(raw) if raw else {}
+    except urllib.error.HTTPError as e:
+        print("HTTPERR", e.code, e.read().decode()[:300], file=sys.stderr)
+        raise
 
 admin = req("POST", "/auth/login", {
     "email": os.environ["ADMIN_EMAIL_VALUE"],
@@ -152,7 +163,8 @@ cust = req("POST", "/auth/register/customer", {
     "document": str(int(os.environ["RUN_ID"]) % 10**11).zfill(11),
     "phone": "65991112222",
 })
-req("POST", f"/finance/accounts/customer/{cust['user']['id']}/adjust",
+cid = cust['user'].get('customerId') or cust['user']['id']
+req("POST", f"/finance/accounts/customer/{cid}/adjust",
     {"amountCents": 1000000, "reason": "Credito QA-01 semente"},
     token=admin["accessToken"])
 presign = req("POST", "/storage/presign",
@@ -161,6 +173,7 @@ presign = req("POST", "/storage/presign",
 upload_url = presign["uploadUrl"].replace("10.0.2.2", "127.0.0.1")
 upload = urllib.request.Request(upload_url, data=b"fake-jpeg-qa01", method="PUT")
 upload.add_header("Content-Type", "image/jpeg")
+upload.add_header("Authorization", f"Bearer {cust['accessToken']}")
 urllib.request.urlopen(upload).read()
 delivery = req("POST", "/deliveries", {
     "pickupAddress": "Av. Historiador Rubens de Mendonca 1000 Cuiaba",

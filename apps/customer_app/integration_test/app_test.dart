@@ -86,11 +86,9 @@ void main() {
 
       Future<void> fillKey(String key, String value) async {
         final finder = find.byKey(ValueKey(key));
-        await tester.scrollUntilVisible(
-          finder,
-          220,
-          scrollable: find.byType(Scrollable).last,
-        );
+        try {
+          await tester.ensureVisible(finder);
+        } catch (_) {}
         await tester.enterText(finder, value);
         await tester.pump();
       }
@@ -100,11 +98,7 @@ void main() {
       await fillKey('qa-entrega', 'Rua das Flores 200 Cuiaba');
       await fillKey('qa-destinatario', 'Destinatario QA');
       await fillKey('qa-tel-dest', '65988887777');
-      await tester.scrollUntilVisible(
-        find.text('Publicar pedido'),
-        220,
-        scrollable: find.byType(Scrollable).last,
-      );
+      await tester.ensureVisible(find.text('Publicar pedido'));
       await tester.tap(find.text('Publicar pedido'));
       await tester.pump(const Duration(seconds: 2));
       if (find.text('Novo pedido').evaluate().isNotEmpty &&
@@ -122,12 +116,13 @@ void main() {
       await _shot(binding, 'cliente-04-pedido-publicado');
 
       final deliveryId = await _firstDeliveryId(me['token'] as String);
-      await _finishViaApi(admin, deliveryId);
+      final pickupCode = await _finishViaApi(admin, deliveryId);
 
-      await tester.tap(find.textContaining('AL-').first);
+      await tester.tap(find.textContaining('AQL-').first);
       await tester.pump(const Duration(seconds: 2));
-      expect(find.textContaining('Procurando um motoboy'), findsNothing);
+      await _pumpUntil(tester, find.text(pickupCode), timeout: 25);
       await _shot(binding, 'cliente-05-codigo-recolhimento');
+      expect(find.textContaining('Procurando um motoboy'), findsNothing);
 
       if (find.text('Enviar avaliacao').evaluate().isNotEmpty) {
         await tester.ensureVisible(find.text('Enviar avaliacao'));
@@ -183,7 +178,7 @@ Future<String> _firstDeliveryId(String token) async {
   return (items.first as Map)['id'] as String;
 }
 
-Future<void> _finishViaApi(
+Future<String> _finishViaApi(
   Map<String, dynamic> admin,
   String deliveryId,
 ) async {
@@ -222,7 +217,7 @@ Future<void> _finishViaApi(
     {'available': true},
     token: token,
   );
-  await _http('POST', '/couriers/me/location', {
+  await _http('PATCH', '/couriers/me/location', {
     'latitude': -15.601,
     'longitude': -56.097,
   }, token: token);
@@ -254,18 +249,38 @@ Future<void> _finishViaApi(
     {'status': 'AT_PICKUP'},
     token: token,
   );
+  final proof = await _http(
+    'POST',
+    '/storage/presign',
+    {'purpose': 'proof', 'contentType': 'image/jpeg'},
+    token: token,
+  );
+  final upUri = Uri.parse(proof['uploadUrl'] as String);
+  final upReq = await HttpClient().putUrl(upUri);
+  upReq.headers.contentType = ContentType('image', 'jpeg');
+  upReq.add(utf8.encode('fake-proof-qa01'));
+  await upReq.close();
+  final proofUrl = proof['fileUrl'] as String;
+  if (proofUrl.isEmpty) fail('proofUrl vazio: presign=$proof');
   await _http(
     'PATCH',
     '/deliveries/$deliveryId/status',
-    {'status': 'PICKED_UP', 'pickupCode': pickupCode},
+    {'status': 'PICKED_UP', 'pickupCode': pickupCode, 'proofUrl': proofUrl},
     token: token,
   );
   await _http(
     'PATCH',
     '/deliveries/$deliveryId/status',
-    {'status': 'DELIVERED'},
+    {'status': 'IN_TRANSIT'},
     token: token,
   );
+  await _http(
+    'PATCH',
+    '/deliveries/$deliveryId/status',
+    {'status': 'DELIVERED', 'proofUrl': proofUrl},
+    token: token,
+  );
+  return pickupCode;
 }
 
 Future<dynamic> _http(

@@ -69,6 +69,55 @@ void main() {
       }
       await _shot(binding, 'prestador-04-disponivel');
 
+      final seedCustomer = await _login(_seedCustomerEmail, _seedCustomerPassword);
+      final presign = await _http('POST', '/storage/presign',
+          {'purpose': 'product', 'contentType': 'image/jpeg'},
+          token: seedCustomer['token'] as String);
+      final upUri = Uri.parse(presign['uploadUrl'] as String);
+      final upReq = await HttpClient().putUrl(upUri);
+      upReq.headers.contentType = ContentType('image', 'jpeg');
+      upReq.add(utf8.encode('fake-product-qa'));
+      await upReq.close();
+      final delivery = await _http('POST', '/deliveries', {
+        'pickupAddress': 'Av. Historiador Rubens de Mendonca 1000 Cuiaba',
+        'pickupLatitude': -15.58,
+        'pickupLongitude': -56.08,
+        'deliveryAddress': 'Rua das Flores 200 Cuiaba',
+        'deliveryLatitude': -15.60,
+        'deliveryLongitude': -56.10,
+        'recipientName': 'Destinatario QA',
+        'recipientPhone': '65988887777',
+        'fulfillmentMode': 'IMMEDIATE',
+        'productType': 'OTHER',
+        'packageSize': 'SMALL',
+        'weightKg': 1.0,
+        'deliveryScope': 'SAME_CITY',
+        'productPhotoUrls': [presign['fileUrl']],
+      }, token: seedCustomer['token'] as String);
+      final courierLogin = await _login(_email, _password);
+      await _http('PATCH', '/couriers/me/availability', {'available': true},
+          token: courierLogin['token'] as String);
+      await _http('PATCH', '/couriers/me/location',
+          {'latitude': -15.601, 'longitude': -56.097},
+          token: courierLogin['token'] as String);
+      await _http('POST', '/deliveries/${delivery['id']}/dispatch', null,
+          token: admin['token'] as String);
+
+      // A tela de Ofertas só recarrega sob demanda; dispara o refresh.
+      for (var i = 0; i < 3; i++) {
+        try {
+          await tester.tap(find.byIcon(Icons.notifications_none_rounded));
+          await tester.pump(const Duration(seconds: 2));
+        } catch (_) {}
+      }
+      // também força recarga trocando de aba e voltando
+      try {
+        await tester.tap(find.text('Corridas'));
+        await tester.pump(const Duration(seconds: 1));
+        await tester.tap(find.text('Ofertas'));
+        await tester.pump(const Duration(seconds: 2));
+      } catch (_) {}
+
       await _pumpUntil(tester, find.text('Aceitar'), timeout: 40);
       expect(find.textContaining(RegExp(r'R\$|repasse|Repasse')), findsWidgets);
       await tester.tap(find.text('Aceitar').first);

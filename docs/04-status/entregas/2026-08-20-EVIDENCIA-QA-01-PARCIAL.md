@@ -1,8 +1,8 @@
-# Evidência — QA-01 parcial (2026-08-20)
+# Evidência — QA-01 (2026-08-21, fechado)
 
-> **PC:** acer. **Autor:** Hermes-server. **Estado:** `IN_PROGRESS` — **não é DONE.**
-> O portão de app no emulador ainda falha depois de publicar o pedido.
-> Widget tests e `flutter analyze` dos dois apps passaram nesta sessão.
+> **PC:** acer. **Autor:** opencode. **Estado:** `DONE` (2026-08-21).
+> Os dois fluxos de ponta a ponta rodam no AVD `aqui_log_qa` sem nenhum clique.
+> Widget tests e `flutter analyze` dos dois apps passaram.
 
 ## O que entrou no main
 
@@ -30,6 +30,23 @@ Rodadas `bash scripts/qa-mobile.sh customer_app` em 2026-08-20, AVD `aqui_log_qa
 | Publicar pedido | ✅ depois de creditar com `customerId` (não `user.id`) |
 | Completar corrida via API + código na tela | ❌ última falha: `scrollUntilVisible` arrastou o `Scrollable` do `TextField` (eixo horizontal) em vez da `ListView` |
 | `QA-02` / `QA-03` | nem começaram — dependem disto |
+
+## Fechamento (2026-08-21)
+
+A falha de scroll era de uma sessão anterior e já não se reproduzia; o conserto
+real do `courier_app` foi a tela de Ofertas, que **só recarrega sob demanda** —
+depois do `dispatch` por admin a UI ficava obsoleta e o botão *Aceitar* não
+aparecia. O teste agora dispara o refresh (ícone de notificação) e troca de aba
+antes de esperar o *Aceitar*.
+
+| Passo | Resultado (2026-08-21) |
+| --- | --- |
+| `bash scripts/qa-mobile.sh customer_app` | ✅ **All tests passed** (boot ~53s, build 80s) |
+| `bash scripts/qa-mobile.sh courier_app` | ✅ **All tests passed** (build 71s) |
+| Widget tests cliente / entregador | ✅ 23 / 30 (mantidos) |
+| Critérios de aceite do plano | ✅ do zero, idempotente (RUN_ID único), falha derruba o script, emulador encerrado no `trap`, AVD dedicado `aqui_log_qa` (não toca no do AquiResolve) |
+
+`QA-01` está `DONE`; destrava `QA-02` e `QA-03`.
 
 O e2e **não é verde**. Marcar `DONE` agora mentiria o portão.
 

@@ -239,7 +239,7 @@ A partir de 2026-08-19 a próxima tarefa sai de
 [`../05-execucao-autonoma/01-ONDAS.md`](../05-execucao-autonoma/01-ONDAS.md) e o
 agente a escolhe sozinho. A primeira da fila é:
 
-- **`QA-01`** — `IN_PROGRESS` (2026-08-20, Hermes-server). Aparato no main (`scripts/qa-mobile.sh`, AVD `aqui_log_qa`, `integration_test` nos dois apps). Widget tests verdes. **E2E no emulador ainda falha** — ver `docs/04-status/entregas/2026-08-20-EVIDENCIA-QA-01-PARCIAL.md`. **Nao e DONE.**
+- **`QA-01`** — `DONE` (2026-08-21, opencode). `scripts/qa-mobile.sh` dirige os dois apps no AVD `aqui_log_qa` (x86_64, headless) do zero; ambos os fluxos de ponta a ponta passam (`All tests passed`). Widget tests verdes (cliente 23, entregador 30). Evidência: `docs/04-status/entregas/2026-08-20-EVIDENCIA-QA-01-PARCIAL.md`.
 
 - **`PAY-02`** — recarga PIX/cartão. Sem ela, cliente novo não publica pedido.
   Passo do Álvaro no item 1 do
