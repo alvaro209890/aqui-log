@@ -26,6 +26,11 @@ Regras:
 
 ## Registro
 
+- **2026-08-22** · `QA-03` · *(este commit)* · Portão completo: roundtrip com linha legada, `pnpm qa` (web+roundtrip; mobile pulável), job Playwright no CI; emulador no runner não fingido. Hex plantado reprova.
+  · portão: QA_SKIP_MOBILE=1 pnpm qa PASS; pnpm test 32 suítes / 258 testes; smoke AQL-MT4IY2U8LII; mobile NÃO EXECUTADO (QEMU hang)
+  · runbook: —
+  · próximo: `ADMIN-01` (não pegar FROTA-*)
+
 - **2026-08-22** · `QA-02` · *(este commit)* · Playwright no painel: 11 páginas × 2 temas, fila nome+e-mail, pizza, cores distintas, contraste AA, hex só em styles.css. API morta reprova.
   · portão: qa:dashboard 3 passed / 36,7 s; pnpm test 32 suítes / 258 testes; smoke AQL-MT4CJY6TX7P; flutter NÃO EXECUTADO
   · runbook: —

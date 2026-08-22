@@ -14,6 +14,8 @@
     "db:admin": "pnpm --filter backend seed:admin",
     "db:migrate": "pnpm --filter backend migration:run",
     "smoke": "bash scripts/smoke-test.sh",
-    "qa:dashboard": "bash scripts/qa-dashboard.sh"
+    "qa:dashboard": "bash scripts/qa-dashboard.sh",
+    "qa": "bash scripts/qa.sh",
+    "qa:mobile": "bash scripts/qa-mobile.sh"
   }
 }

@@ -5,15 +5,11 @@
 > [`../02-planejamento/01-ROADMAP.md`](../02-planejamento/01-ROADMAP.md) §9 e
 > acrescenta as camadas que faltavam.
 
-## 0. Duas versões do portão
+## 0. Versão do portão
 
-O portão completo depende de aparato que a **onda 1 ainda vai construir**. Então:
-
-- **Antes de `QA-03` fechar:** vale o portão **base** (§2). As linhas de QA de app
-  e de navegador saem como `N/A — aparato em construção (QA-01/QA-02)`.
-- **Depois de `QA-03` fechar:** vale o portão **completo** (§2 + §3). A partir
-  daí, `N/A` em QA só é aceitável se a tarefa **não tocou** naquela superfície, e
-  precisa dizer qual superfície não foi tocada.
+Depois de `QA-03` (2026-08-22) vale o portão **completo** (§2 + §3).
+`N/A` em QA de app ou de navegador só é aceitável se a tarefa **não tocou**
+naquela superfície, e precisa dizer qual superfície não foi tocada.
 
 Marcar `N/A` sem justificativa é a mesma coisa que mentir. `Não executado` é uma
 resposta honesta; `deve passar` não é resposta nenhuma.
@@ -82,6 +78,13 @@ Ou tudo de uma vez, na raiz:
 
 ```bash
 pnpm qa
+```
+
+No CI e quando o qemu do AVD `aqui_log_qa` pende (já medido: thread QEMU
+travada → segfault), pular o emulador sem fingir cobertura:
+
+```bash
+QA_SKIP_MOBILE=1 pnpm qa
 ```
 
 ### O que o aparato precisa respeitar

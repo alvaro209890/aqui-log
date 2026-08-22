@@ -134,3 +134,77 @@ jobs:
         run: dart analyze
       - working-directory: packages/aqui_log_core
         run: dart test
+
+  dashboard-e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: aqui_log
+          POSTGRES_PASSWORD: aqui_log_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aqui_log -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      CI: "true"
+      NODE_ENV: test
+      APP_TIMEZONE: America/Sao_Paulo
+      DATABASE_HOST: localhost
+      DATABASE_PORT: "5432"
+      DATABASE_USER: aqui_log
+      DATABASE_PASSWORD: aqui_log_dev
+      DATABASE_SYNC: "false"
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: aqui-log-ci-secret-only
+      JWT_EXPIRES_IN: 1d
+      JWT_REFRESH_EXPIRES_DAYS: "7"
+      STORAGE_DRIVER: local
+      STORAGE_LOCAL_DIR: /tmp/aqui-log-uploads
+      GEO_PROVIDER: local
+      PUBLIC_API_URL: http://127.0.0.1:3000/api/v1
+      ADMIN_NAME: Administrador CI
+      ADMIN_EMAIL: admin@aquilog.com.br
+      ADMIN_PASSWORD: AdminLocal123!
+      QA_ADMIN_EMAIL: admin@aquilog.com.br
+      QA_ADMIN_PASSWORD: AdminLocal123!
+      PRICING_BASE_FEE_CENTS: "1000"
+      PRICING_PER_KM_CENTS: "500"
+      PRICING_PLATFORM_FEE_PERCENT: "20"
+      PRICING_MIN_FEE_CENTS: "800"
+      OFFER_TTL_SECONDS: "120"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter dashboard exec playwright install --with-deps chromium
+      - name: Playwright do painel (QA-02)
+        run: bash scripts/qa-dashboard.sh
+      - name: Migration roundtrip (QA-03)
+        run: bash scripts/migration-roundtrip.sh
+
+  # Emulador Android no runner e lento e instavel (boot ~53 s, x86_64 vs APK
+  # arm64, disputa com o AVD do AquiResolve). O caminho principal e
+  # scripts/qa-mobile.sh neste PC. Nao fingir cobertura aqui.
+

@@ -17,11 +17,19 @@ do
   [[ -n "$candidate" && -x "$candidate" ]] && { CHROME="$candidate"; break; }
 done
 if [[ -z "$CHROME" ]]; then
-  echo "Chromium do cache ausente — nao baixar de novo sem pedido." >&2
-  exit 1
+  if [[ "${CI:-}" == "true" ]]; then
+    echo "CI: Chromium gerenciado pelo Playwright (pode baixar no runner)."
+    unset PLAYWRIGHT_CHROMIUM
+    unset PLAYWRIGHT_BROWSERS_PATH
+    unset PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD
+  else
+    echo "Chromium do cache ausente — nao baixar de novo sem pedido." >&2
+    exit 1
+  fi
+else
+  export PLAYWRIGHT_CHROMIUM="$CHROME"
+  export PLAYWRIGHT_BROWSERS_PATH="$(cd "$(dirname "$CHROME")/../.." && pwd)"
 fi
-export PLAYWRIGHT_CHROMIUM="$CHROME"
-export PLAYWRIGHT_BROWSERS_PATH="$(cd "$(dirname "$CHROME")/../.." && pwd)"
 
 RUN_ID="$(date +%s)"
 DB_NAME="aqui_log_qa_dash_${RUN_ID}"
@@ -125,7 +133,7 @@ psql_admin -c "CREATE DATABASE ${DB_NAME};" >/dev/null
 ) >"$EVID_DIR/api.log" 2>&1 &
 API_PID=$!
 
-for _ in $(seq 1 90); do
+for _ in $(seq 1 180); do
   curl -fsS "http://127.0.0.1:${API_PORT}/api/v1/health" >/dev/null 2>&1 && break
   sleep 1
 done
@@ -296,15 +304,21 @@ SEED_COURIER_NAME="$(grep '^COURIER_NAME=' "$SEED_OUT" | cut -d= -f2 || true)"
 
 run_pw() {
   cd "$ROOT_DIR/apps/dashboard"
+  if [[ -n "${CHROME:-}" ]]; then
+    export PLAYWRIGHT_CHROMIUM="$CHROME"
+    export PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_PATH"
+    export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+  else
+    unset PLAYWRIGHT_CHROMIUM
+    unset PLAYWRIGHT_BROWSERS_PATH
+    unset PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD
+  fi
   QA_DASHBOARD_URL="http://127.0.0.1:${DASH_PORT}" \
   QA_ADMIN_EMAIL="$ADMIN_EMAIL_VALUE" \
   QA_ADMIN_PASSWORD="$ADMIN_PASSWORD_VALUE" \
   QA_SEED_COURIER_EMAIL="$SEED_COURIER_EMAIL" \
   QA_SEED_COURIER_NAME="$SEED_COURIER_NAME" \
   QA_EVID_DIR="$EVID_DIR" \
-  PLAYWRIGHT_CHROMIUM="$CHROME" \
-  PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_PATH" \
-  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
   pnpm exec playwright test "$@"
 }
 

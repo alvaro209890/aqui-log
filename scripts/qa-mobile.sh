@@ -15,6 +15,12 @@ export JAVA_HOME="${JAVA_HOME:-/usr/lib/jvm/java-17-openjdk-amd64}"
 export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}"
 export ANDROID_HOME="$ANDROID_SDK_ROOT"
 export PATH="$JAVA_HOME/bin:$HOME/develop/flutter/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator:$PATH"
+# O sandbox do agente redireciona GRADLE_USER_HOME para /tmp/cursor-sandbox-cache
+# e o assembleDebug passa dos 12 min do test (QA-03, 2026-08-22). Forçar o
+# Gradle do usuário. Não toca no AVD Medium_Phone_API_36.0 (AquiResolve).
+if [[ "${GRADLE_USER_HOME:-}" == *cursor-sandbox-cache* ]] || [[ -z "${GRADLE_USER_HOME:-}" ]]; then
+  export GRADLE_USER_HOME="$HOME/.gradle"
+fi
 
 AVD_NAME="aqui_log_qa"
 RUN_ID="$(date +%s)"
@@ -110,7 +116,7 @@ docker exec aqui-log-postgres psql -U "$DB_USER" -d postgres \
 ) >"$EVID_DIR/api.log" 2>&1 &
 API_PID=$!
 
-for _ in $(seq 1 90); do
+for _ in $(seq 1 180); do
   curl -fsS "http://127.0.0.1:${PORT}/api/v1/health" >/dev/null 2>&1 && break
   sleep 1
 done
@@ -215,7 +221,7 @@ fi
 set +e
 (
   cd "$ROOT_DIR/apps/$APP"
-  flutter test integration_test/app_test.dart "${DEFINES[@]}"
+  flutter test integration_test/app_test.dart --timeout 25m "${DEFINES[@]}"
 )
 FLUTTER_CODE=$?
 set -e

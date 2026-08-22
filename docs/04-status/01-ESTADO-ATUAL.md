@@ -1,11 +1,11 @@
 # Estado atual observado
 
-> **Atualização 2026-08-22 (Cursor Grok):** `QA-02` DONE no main — Playwright
-> no painel (11 páginas × 2 temas, fila com nome/e-mail, pizza de status,
-> cores DELIVERED≠CANCELED, contraste AA, hex só em `styles.css`).
-> `pnpm qa:dashboard` passa com API viva e **reprova** com ela morta.
-> Evidência: `docs/04-status/entregas/2026-08-22-EVIDENCIA-QA-02.md`.
-> Próxima da onda 1: `QA-03`. **Não pegar `FROTA-*`:** Claude e Hermes estão nela.
+> **Atualização 2026-08-22 (Cursor Grok):** `QA-03` DONE no main — portão
+> completo: `scripts/migration-roundtrip.sh`, `pnpm qa` (roundtrip + Playwright;
+> mobile pulável com `QA_SKIP_MOBILE=1`), job `dashboard-e2e` no CI. Emulador
+> no runner **não** fingido. Evidência:
+> `docs/04-status/entregas/2026-08-22-EVIDENCIA-QA-03.md`.
+> Próxima: `ADMIN-01`. **Não pegar `FROTA-*`:** Claude e Hermes estão nela.
 >
 > **Atualização 2026-08-21 (Hermes-acer):** QA de aceite no runtime real ✅
 > (evidência `docs/04-status/entregas/2026-08-21-EVIDENCIA-QA-ACEITE-RUNTIME.md`):
@@ -464,10 +464,10 @@ próxima sessão deve fazer:
   verificação, o runbook do Álvaro e o registro de execução;
 - **`BLOCKED` deixou de parar a cadeia**: o agente escreve o passo do Álvaro no
   runbook e segue para a próxima tarefa desbloqueada;
-- **`UX-02` foi cancelado como ID** e absorvido pela onda 1 (`QA-01`/`QA-02`/`QA-03`).
+- **`UX-02` está `DONE`** — absorvido pela onda 1 (`QA-01`/`QA-02`/`QA-03`).
 
-⚠️ O aparato de QA automatizado ainda **não existe** — ele é o trabalho da onda 1.
-Até `QA-03` fechar, vale o portão base.
+O aparato de QA automatizado **existe**: `pnpm qa` (roundtrip + Playwright;
+`QA_SKIP_MOBILE=1` no CI e quando o qemu pende). Vale o portão completo.
 
 A cadeia foi **medida nesta sessão**, não suposta: o emulador headless sobe em
 **53 s** e chega a `device` (Android 16 / API 36), `flutter devices` o enxerga
@@ -490,11 +490,11 @@ offline" não é defeito — `offline` é o estado normal durante os ~53 s de bo
 
 ## 5. Próximo passo
 
-**A próxima tarefa é `QA-03`** — ligar o aparato no portão (`pnpm qa`,
-roundtrip de migration, job Playwright no CI). Ordem:
+**A próxima tarefa é `ADMIN-01`** — fundação do painel (motivo, auditoria,
+matriz de permissões, confirmação dupla). Ordem:
 [`../05-execucao-autonoma/01-ONDAS.md`](../05-execucao-autonoma/01-ONDAS.md).
 
-`QA-01` e `QA-02` estão `DONE`. **Não executar `FROTA-01`, `FROTA-02` nem
+`QA-01`, `QA-02` e `QA-03` estão `DONE`. **Não executar `FROTA-01`, `FROTA-02` nem
 `ADMIN-04` nesta cadeia** — Claude e Hermes estão na frota; colidir no `main`
 apaga trabalho alheio.
 

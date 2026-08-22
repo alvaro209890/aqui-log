@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { defineConfig, devices } from '@playwright/test';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -7,6 +8,9 @@ const cachedChrome = join(
   homedir(),
   '.cache/ms-playwright/chromium-1234/chrome-linux64/chrome',
 );
+const executablePath =
+  process.env.PLAYWRIGHT_CHROMIUM ||
+  (existsSync(cachedChrome) ? cachedChrome : undefined);
 
 export default defineConfig({
   testDir: './e2e',
@@ -23,7 +27,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     trace: 'off',
     launchOptions: {
-      executablePath: process.env.PLAYWRIGHT_CHROMIUM || cachedChrome,
+      ...(executablePath ? { executablePath } : {}),
       args: ['--no-sandbox', '--disable-dev-shm-usage'],
     },
   },

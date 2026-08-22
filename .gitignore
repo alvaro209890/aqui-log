@@ -33,6 +33,7 @@ apps/backend/uploads/
 # rodadas locais do qa-mobile.sh / qa-dashboard.sh (log da API pode vazar env)
 docs/04-status/entregas/qa-01-*/
 docs/04-status/entregas/qa-02-*/
+docs/04-status/entregas/qa-03-*/
 apps/dashboard/test-results/
 apps/dashboard/playwright-report/
 apps/dashboard/blob-report/

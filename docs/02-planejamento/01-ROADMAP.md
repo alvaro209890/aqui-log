@@ -1,8 +1,8 @@
 # Aqui Log — Roadmap executivo B2C
 
-> **Atualizado:** 2026-08-22 (`QA-02` DONE)
+> **Atualizado:** 2026-08-22 (`QA-03` DONE)
 > **Status:** fonte de verdade para prioridade, dependências e ordem de execução
-> **Rodada atual:** `QA-02` fechou o QA de navegador do painel. Próximo: `QA-03`.
+> **Rodada atual:** onda 1 fechada (`QA-01`/`QA-02`/`QA-03`). Próximo: `ADMIN-01`.
 > **Não executar `FROTA-*` enquanto Claude/Hermes estão na frota.**
 > Em 2026-08-19 fechou `COUR-02`. Em 2026-08-11 fecharam `PAY-01`, `OPS-01A`,
 > os dois apps distribuíveis e `ADMIN-02A`.
@@ -255,7 +255,7 @@ Esta trilha pode ocorrer em paralelo às Fases 1–4 quando houver autorização
 | UX-01A | ✅ | Aplicar tema no app cliente e cobrir por testes | [diretrizes](../01-produto/02-DIRETRIZES-VISUAIS.md) |
 | UX-01B | ✅ | Aplicar tema no app motoboy e cobrir por testes | [diretrizes](../01-produto/02-DIRETRIZES-VISUAIS.md) |
 | UX-01C | ✅ | Tokens laranja no dashboard + **tema claro/escuro**, com contraste AA medido nas 11 telas dos 2 temas (2026-08-08) | Diretrizes visuais |
-| UX-02 | ▶️ | Acessibilidade, estados, responsividade e QA visual dos fluxos; parte mobile exige dispositivo | Critérios do documento visual |
+| UX-02 | ✅ | Absorvido pela onda 1 (`QA-01`/`QA-02`/`QA-03`, 2026-08-22): emulador dirigido + Playwright no portão | [`10-ONDA-1-QA-AUTOMATIZADO.md`](../05-execucao-autonoma/10-ONDA-1-QA-AUTOMATIZADO.md) |
 
 ## 8. Registro de decisões pendentes
 

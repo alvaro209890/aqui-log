@@ -2,6 +2,16 @@
 
 Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
+## 2026-08-22 — QA-03: portão completo (roundtrip + pnpm qa + CI)
+
+`scripts/migration-roundtrip.sh` aplica, reverte e reaplica a última migration
+com linha legada. `pnpm qa` encadeia roundtrip + Playwright; mobile no CI fica
+de fora de propósito (emulador lento/instável). Job `dashboard-e2e` no GitHub
+Actions. Defeito plantado (`#f97316` em `theme.ts`) reprova o teste hex.
+`UX-02` absorvido. Sem `FROTA-*`.
+
+Evidência: `docs/04-status/entregas/2026-08-22-EVIDENCIA-QA-03.md`.
+
 ## 2026-08-22 — QA-02: Playwright no painel (sem humano)
 
 Varredura logada das 11 páginas nos temas claro e escuro, com asserções dos
