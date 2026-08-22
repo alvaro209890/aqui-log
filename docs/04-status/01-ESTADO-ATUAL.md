@@ -1,5 +1,10 @@
 # Estado atual observado
 
+> **Atualização 2026-08-21 (Hermes-acer):** APKs de distribuição (cliente +
+> entregador, arm64, 19,4 MB cada) gerados e entregues; evidência em
+> `docs/04-status/entregas/2026-08-21-EVIDENCIA-APKS.md`. Runtime OPS-01A
+> confirmado no ar (health `ok`, db+redis `ok`, 3 units systemd active).
+>
 > **Atualizacao 2026-08-21 (opencode):** QA-01 DONE no main — `scripts/qa-mobile.sh` dirige os dois apps no AVD `aqui_log_qa` do zero; ambos os fluxos de ponta a ponta passam (idempotente, falha derruba o script, emulador encerrado no trap). Proxima tarefa da onda 1: QA-02 (Playwright no painel).
 
 

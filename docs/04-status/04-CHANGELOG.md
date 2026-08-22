@@ -2,6 +2,22 @@
 
 Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
+## 2026-08-21 — APKs de distribuição (cliente + entregador) e runtime confirmado
+
+Pedido do Álvaro: gerar os dois APKs, entregar, documentar, pushar e manter o
+runtime online. Builds `flutter build apk --release --target-platform
+android-arm64`: `dist/aqui-log-cliente-2026-08-21.apk` e
+`dist/aqui-log-entregador-2026-08-21.apk` (19,4 MB cada; `dist/` não é
+versionado). `flutter analyze` 0 issues e widget tests 23/30 verdes nos dois
+apps. APKs apontam por default para `https://aquilog-api.cursar.space/api/v1`
+(padrão `3d66fd0`) — conversam com o runtime de distribuição direto. Health
+público `ok` (db + redis `ok`), 3 units systemd ativas, containers healthy.
+Nenhum código tocado (mudança documental + artefatos); working tree do QA-02
+preservado.
+
+Evidência: `docs/04-status/entregas/2026-08-21-EVIDENCIA-APKS.md`.
+
+
 ## 2026-08-19 — execução autônoma: 7 decisões fechadas e pasta de ondas
 
 Mudança documental, sem código. As 7 `DEC-*` pendentes foram fechadas pelo Álvaro
