@@ -25,6 +25,11 @@ Regras:
   bloqueada.
 
 ## Registro
+- **2026-08-22** · `—` · *(este commit)* · APKs 22/08 regenerados no acer e entregues no Google Drive (`G:\Meu Drive\Aqui_Log\APKs`, via Windows pcque001imap; SHA-256 conferido no destino). Runtime cursar.space re-verificado. Sem código novo.
+  · portão: analyze 0 issues x2; widget tests 23 passed (cliente) + 30 passed (entregador); builds Gradle release arm64 ok; hashes idênticos aos builds de 21/08 (determinismo)
+  · runbook: —
+  · próximo: `ADMIN-01` (não pegar FROTA-*)
+
 
 - **2026-08-22** · `QA-03` · *(este commit)* · Portão completo: roundtrip com linha legada, `pnpm qa` (web+roundtrip; mobile pulável), job Playwright no CI; emulador no runner não fingido. Hex plantado reprova.
   · portão: QA_SKIP_MOBILE=1 pnpm qa PASS; pnpm test 32 suítes / 258 testes; smoke AQL-MT4IY2U8LII; mobile NÃO EXECUTADO (QEMU hang)
