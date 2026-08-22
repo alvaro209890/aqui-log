@@ -1,5 +1,12 @@
 # Estado atual observado
 
+> **Atualização 2026-08-22 (Cursor Grok):** `QA-02` DONE no main — Playwright
+> no painel (11 páginas × 2 temas, fila com nome/e-mail, pizza de status,
+> cores DELIVERED≠CANCELED, contraste AA, hex só em `styles.css`).
+> `pnpm qa:dashboard` passa com API viva e **reprova** com ela morta.
+> Evidência: `docs/04-status/entregas/2026-08-22-EVIDENCIA-QA-02.md`.
+> Próxima da onda 1: `QA-03`. **Não pegar `FROTA-*`:** Claude e Hermes estão nela.
+>
 > **Atualização 2026-08-21 (Hermes-acer):** QA de aceite no runtime real ✅
 > (evidência `docs/04-status/entregas/2026-08-21-EVIDENCIA-QA-ACEITE-RUNTIME.md`):
 > criar conta cliente é 201 auto-login; motoboy nasce PENDING e opera após
@@ -54,7 +61,7 @@ coluna `company_id`).
 | Backend NestJS | Auth, cliente, entregas (**criação exige foto/tipo/tamanho/peso/modo**), **modo agendado com janela e aceite antecipado**, ofertas com **reserva de agenda** e **reoferta por anéis de raio com limite de rodadas e de tempo**, tracking, **preço v2 versionado com breakdown congelado**, **código de recolhimento na coleta**, **aviso de demora da busca + ações do cliente (tentar de novo, editar, cancelar) + aumento com consentimento**, **desistência do prestador com taxa no ledger (`COUR-02`)**, dashboard e storage local | **15 migrations** (enum `COURIER_CANCEL_FEE` em 2026-08-19) |
 | App cliente Flutter | Cadastro/login **com auto-login**, **confirmação de telefone por código no app (`B2C-04`)**, pedido estruturado **com foto obrigatória**, **escolha entre agora e agendar**, **código de recolhimento visível após o aceite**, **status da busca com aviso de demora e ações de recuperação**, histórico, acompanhamento, avaliação e **carteira**. **APK release arm64 gerado** apontando para a API pública | QA em dispositivo/emulador pendente (`UX-02`); rebuild do APK para incluir a tela de telefone; **recarga de saldo não existe** até `PAY-02` |
 | App motoboy Flutter | **Cadastro dentro do app (com aviso de análise)**, login **com auto-login**, disponibilidade, oferta (**agendada mostra a janela e aceita antecipado**, **com o repasse visível antes do aceite**), **abas Em andamento / Agenda / Concluídas**, **coleta com código de recolhimento**, **cancelar corrida com confirmação da taxa (`COUR-02`)**, prova, entrega e **carteira do ledger**. **APK release arm64 gerado** apontando para a API pública | rebuild do APK e QA em aparelho pendentes (`UX-02`); não avalia o cliente (`B2C-03` BLOCKED); sem saque |
-| Dashboard React | KPIs, entregas (**filtro e coluna de modo**), mapa, motoboys (**fila de aprovação com identidade, documentos e confirmação individual**), usuários, auditoria, **configurações completas de preço/multas/agendamento/reoferta** (inclui **aviso de demora** e **aumento de destrava da busca**), relatórios; identidade laranja + **tema claro/escuro**; **gráfico de pizza e gauge corrigidos (2026-08-10)** | seções "Modo agendado" e **"Reoferta por aneis"** ainda **sem QA de navegador**; busca da `TopBar` continua decorativa (não corrigida — é feature nova, fora do escopo da auditoria) |
+| Dashboard React | KPIs, entregas (**filtro e coluna de modo**), mapa, motoboys (**fila de aprovação com identidade, documentos e confirmação individual**), usuários, auditoria, **configurações completas de preço/multas/agendamento/reoferta** (inclui **aviso de demora** e **aumento de destrava da busca**), relatórios; identidade laranja + **tema claro/escuro**; **gráfico de pizza e gauge corrigidos (2026-08-10)** | **QA-02** varreu as 11 páginas logadas nos dois temas (2026-08-22). Busca da `TopBar` continua decorativa (é `ADMIN-01`) |
 | Backend — ledger (`PAY-01` + `COUR-02`) | Pedido **pré-pago**: criação reserva o preço, cancelamento do cliente libera, `DELIVERED` liquida; **desistência do prestador debita a taxa congelada** (recusa se saldo insuficiente); ajuste administrativo auditado; extrato e resumo com autorização por papel; `402` sem saldo | **crédito só por operação de admin** — recarga PIX/cartão é `PAY-02` |
 | Postgres/Redis | Containers `aqui-log-postgres` (5433) e `aqui-log-redis` (6379) ativos, `restart=unless-stopped`; dados do Postgres em `~/Documentos/Bando_de_dados/Aqui_Log` (`DEC-26`, migrados 2026-08-11) | banco ainda é descartável; **sem backup automatizado** (`OPS-01`) |
 | Cloud | Scaffolds Render/Vercel/Firebase; alvos **decididos** (`DEC-25`) | nenhum projeto ou credencial conectado — evolução posterior ao runtime local |
@@ -431,12 +438,10 @@ Evidência anterior (mobile, 2026-08-07):
 - [x] Migrar os dados do Postgres para `~/Documentos/Bando_de_dados/Aqui_Log`.
 - [x] Fechar o smoke do `PAY-01` em banco acumulado (delta em vez de total).
 - [x] Gerar o APK do app cliente (release arm64) apontando para a API pública.
-- [ ] Fazer QA de navegador das seções "Modo agendado" e "Reoferta por aneis" do painel.
+- [x] Fazer QA de navegador das seções "Modo agendado" e "Reoferta por aneis" do painel (`QA-02`, 2026-08-22).
 - [x] Gerar o APK atual do app do motoboy (2026-08-11).
 - [x] Criar tela de aprovação de entregadores no painel (`ADMIN-02A`, 2026-08-11).
-- [ ] **QA de navegador logado da fila de aprovação** — a receita de 6 passos
-      está em `2026-08-11-EVIDENCIA-ADMIN-02A.md` §6, e dois cadastros pendentes
-      ficaram no banco de propósito para isso.
+- [x] **QA de navegador logado da fila de aprovação** (`QA-02`, 2026-08-22).
 - [ ] Fazer QA visual dos apps em emulador/dispositivo — o APK do cliente existe,
       mas ninguém o instalou ainda.
 - [ ] Fazer login de admin no painel público pelo navegador (o carregamento e o
@@ -485,23 +490,18 @@ offline" não é defeito — `offline` é o estado normal durante os ~53 s de bo
 
 ## 5. Próximo passo
 
-**A próxima tarefa é `QA-01`** — a primeira de
-[`../05-execucao-autonoma/01-ONDAS.md`](../05-execucao-autonoma/01-ONDAS.md), e a
-partir de agora o agente a escolhe sozinho por lá.
+**A próxima tarefa é `QA-03`** — ligar o aparato no portão (`pnpm qa`,
+roundtrip de migration, job Playwright no CI). Ordem:
+[`../05-execucao-autonoma/01-ONDAS.md`](../05-execucao-autonoma/01-ONDAS.md).
 
-`BASE-04`, `B2C-01B`, `B2C-05`, `UX-01C`, `B2C-02`, `PICK-01`, `B2C-06`,
-`SCHED-01`, `COUR-01`, `DISP-01`, `DISP-02`, **`PAY-01`** e **`OPS-01A`** estão
-`DONE`. Com o `PAY-01` fechado, **`COUR-02` destrava** (cancelamento do
-prestador com taxa no saldo) — é o próximo ID natural. A fila também tem
-`UX-02` (QA visual: agora existe um APK do cliente para instalar) e, como
-pendência de produto, **`PAY-02`** (Pagar.me, `DEC-06`): sem ela o cliente que
-instalar o APK não consegue pôr saldo e, portanto, não consegue publicar
-pedido. Escolher um único ID, conforme o backlog.
+`QA-01` e `QA-02` estão `DONE`. **Não executar `FROTA-01`, `FROTA-02` nem
+`ADMIN-04` nesta cadeia** — Claude e Hermes estão na frota; colidir no `main`
+apaga trabalho alheio.
 
 Pendência aberta de `PAY-01`: a **recarga de saldo não existe**. O único
 caminho de crédito é o ajuste administrativo auditado
-(`POST /finance/accounts/customer/:id/adjust`). `PAY-DEC-02` (política de
-cancelamento do cliente depois do aceite/coleta) continua sem decisão.
+(`POST /finance/accounts/customer/:id/adjust`). Política de cancelamento do
+cliente é `PAY-01A` (depois de `QA-03`).
 
 Pendência aberta de `OPS-01A`: sem backup automatizado e sem monitoramento (é
 `OPS-01`); o dashboard é público e protegido só pelo login de admin da própria

@@ -1,31 +1,50 @@
 # Handoff vigente
 
-- **Data/hora:** 2026-08-21
-- **Agente:** Hermes-acer
-- **Tarefa:** gerar e entregar os APKs de distribuição (cliente + entregador),
-  documentar, pushar e confirmar o runtime online em `*.cursar.space`.
-- **Branch/commit inicial:** `main` @ `766f78d` (QA-01 DONE)
-- **Estado:** entregue e pushado. Evidência:
-  `docs/04-status/entregas/2026-08-21-EVIDENCIA-APKS.md`.
+- **Data/hora:** 2026-08-22
+- **Agente:** Cursor Grok 4.6 (acer)
+- **Tarefa:** `QA-02` — Playwright no painel admin, documentar e push no `main`
+- **Branch/commit:** `main` (este commit)
+- **Escopo autorizado:** uma tarefa da onda 1; commit+push no `main`
 
 ## Resultado
 
-Os dois APKs (arm64, ~19,4 MB cada) foram buildados
-(`flutter build apk --release --target-platform android-arm64`), copiados para
-`dist/` com data de hoje e enviados ao Álvaro no canal. Ambos apontam por
-default para `https://aquilog-api.cursar.space/api/v1` (padrão `3d66fd0`), ou
-seja, conversam com o runtime de distribuição deste PC sem configuração extra.
+`QA-02` fechado. `pnpm qa:dashboard` (run 1787401039): 3 testes Playwright
+verdes com API viva (36,7 s); o mesmo spec **falha** com a API morta (login
+não entra). Portão: build/lint ok; `pnpm test` 32 suítes / 258 testes; smoke
+público `AQL-MT4CJY6TX7P`. Flutter não rodou neste ambiente (EUID root).
 
-Verificação real: `flutter analyze` 0 issues e widget tests 23 (cliente) / 30
-(entregador) verdes; health público `ok` com db+redis `ok`; as 3 units systemd
-(`aqui-log-api`, `aqui-log-dashboard`, `cloudflared-aqui-log`) ativas.
+## Alterações
 
-## Atenção para o próximo agente
+- `apps/dashboard/e2e/*`, `playwright.config.ts` — spec alinhado ao DOM real
+- `scripts/qa-dashboard.sh` — seed PENDING + DELIVERED + CANCELED; prova API morta
+- `package.json` — script `qa:dashboard`
+- prints em `docs/04-status/entregas/qa-02-*.png`
 
-- **Working tree sujo do QA-02 (opencode) preservado intacto:** modificados
-  `apps/dashboard/package.json` e `pnpm-lock.yaml`; não monitorados
-  `apps/dashboard/e2e/`, `apps/dashboard/playwright.config.ts`,
-  `scripts/qa-dashboard.sh`. Commit seletivo apenas — não rodar `git add -A`.
-- `dist/` é ignorado no git: APK é artefato de entrega via chat, não versionado.
-- Próxima da onda 1: `QA-02` (Playwright no painel) — já em andamento pelo
-  opencode; depois `QA-03` fecha a onda.
+## Evidências executadas
+
+| Verificação | Resultado | Observação |
+| --- | --- | --- |
+| `pnpm qa:dashboard` | PASS | live 0 / dead 1 |
+| `pnpm build` / `lint` / `test` | PASS | 32/258 |
+| smoke público | PASS | `AQL-MT4CJY6TX7P` |
+| flutter analyze/test | NÃO EXECUTADO | sandbox root; QA-02 não tocou Dart |
+
+## Não feito e bloqueios
+
+- `QA-03` ainda aberto
+- **`FROTA-01` / `FROTA-02` / `ADMIN-04`:** não tocar — Claude e Hermes estão na frota
+- Recarga Pagar.me, Firebase, Render/Vercel, iOS compile — runbook do Álvaro
+
+## Riscos conhecidos
+
+- Smoke desta sessão criou pedidos no banco do runtime público (`cursar.space`)
+- Busca da TopBar continua decorativa (`ADMIN-01`)
+
+## Próximo passo recomendado
+
+1. `[QA-03]` — `scripts/migration-roundtrip.sh`, `pnpm qa`, job Playwright no CI
+2. Depois: `ADMIN-01` (não `FROTA-*`)
+
+## Mensagem de retomada
+
+> `QA-02` está no `main`. Pegue `QA-03`. Não mexa em frota.

@@ -2,6 +2,18 @@
 
 Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
+## 2026-08-22 — QA-02: Playwright no painel (sem humano)
+
+Varredura logada das 11 páginas nos temas claro e escuro, com asserções dos
+três defeitos históricos (e-mail na fila, pizza de status, cores
+DELIVERED≠CANCELED), contraste AA e zero hex de marca fora de `styles.css`.
+`pnpm qa:dashboard` passa com API viva e reprova com ela morta. Chromium do
+cache local; banco descartável via psql :5433. Sem `FROTA-*`.
+
+Evidência: `docs/04-status/entregas/2026-08-22-EVIDENCIA-QA-02.md`.
+
+
+
 ## 2026-08-21 — QA de aceite no runtime real (conta + fluxo + sem pagamentos)
 
 Prova ponta a ponta contra `https://aquilog-api.cursar.space/api/v1`: conta

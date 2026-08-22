@@ -1,122 +1,135 @@
 import { test, expect, type Page } from '@playwright/test';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import {
+  PAGES,
+  adminPassword,
+  attachConsole,
+  assertContrastAa,
+  assertNoHorizontalOverflow,
+  brandHexOutsideStyles,
+  login,
+  requireAdminPassword,
+  seedCourierEmail,
+  seedCourierName,
+  setTheme,
+  snapshot,
+} from './helpers';
 
-const PAGES = [
-  { path: '/', name: 'Overview' },
-  { path: '/deliveries', name: 'Deliveries' },
-  { path: '/map', name: 'Map' },
-  { path: '/couriers', name: 'Couriers' },
-  { path: '/users', name: 'Users' },
-  { path: '/finance', name: 'Finance' },
-  { path: '/reports', name: 'Reports' },
-  { path: '/ratings', name: 'Ratings' },
-  { path: '/audit', name: 'Audit' },
-  { path: '/settings', name: 'Settings' },
-  { path: '/alerts', name: 'Alerts' },
-] as const;
+const srcRoot = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 
-const adminEmail = process.env.QA_ADMIN_EMAIL || 'admin@aquilog.com.br';
-const adminPassword = process.env.QA_ADMIN_PASSWORD || '';
-const seedCourierEmail = process.env.QA_SEED_COURIER_EMAIL || '';
-const seedDeliveredId = process.env.QA_SEED_DELIVERED_ID || '';
-const seedCanceledId = process.env.QA_SEED_CANCELED_ID || '';
+test('zero hexadecimal de marca fora de styles.css', () => {
+  const hits = brandHexOutsideStyles(srcRoot);
+  expect(hits, hits.join('\n')).toEqual([]);
+});
 
-async function login(page: Page) {
-  await page.goto('/');
-  await page.waitForLoadState('networkidle').catch(() => {});
-  const email = page.getByLabel(/e-?mail/i);
-  const password = page.getByLabel(/senha/i);
-  await email.fill(adminEmail);
-  await password.fill(adminPassword);
-  await page.getByRole('button', { name: /entrar/i }).click();
-  await page.waitForURL('**/', { timeout: 15_000 }).catch(() => {});
-  await page.waitForSelector('body', { timeout: 15_000 });
-}
-
-async function toggleTheme(page: Page) {
-  const btn = page.locator(
-    'button[title="Usar tema escuro"], button[title="Usar tema claro"]',
-  );
-  await btn.first().click();
-  await page.waitForTimeout(400);
-}
-
-async function sweep(page: Page, theme: string) {
-  const consoleErrors: string[] = [];
-  const pageErrors: string[] = [];
-  page.on('console', (m) => {
-    if (m.type() === 'error') consoleErrors.push(m.text());
-  });
-  page.on('pageerror', (e) => pageErrors.push(e.message));
-
-  await login(page);
-
-  // viewport estreito p/ checar overflow horizontal
+async function sweep(
+  page: Page,
+  theme: 'light' | 'dark',
+  errors: string[],
+): Promise<void> {
   await page.setViewportSize({ width: 430, height: 900 });
-
   for (const p of PAGES) {
-    consoleErrors.length = 0;
-    pageErrors.length = 0;
-    await page.goto(p.path, { waitUntil: 'networkidle' }).catch(() => {});
-    await page.waitForTimeout(600);
-    const title = await page.title().catch(() => '');
-    expect(title, `${p.name} (${theme}) deve carregar`).toBeTruthy();
-
-    const overflow = await page.evaluate(() => {
-      const de = document.documentElement;
-      return de.scrollWidth - de.clientWidth;
+    errors.length = 0;
+    await page.goto(p.path, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(700);
+    const heading = page.locator('.page-heading h1, .login-card h1').first();
+    await expect(heading, `${p.name} (${theme}) deve carregar`).toBeVisible({
+      timeout: 15_000,
     });
+    await assertNoHorizontalOverflow(page, `${p.name}/${theme}`);
     expect(
-      overflow,
-      `overflow horizontal em ${p.name} (${theme}): ${overflow}px`,
-    ).toBeLessThanOrEqual(2);
-
-    expect(
-      pageErrors,
-      `pageerror em ${p.name} (${theme}): ${pageErrors.join(' | ')}`,
-    ).toHaveLength(0);
-    expect(
-      consoleErrors,
-      `console.error em ${p.name} (${theme}): ${consoleErrors.join(' | ')}`,
+      errors,
+      `console/pageerror em ${p.name} (${theme}): ${errors.join(' | ')}`,
     ).toHaveLength(0);
   }
+}
 
-  // Defeitos históricos (só quando há dado semeado)
-  if (seedCourierEmail) {
-    await page.goto('/couriers', { waitUntil: 'networkidle' }).catch(() => {});
-    await page.waitForTimeout(500);
-    const body = (await page.locator('body').innerText()).toLowerCase();
-    expect(
-      body.includes(seedCourierEmail.toLowerCase()),
-      `fila de aprovação não mostra o e-mail do candidato (${seedCourierEmail})`,
-    ).toBeTruthy();
-  }
-  if (seedDeliveredId && seedCanceledId) {
-    await page.goto('/deliveries', { waitUntil: 'networkidle' }).catch(() => {});
-    await page.waitForTimeout(500);
-    const body = await page.locator('body').innerText();
-    expect(
-      body,
-      'entregas não listam entregue e cancelado com rótulos distintos',
-    ).toMatch(/entregue/i);
-    expect(
-      body,
-      'entregas não listam entregue e cancelado com rótulos distintos',
-    ).toMatch(/cancelad[oa]/i);
-  }
-
-  // Gráfico de pizza desenha setores (svg com paths) em Reports
-  await page.goto('/reports', { waitUntil: 'networkidle' }).catch(() => {});
+async function assertHistoricalDefects(page: Page, theme: string): Promise<void> {
+  await page.goto('/couriers', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(800);
-  const svgPaths = await page.locator('svg path').count();
-  expect(svgPaths, 'gráfico não desenha nenhum setor (svg path)').toBeGreaterThan(0);
+  const queue = page.locator('.approval-queue');
+  await expect(queue, `fila de aprovação ausente (${theme})`).toBeVisible({
+    timeout: 10_000,
+  });
+  await expect(
+    queue.locator('.approval-identity strong').first(),
+    `fila sem nome (${theme})`,
+  ).toContainText(seedCourierName);
+  if (seedCourierEmail) {
+    await expect(
+      queue.locator('.approval-identity span').first(),
+      `fila sem e-mail (${theme}) — regressão ADMIN-02A`,
+    ).toContainText(seedCourierEmail);
+  }
+
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  const chart = page.getByTestId('chart-deliveries-by-status');
+  await expect(chart, `pizza de status ausente (${theme})`).toBeVisible({
+    timeout: 15_000,
+  });
+  const paths = chart.locator('svg path');
+  await expect(
+    paths.first(),
+    `gráfico não desenha setor (${theme}) — regressão Recharts 3.9`,
+  ).toBeVisible({ timeout: 10_000 });
+  expect(
+    await paths.count(),
+    `pizza sem path SVG (${theme})`,
+  ).toBeGreaterThan(0);
+
+  await page.goto('/deliveries', { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(800);
+  const delivered = page.locator('.status.green').filter({ hasText: /entregue/i }).first();
+  const canceled = page.locator('.status.red').filter({ hasText: /cancelad/i }).first();
+  await expect(delivered, `selo Entregue ausente (${theme})`).toBeVisible();
+  await expect(canceled, `selo Cancelada ausente (${theme})`).toBeVisible();
+  const deliveredColor = await delivered.evaluate((el) => getComputedStyle(el).color);
+  const canceledColor = await canceled.evaluate((el) => getComputedStyle(el).color);
+  expect(
+    deliveredColor,
+    `DELIVERED e CANCELED com a mesma cor (${theme}): ${deliveredColor}`,
+  ).not.toEqual(canceledColor);
+
+  await page.goto('/settings', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Modo agendado' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Reoferta por aneis' }),
+  ).toBeVisible();
 }
 
 test('QA-02 painel: varredura claro', async ({ page }) => {
-  await sweep(page, 'claro');
+  requireAdminPassword();
+  expect(adminPassword, 'senha nao pode ir vazia ao login').not.toBe('');
+  const errors = attachConsole(page);
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await assertContrastAa(page, 'login-claro');
+  await snapshot(page, 'qa-02-login-claro');
+  await login(page);
+  await setTheme(page, 'light');
+  await sweep(page, 'light', errors);
+  await assertHistoricalDefects(page, 'claro');
+  await page.goto('/deliveries', { waitUntil: 'domcontentloaded' });
+  await assertContrastAa(page, 'claro');
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await snapshot(page, 'qa-02-overview-claro');
+  await page.goto('/couriers', { waitUntil: 'domcontentloaded' });
+  await snapshot(page, 'qa-02-fila-aprovacao-claro');
+  await page.goto('/deliveries', { waitUntil: 'domcontentloaded' });
+  await snapshot(page, 'qa-02-entregas-claro');
+  await page.goto('/settings', { waitUntil: 'domcontentloaded' });
+  await snapshot(page, 'qa-02-settings-claro');
 });
 
 test('QA-02 painel: varredura escuro', async ({ page }) => {
+  requireAdminPassword();
+  const errors = attachConsole(page);
   await login(page);
-  await toggleTheme(page);
-  await sweep(page, 'escuro');
+  await setTheme(page, 'dark');
+  await sweep(page, 'dark', errors);
+  await assertHistoricalDefects(page, 'escuro');
+  await page.goto('/deliveries', { waitUntil: 'domcontentloaded' });
+  await assertContrastAa(page, 'escuro');
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await snapshot(page, 'qa-02-overview-escuro');
 });

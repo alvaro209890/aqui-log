@@ -30,7 +30,9 @@
 | — | `UX-01C` | `DONE` (2026-08-08) | P1 | Dashboard usa tokens laranja equivalentes | evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-UX-01C.md` |
 | — | `UX-02` | `CANCELED` | P1 | Cancelado como ID próprio e **absorvido pela onda 1** (`QA-01`/`QA-02`/`QA-03`): QA de app por emulador dirigido e QA de painel por Playwright, dentro do portão de cada tarefa | ver [`../05-execucao-autonoma/10-ONDA-1-QA-AUTOMATIZADO.md`](../05-execucao-autonoma/10-ONDA-1-QA-AUTOMATIZADO.md) |
 | — | `B2C-04` | `DONE` (2026-08-19) | P1 | Verificação de telefone por código no app (sem SMS) | evidência: `docs/04-status/entregas/2026-08-19-EVIDENCIA-B2C-04.md` |
-| — | `ADMIN-02A` | `DONE` (2026-08-11) | P1 | **Fila de aprovação de entregadores no painel**: identidade (nome/e-mail) no payload, filtro por status, contador, documentos abríveis e confirmação individual. Não era "só tela" — a lista não trazia quem era o candidato | evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-ADMIN-02A.md`; **QA de navegador logado pendente** |
+| — | `ADMIN-02A` | `DONE` (2026-08-11) | P1 | **Fila de aprovação de entregadores no painel**: identidade (nome/e-mail) no payload, filtro por status, contador, documentos abríveis e confirmação individual. Não era "só tela" — a lista não trazia quem era o candidato | evidência: `docs/04-status/entregas/2026-08-11-EVIDENCIA-ADMIN-02A.md`; QA logado: `QA-02` |
+| — | `QA-01` | `DONE` (2026-08-21) | P0 | E2E dos dois apps no AVD `aqui_log_qa` | evidência: `docs/04-status/entregas/2026-08-20-EVIDENCIA-QA-01-PARCIAL.md` |
+| — | `QA-02` | `DONE` (2026-08-22) | P0 | Playwright no painel: 11 páginas × 2 temas, fila nome+e-mail, pizza, cores DELIVERED≠CANCELED, contraste AA, hex só em `styles.css`; falha com API morta | evidência: `docs/04-status/entregas/2026-08-22-EVIDENCIA-QA-02.md` |
 | — | `B2C-02` | `DONE` (2026-08-08) | P1 | Preço v2 versionado com breakdown congelado | `DEC-02` decidida; evidência: `docs/04-status/entregas/2026-08-08-EVIDENCIA-B2C-02-E-TEMA-ESCURO.md` |
 | — | `B2C-06` | `DONE` (2026-08-09) | P1 | Dual km imediato/agendado + settings admin | evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-SCHED-01-B2C-06.md` |
 | — | `SCHED-01` | `DONE` (2026-08-09) | P1 | Modo `SCHEDULED` individual + aceite antecipado | mesmo esforço e mesma evidência de `B2C-06` |
@@ -233,13 +235,11 @@ mostrava.
 
 Evidência: `docs/04-status/entregas/2026-08-09-EVIDENCIA-COUR-01.md`.
 
-## 3. Tarefa pronta — `QA-01`
+## 3. Tarefa pronta — `QA-03`
 
-A partir de 2026-08-19 a próxima tarefa sai de
-[`../05-execucao-autonoma/01-ONDAS.md`](../05-execucao-autonoma/01-ONDAS.md) e o
-agente a escolhe sozinho. A primeira da fila é:
-
-- **`QA-01`** — `DONE` (2026-08-21, opencode). `scripts/qa-mobile.sh` dirige os dois apps no AVD `aqui_log_qa` (x86_64, headless) do zero; ambos os fluxos de ponta a ponta passam (`All tests passed`). Widget tests verdes (cliente 23, entregador 30). Evidência: `docs/04-status/entregas/2026-08-20-EVIDENCIA-QA-01-PARCIAL.md`.
+- **`QA-01`** — `DONE` (2026-08-21). Evidência: `docs/04-status/entregas/2026-08-20-EVIDENCIA-QA-01-PARCIAL.md`.
+- **`QA-02`** — `DONE` (2026-08-22). Playwright no painel. Evidência: `docs/04-status/entregas/2026-08-22-EVIDENCIA-QA-02.md`.
+- **`QA-03`** — próxima: `pnpm qa`, roundtrip de migration, job Playwright no CI. **Não pegar `FROTA-*`.**
 
 - **`PAY-02`** — recarga PIX/cartão. Sem ela, cliente novo não publica pedido.
   Passo do Álvaro no item 1 do

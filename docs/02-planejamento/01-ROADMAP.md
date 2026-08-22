@@ -1,13 +1,9 @@
 # Aqui Log — Roadmap executivo B2C
 
-> **Atualizado:** 2026-08-19 (as 7 `DEC-*` pendentes fechadas; `TRIP-*` cortados;
-> execução passa a ser autônoma — ver [`../05-execucao-autonoma/`](../05-execucao-autonoma/00-COMO-USAR.md))
+> **Atualizado:** 2026-08-22 (`QA-02` DONE)
 > **Status:** fonte de verdade para prioridade, dependências e ordem de execução
-> **Rodada atual:** `DISP-02` fechado com evidência de runtime local (aviso de
-> demora idempotente, ações do cliente na busca esgotada e aumento com
-> consentimento — `DEC-03` completo).
-> **Próximo pacote:** `UX-02` (QA visual — os dois APKs existem, a fila de
-> aprovação espera QA logado, e o cancelar do prestador espera aparelho).
+> **Rodada atual:** `QA-02` fechou o QA de navegador do painel. Próximo: `QA-03`.
+> **Não executar `FROTA-*` enquanto Claude/Hermes estão na frota.**
 > Em 2026-08-19 fechou `COUR-02`. Em 2026-08-11 fecharam `PAY-01`, `OPS-01A`,
 > os dois apps distribuíveis e `ADMIN-02A`.
 > **Produto principal:** cliente pessoa física → motoboy, sem intermediário no fluxo

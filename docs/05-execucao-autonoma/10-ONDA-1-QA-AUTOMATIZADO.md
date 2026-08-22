@@ -28,7 +28,7 @@ ninguém tinha ligado as peças.
 | JDK 17 | `/usr/lib/jvm/java-17-openjdk-amd64` | existe (o `java` do PATH é o 21) |
 | Flutter | `~/develop/flutter/bin/flutter` | existe |
 | `integration_test` nos apps | — | **não existe; é o trabalho do `QA-01`** |
-| Playwright no repo | — | **não existe; é o trabalho do `QA-02`** |
+| Playwright no repo | `apps/dashboard` + `scripts/qa-dashboard.sh` | **`QA-02` DONE 2026-08-22** |
 
 ## Medido em 2026-08-19, não suposto
 
@@ -179,28 +179,28 @@ já está baixado neste PC; falta só o projeto.
 
 ### O que entregar
 
-- [ ] Playwright como `devDependency` de `apps/dashboard`, script `qa:e2e`,
+- [x] Playwright como `devDependency` de `apps/dashboard`, script `qa:e2e`,
       apontando para o Chromium do cache (**não baixar de novo**).
-- [ ] Login real de admin (credencial de `.env`, nunca no código).
-- [ ] Varredura das **11 páginas** (`OverviewPage`, `DeliveriesPage`, `MapPage`,
+- [x] Login real de admin (credencial de `.env`, nunca no código).
+- [x] Varredura das **11 páginas** (`OverviewPage`, `DeliveriesPage`, `MapPage`,
       `CouriersPage`, `UsersPage`, `FinancePage`, `ReportsPage`, `RatingsPage`,
       `AlertsPage`, `AuditPage`, `SettingsPage`) nos **dois temas**, verificando:
       carregou, não tem erro de console, não tem overflow horizontal em 430 px.
-- [ ] Asserções de conteúdo, não só de "abriu": a fila de aprovação mostra **nome
+- [x] Asserções de conteúdo, não só de "abriu": a fila de aprovação mostra **nome
       e e-mail** (o defeito que o `ADMIN-02A` encontrou era exatamente esse), o
       gráfico de pizza **desenha setores** (regressão de 2026-08-10, Recharts 3.9
       + React 19 StrictMode), `DELIVERED` e `CANCELED` têm **cores distintas**
       (defeito corrigido em `UX-01C`).
-- [ ] Verificação de contraste automatizada e a regra "zero hexadecimal de marca
+- [x] Verificação de contraste automatizada e a regra "zero hexadecimal de marca
       fora de `styles.css`" como teste, não como promessa.
 
 ### Critérios de aceite
 
-- [ ] `pnpm --filter dashboard qa:e2e` passa com a API viva e falha com ela morta
+- [x] `pnpm --filter dashboard qa:e2e` passa com a API viva e falha com ela morta
       (prove os dois).
-- [ ] Os três defeitos históricos acima têm teste que **falha se voltarem**.
-- [ ] Nenhuma credencial no repositório.
-- [ ] Portão base verde.
+- [x] Os três defeitos históricos acima têm teste que **falha se voltarem**.
+- [x] Nenhuma credencial no repositório.
+- [x] Portão base verde.
 
 ### O que NÃO fazer
 
