@@ -1,5 +1,12 @@
 # Estado atual observado
 
+> **Atualização 2026-08-21 (Hermes-acer):** QA de aceite no runtime real ✅
+> (evidência `docs/04-status/entregas/2026-08-21-EVIDENCIA-QA-ACEITE-RUNTIME.md`):
+> criar conta cliente é 201 auto-login; motoboy nasce PENDING e opera após
+> aprovação admin; pedido com foto → auto-dispatch → oferta → aceite ACCEPTED;
+> ledger interno (crédito/reserva/statement) íntegro; **sem superfície de
+> pagamento externo** (Pagar.me fora — como esperado). Nenhum bug.
+>
 > **Atualização 2026-08-21 (Hermes-acer):** APKs de distribuição (cliente +
 > entregador, arm64, 19,4 MB cada) gerados e entregues; evidência em
 > `docs/04-status/entregas/2026-08-21-EVIDENCIA-APKS.md`. Runtime OPS-01A

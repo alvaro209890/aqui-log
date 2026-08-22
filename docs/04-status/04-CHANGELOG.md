@@ -2,6 +2,20 @@
 
 Linha do tempo do monorepo `aqui-log` em `main` (2026-07-16).
 
+## 2026-08-21 — QA de aceite no runtime real (conta + fluxo + sem pagamentos)
+
+Prova ponta a ponta contra `https://aquilog-api.cursar.space/api/v1`: conta
+cliente 201 com auto-login; conta motoboy PENDING→ACTIVE via aprovação admin;
+pedido com foto → ledger reserva → auto-dispatch → oferta PENDING → aceite
+ACCEPTED; statement do cliente com crédito/reserva/saldo corretos. Nenhum
+controller de gateway (Pagar.me ausente por design). Resultado: **OK**, sem
+bugs; observações de produto registradas (PENDING do motoboy, oferta depende de
+posição+disponibilidade, summary admin-only). Mudança documental — nenhum
+código tocado; resíduo de QA (contas `qa-hermes-*`) sinalizado no doc.
+
+Evidência: `docs/04-status/entregas/2026-08-21-EVIDENCIA-QA-ACEITE-RUNTIME.md`.
+
+
 ## 2026-08-21 — APKs de distribuição (cliente + entregador) e runtime confirmado
 
 Pedido do Álvaro: gerar os dois APKs, entregar, documentar, pushar e manter o
